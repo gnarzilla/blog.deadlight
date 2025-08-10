@@ -1,7 +1,7 @@
 // src/templates/admin/settings.js - Updated with proper checkbox styling
 import { renderTemplate } from '../base.js';
 
-export function renderSettings(settings, user) {
+export function renderSettings(settings, user, config = null) {
   const content = `
     <div class="settings-page">
       <h1>Site Settings</h1>
@@ -90,5 +90,5 @@ export function renderSettings(settings, user) {
     </div>
   `;
 
-  return renderTemplate('Settings', content, user);
+  return renderTemplate('Settings', content, user, config);
 }

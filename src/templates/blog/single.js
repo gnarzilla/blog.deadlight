@@ -1,6 +1,6 @@
 // src/templates/blog/single.js
 import { renderTemplate } from '../base.js';
-import { renderMarkdown } from '../../../lib.deadlight/core/src/markdown/processor.js';
+import { renderMarkdown } from '../../../../lib.deadlight/core/src/markdown/processor.js';
 import { renderAuthorLink } from '../../utils/templates.js';
 
 export function renderSinglePost(post, user = null, navigation = null, config = null) {

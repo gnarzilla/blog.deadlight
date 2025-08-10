@@ -1,11 +1,11 @@
 // src/routes/auth.js - Updated with better rate limiting
 import { renderLoginForm } from '../templates/auth/index.js';
-import { hashPassword, verifyPassword } from '../utils/auth.js';
-import { createJWT } from '../utils/jwt.js';
-import { UserModel } from '../../lib.deadlight/core/src/db/models/user.js';
-import { Logger } from '../../lib.deadlight/core/src/logging/logger.js';
-import { Validator, FormValidator, CSRFProtection } from '../../lib.deadlight/core/src/security/validation.js';
-import { authLimiter } from '../../lib.deadlight/core/src/security/ratelimit.js';
+import { hashPassword, verifyPassword } from '../../../lib.deadlight/core/src/auth/password.js';
+import { createJWT } from '../../../lib.deadlight/core/src/auth/jwt.js';
+import { UserModel } from '../../../lib.deadlight/core/src/db/models/user.js';
+import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
+import { Validator, FormValidator, CSRFProtection } from '../../../lib.deadlight/core/src/security/validation.js';
+import { authLimiter } from '../../../lib.deadlight/core/src/security/ratelimit.js';
 
 export const authRoutes = {
   '/login': {

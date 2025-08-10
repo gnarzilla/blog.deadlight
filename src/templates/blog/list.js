@@ -1,8 +1,8 @@
 // src/templates/blog/list.js 
 import { renderTemplate } from '../base.js';
-import { renderMarkdown } from '../../../lib.deadlight/core/src/markdown/processor.js';
-import { PostList, Pagination } from '../../../lib.deadlight/core/src/components/posts/index.js';
-import { defaultProcessor } from '../../../lib.deadlight/core/src/markdown/processor.js';
+import { renderMarkdown } from '../../../../lib.deadlight/core/src/markdown/processor.js';
+import { PostList, Pagination } from '../../../../lib.deadlight/core/src/components/posts/index.js';
+import { defaultProcessor } from '../../../../lib.deadlight/core/src/markdown/processor.js';
 
 const postList = new PostList({
   showActions: true,

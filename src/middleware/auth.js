@@ -1,5 +1,5 @@
 import { parseCookies } from '../utils.js';
-import { verifyJWT } from '../utils/jwt.js';
+import { verifyJWT } from '../../lib.deadlight/src/core/auth/jwt.js';
 
 export const authMiddleware = async (request, env) => {
   const cookies = parseCookies(request);

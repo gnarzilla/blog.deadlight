@@ -1,8 +1,8 @@
 
 // src/routes/inbox.js
 import { renderTemplate } from '../templates/base.js';
-import { MarkdownProcessor } from '../../lib.deadlight/core/src/markdown/processor.js';
-import { checkAuth } from '../utils/auth.js';
+import { MarkdownProcessor } from '../../../lib.deadlight/core/src/markdown/processor.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { configService } from '../services/config.js'; // Add this import
 
 export const inboxRoutes = {

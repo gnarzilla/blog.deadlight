@@ -1,6 +1,6 @@
 // src/templates/user/profile.js
 import { renderTemplate } from '../base.js';
-import { renderMarkdown } from '../../../lib.deadlight/core/src/markdown/processor.js';
+import { renderMarkdown } from '../../../../lib.deadlight/core/src/markdown/processor.js';
 
 export function renderUserProfile(user, posts, currentUser, config, pagination) {
   // Create excerpt from content if no excerpt exists

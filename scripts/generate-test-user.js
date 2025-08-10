@@ -12,7 +12,7 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS request_logs;
 
--- Create users table first (parent table)
+-- Create users table (parent table)
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -21,10 +21,14 @@ CREATE TABLE users (
     role TEXT DEFAULT 'user',
     email TEXT,
     last_login DATETIME,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    subdomain TEXT,
+    profile_title TEXT,
+    profile_description TEXT,
+    updated_at TIMESTAMP
 );
 
--- Create posts table with updated schema
+-- Create posts table
 CREATE TABLE posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -35,15 +39,21 @@ CREATE TABLE posts (
     published BOOLEAN DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_email INTEGER DEFAULT 0,
+    email_metadata TEXT DEFAULT NULL,
+    is_reply_draft INTEGER DEFAULT 0,
+    visibility TEXT DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
+    moderation_status TEXT DEFAULT 'approved' CHECK (moderation_status IN ('approved', 'pending', 'rejected')),
+    moderation_notes TEXT,
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Create settings table
 CREATE TABLE settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL,
-  type TEXT DEFAULT 'string',
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    type TEXT DEFAULT 'string',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create request_logs table
@@ -61,21 +71,20 @@ CREATE TABLE request_logs (
     error TEXT
 );
 
--- Create indexes for better performance
+-- Indexes
 CREATE INDEX idx_posts_published ON posts(published);
 CREATE INDEX idx_posts_author ON posts(author_id);
 CREATE INDEX idx_posts_created ON posts(created_at);
-CREATE INDEX idx_posts_slug ON posts(slug);`;
+CREATE INDEX idx_posts_slug ON posts(slug);
+`;
 
 async function generateTestUserCredentials() {
   try {
     const password = 'gross-gnar';
-    // Use console.error for logs so they don't go to stdout
     console.error('Generating credentials for password:', password);
     
     const { hash, salt } = await hashPassword(password);
     
-    // Log to stderr
     console.error('Generated credentials:', {
       password,
       hashStart: hash.substring(0, 10),
@@ -84,11 +93,9 @@ async function generateTestUserCredentials() {
       saltLength: salt.length
     });
 
-    // Store these values for verification
     const testVerify = await verifyPassword(password, hash, salt);
     console.error('Verification test:', { testVerify });
 
-    // Only write SQL to stdout
     const fullSql = `${baseSql}
 
 -- Insert admin user with role
@@ -110,7 +117,8 @@ INSERT INTO settings (key, value, type) VALUES
   ('timezone', 'UTC', 'string'),
   ('enable_registration', 'false', 'boolean'),
   ('require_login_to_read', 'false', 'boolean'),
-  ('maintenance_mode', 'false', 'boolean');`;
+  ('maintenance_mode', 'false', 'boolean');
+`;
 
     process.stdout.write(fullSql);
   } catch (error) {

@@ -1,5 +1,5 @@
 // src/services/config.js - Update with better error handling
-import { SettingsModel } from '../../lib.deadlight/core/src/db/models/index.js';
+import { SettingsModel } from '../../../lib.deadlight/core/src/db/models/index.js';
 
 class ConfigService {
   constructor() {

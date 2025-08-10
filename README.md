@@ -1,4 +1,4 @@
-# Deadlight Edge Bootstrap v4 - Secure, Modular Blog Platform with Integrated Proxy Management
+_# Deadlight Edge Bootstrap v4 - Secure, Modular Blog Platform with Integrated Proxy Management
 
 🌐 Live Demo: [deadlight.boo](https://deadlight.boo)
 
@@ -105,12 +105,6 @@ blog.deadlight HTTP/JSON Multi-Protocol Bridge
 - Test email federation between blog instances
 - Complete infrastructure sovereignty
 
-## Optimized for Mobile
-
-![Mobile - Light Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/blog_ylog_mobile_wh.png)
-
-![Mobile - Dark Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/blog_ylog_mobile_bl.png)
-
 ### Market Comparison
 
 ```markdown
@@ -135,33 +129,24 @@ blog.deadlight HTTP/JSON Multi-Protocol Bridge
 
 **Clone and install:**
 ```bash
-git clone https://github.com/gnarzilla/blog.deadlight.boo.git
-cd blog.deadlight.boo
+git clone https://github.com/gnarzilla/deadlight.boo.git
+cd deadlight.boo
 npm install
 ```
 ### Create your D1 database:
 ```bash
-wrangler d1 create blog_content
+wrangler d1 create your-db-name
 ```
 
-Update wrangler.toml with your database ID:
-```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "blog_content"
-database_id = "your-database-id-here"
-```
-
-Initialize the database:
+## Initialize the database:
 
 ### Local development
 
-```wrangler d1 execute blog_content --local --file=schema.sql```
+```wrangler d1 execute your-db-name --local --file=schema.sql```
 
 ### Production
 
-```wrangler d1 execute blog_content --remote --file=schema.sql```
-
+```wrangler d1 execute your-db-name --remote --file=schema.sql```
 
 ### Create KV namespace for rate limiting
 
@@ -169,18 +154,62 @@ Initialize the database:
 
 ### Configure your domain and bindings in wrangler.toml:
 ```toml
+name = "yourdomain.com"
+main = "src/index.js"
+compatibility_date = "2023-10-20"
+
 [[routes]]
 pattern = "yourdomain.com/*"
 zone_id = "your-zone-id"
 
+pattern = "proxy.yourdomain.com/*"
+zone_id = "your-zone-id"
+
 [[d1_databases]]
 binding = "DB"
-database_name = "blog_content_new"
+database_name = "your-db-name"
 database_id = "your-database-id-here"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
 id = "your-kv-namespace-id"
+
+[build]
+command = "npm install"
+
+[vars]
+JWT_SECRET = "your-jwt-secret"
+X_API_KEY = "your-x-api-key"
+PROXY_URL = "http://localhost:8080" # For local development. For production http://[your-ip-address]:8080 Use curl ifconfig.me to determine local IP
+
+```
+
+### Configure your local environment in package.json
+
+```json
+  GNU nano 7.2                           package.json                                    
+{
+  "name": "your-worker",
+  "version": "1.1.0",
+  "description": "Edge-first blog framework",
+  "main": "src/index.js",
+  "type": "module",
+  "dependencies": {
+    "marked": "^11.2.0",
+    "xss": "^1.0.15"
+  },
+  "scripts": {
+    "build": "node scripts/generate-test-user.js > scripts/seed-db.sql",
+    "seed-db": "wrangler d1 execute blog_content --local --file=./scripts/seed-db.sql",
+    "seed-db:remote": "wrangler d1 execute blog_content --file=./scripts/seed-db.sql",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:full": "npm run build && npm run seed-db:remote && wrangler deploy",
+    "dev": "npm run build && npm run seed-db && wrangler dev",
+    "setup": "npm run build && npm run seed-db && npm run dev",
+    "cleanup": "node scripts/cleanup.js",
+    "deploy:clean": "npm run delpoy && npm run cleanup"
+  }
+}
 ```
 
 ## Set production secrets:
@@ -199,7 +228,19 @@ wrangler deploy
 ### Create your admin user:
 ```bash
 # Generate secure credentials
-node scripts/generate-user.js
+$chmod +x scripts/gen-admin/seed-dev.sh
+$ ./scripts/gen-admin/seed-dev.sh -v
+Enter admin username: admin
+Enter admin email: admin@deadlight.boo
+Enter admin password:
+Duplicate check result: 0 existing user(s) found.
+
+ ⛅️ wrangler 4.27.0 (update available 4.28.1)
+─────────────────────────────────────────────
+🌀 Executing on local database thatch-db (05792bea-8178-4509-8927-bc79bfeb8340) from .wrangler/state/v3/d1:
+🌀 To execute on your remote database, add a --remote flag to your wrangler command.
+🚣 2 commands executed successfully.
+Admin user created.
 
 # Or manually via SQL
 wrangler d1 execute blog_content_new --remote --command "INSERT INTO users (username, password_hash, role) VALUES ('admin', 'your-hash-here', 'admin')"
@@ -301,17 +342,6 @@ Edit `src/config.js` to customize:
 - Theme defaults
 - Security settings
 
-### Common Tasks
-Add a new user
-```
-bash
-### Via admin interface (when logged in as admin)
-https://your-site/admin/users/add
-
-### Via script
-node scripts/create-user.js username password role
-```
-
 ### Customize styling
 Edit theme variables in src/routes/styles.js. The CSS uses variables for easy customization.
 
@@ -407,3 +437,4 @@ Maintained with ❤️ and Diet Mountain Dew
 ## Support
 
 ☕  [Support is greatly appreciated! Buy me a coffee](coff.ee/gnarzillah)
+_

@@ -6,11 +6,11 @@ import {
   renderDeleteConfirmation
 } from '../templates/admin/index.js';
 import { handleProxyRoutes, handleProxyTests } from './proxy.js';
-import { checkAuth } from '../utils/auth.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { renderTemplate } from '../templates/base.js';
-import { UserModel, PostModel } from '../../lib.deadlight/core/src/db/models/index.js';
-import { Logger } from '../../lib.deadlight/core/src/logging/logger.js';
-import { DatabaseError } from '../../lib.deadlight/core/src/db/base.js';
+import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js';
+import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
+import { DatabaseError } from '../../../lib.deadlight/core/src/db/base.js';
 
 export const adminRoutes = {
 '/admin': {

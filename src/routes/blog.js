@@ -26,7 +26,7 @@ export const blogRoutes = {
         
         // Get total count for pagination (only published posts, exclude emails)
         const countResult = await env.DB.prepare(
-          'SELECT COUNT(*) as total FROM posts WHERE published = 1 AND (is_email = 0 OR is_email IS NULL)'
+          'SELECT COUNT(*) as total FROM posts WHERE published = 1'
         ).first();
         const totalPosts = countResult.total;
         const totalPages = Math.ceil(totalPosts / postsPerPage);
@@ -38,7 +38,7 @@ export const blogRoutes = {
             users.username as author_username 
           FROM posts 
           JOIN users ON posts.author_id = users.id 
-          WHERE posts.published = 1 AND (posts.is_email = 0 OR posts.is_email IS NULL)
+          WHERE posts.published = 1
           ORDER BY posts.created_at DESC
           LIMIT ? OFFSET ?
         `).bind(postsPerPage, offset).all();
@@ -84,7 +84,7 @@ export const blogRoutes = {
             users.username as author_username
           FROM posts 
           LEFT JOIN users ON posts.author_id = users.id
-          WHERE posts.slug = ? AND posts.published = 1 AND (posts.is_email = 0 OR posts.is_email IS NULL)
+          WHERE posts.slug = ? AND posts.published = 1
         `).bind(postId).first();
         
         // If not found by slug, try by ID
@@ -95,7 +95,7 @@ export const blogRoutes = {
               users.username as author_username
             FROM posts 
             LEFT JOIN users ON posts.author_id = users.id
-            WHERE posts.id = ? AND posts.published = 1 AND (posts.is_email = 0 OR posts.is_email IS NULL)
+            WHERE posts.id = ? AND posts.published = 1
           `).bind(postId).first();
         }
 

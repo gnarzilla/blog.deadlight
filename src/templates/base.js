@@ -2,7 +2,7 @@
 import { siteConfig } from '../config.js';
 
 export function renderTemplate(title, bodyContent, user = null, config = null) {
-  const siteTitle = config?.title || 'deadlight';
+  const siteTitle = config?.title || 'D E A D L I G H T';
   const pageTitle = title === 'home' ? siteTitle : `${title} | ${siteTitle}`;
   
   const authLinks = user 
