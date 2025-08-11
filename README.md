@@ -1,8 +1,8 @@
-_# Deadlight Edge Bootstrap v4 - Secure, Modular Blog Platform with Integrated Proxy Management
+# Deadlight Edge Bootstrap v4 - Secure, Modular Blog Platform with Integrated Proxy Management
 
-🌐 Live Demo: [deadlight.boo](https://deadlight.boo)
+🌐 Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo)
 
-A production-ready, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, and everything you need for a truly self-sovereign digital presence.
+A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, and everything you need for a truly self-sovereign digital presence.
 
 ![Main Blog - Dark Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/blog_bl_ylog_hero.png)
 
