@@ -367,191 +367,6 @@ export const adminRoutes = {
     }
   },
 
-  '/admin/comments/:postId': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
-      const postId = request.params.postId;
-      const fedSvc = new FederationService(env);
-      const comments = await fedSvc.getThreadedComments(postId);
-      const { configService } = await import('../services/config.js');
-      const config = await configService.getConfig(env.DB);
-      const { renderCommentList } = await import('../templates/admin/comments.js');
-      return new Response(renderCommentList(comments, postId, user, config), {
-        headers: { 'Content-Type': 'text/html' }
-      });
-    }
-  },
-
-  '/admin/add-comment/:postId': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
-      const postId = request.params.postId;
-      const { renderAddCommentForm } = await import('../templates/admin/comments.js');
-      return new Response(renderAddCommentForm(postId, user), {
-        headers: { 'Content-Type': 'text/html' }
-      });
-    },
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
-      const postId = request.params.postId;
-
-      const clonedRequest = request.clone();
-      const formData = await clonedRequest.formData();
-      const content = formData.get('content');
-
-      if (!content) {
-        return new Response('Content is required', { status: 400 });
-      }
-
-      const fedSvc = new FederationService(env);
-      const post = await env.DB.prepare('SELECT id, federation_metadata FROM posts WHERE id = ?')
-        .bind(postId).first();
-      if (!post) {
-        return new Response('Post not found', { status: 404 });
-      }
-
-      const meta = post.federation_metadata ? JSON.parse(post.federation_metadata) : {};
-      const sourceUrl = meta.source_url || `${env.SITE_URL}/post/${postId}`;
-      const comment = {
-        id: Date.now(),
-        content,
-        author: user.username,
-        published_at: new Date().toISOString(),
-        parent_url: sourceUrl
-      };
-
-      const insertResult = await env.DB.prepare(`
-        INSERT INTO posts (title, content, slug, author_id, created_at, published, post_type, parent_id, thread_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        `Comment on ${sourceUrl}`,
-        content,
-        `comment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        user.id,
-        new Date().toISOString(),
-        1,
-        'comment',
-        postId,
-        postId
-      ).run();
-
-      const domains = await fedSvc.getConnectedDomains();
-      const targetDomains = domains.map(d => d.domain);
-      await fedSvc.sendFederatedComment(comment, targetDomains);
-
-      return Response.redirect(`${new URL(request.url).origin}/admin/comments/${postId}`);
-    }
-  },
-
-  '/admin/comments/reply/:id': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
-      const commentId = request.params.id;
-      const comment = await env.DB.prepare(`
-        SELECT p.*, u.username as author_username
-        FROM posts p
-        LEFT JOIN users u ON p.author_id = u.id
-        WHERE p.id = ? AND p.post_type = 'comment'
-      `).bind(commentId).first();
-      if (!comment) return new Response('Comment not found', { status: 404 });
-      const { renderReplyForm } = await import('../templates/admin/comments.js');
-      return new Response(renderReplyForm(comment, user), {
-        headers: { 'Content-Type': 'text/html' }
-      });
-    },
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
-      const commentId = request.params.id;
-
-      const clonedRequest = request.clone();
-      const formData = await clonedRequest.formData();
-      const content = formData.get('content');
-
-      if (!content) {
-        return new Response('Content is required', { status: 400 });
-      }
-
-      const parentComment = await env.DB.prepare(`
-        SELECT p.*, u.username as author_username
-        FROM posts p
-        LEFT JOIN users u ON p.author_id = u.id
-        WHERE p.id = ? AND p.post_type = 'comment'
-      `).bind(commentId).first();
-      if (!parentComment) {
-        return new Response('Parent comment not found', { status: 404 });
-      }
-
-      const fedSvc = new FederationService(env);
-      const post = await env.DB.prepare('SELECT id, federation_metadata FROM posts WHERE id = ?')
-        .bind(parentComment.parent_id || parentComment.thread_id).first();
-      if (!post) {
-        return new Response('Post not found', { status: 404 });
-      }
-
-      const meta = post.federation_metadata ? JSON.parse(post.federation_metadata) : {};
-      const sourceUrl = meta.source_url || `${env.SITE_URL}/post/${parentComment.parent_id || parentComment.thread_id}`;
-      const reply = {
-        id: Date.now(),
-        content,
-        author: user.username,
-        published_at: new Date().toISOString(),
-        parent_url: sourceUrl,
-        in_reply_to: commentId
-      };
-
-      const insertResult = await env.DB.prepare(`
-        INSERT INTO posts (title, content, slug, author_id, created_at, published, post_type, parent_id, thread_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        `Reply to comment on ${sourceUrl}`,
-        content,
-        `reply-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        user.id,
-        new Date().toISOString(),
-        1,
-        'comment',
-        commentId,
-        parentComment.thread_id || commentId
-      ).run();
-
-      const domains = await fedSvc.getConnectedDomains();
-      const targetDomains = domains.map(d => d.domain);
-      await fedSvc.sendFederatedComment(reply, targetDomains);
-
-      return Response.redirect(`${new URL(request.url).origin}/admin/comments/${parentComment.parent_id || parentComment.thread_id}`);
-    }
-  },
-
-  '/admin/comments/delete/:id': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
-      const commentId = request.params.id;
-
-      const comment = await env.DB.prepare(`
-        SELECT p.*, u.username as author_username, p.parent_id AS parent_post_id
-        FROM posts p
-        LEFT JOIN users u ON p.author_id = u.id
-        WHERE p.id = ? AND p.post_type = 'comment'
-      `).bind(commentId).first();
-      if (!comment) return new Response('Comment not found', { status: 404 });
-
-      await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
-
-      const fedSvc = new FederationService(env);
-      const domains = await fedSvc.getConnectedDomains();
-      const targetDomains = domains.map(d => d.domain);
-      await fedSvc.sendDeleteComment(commentId, targetDomains);
-
-      return Response.redirect(`${new URL(request.url).origin}/admin/comments/${comment.parent_post_id || comment.thread_id}`);
-    }
-  },
-
   '/admin/users': {
     GET: async (request, env) => {
       const userModel = new UserModel(env.DB);
@@ -762,13 +577,40 @@ export const adminRoutes = {
       }
   },
   // Endpoint for receiving federated posts
-  '/federation/receive': {
+  '/federation/receive' : {
     POST: async (request, env) => {
-      const fedSvc = new FederationService(env);
-      const data = await request.json();
-      const result = await fedSvc.processIncomingFederation(data);
-      return new Response(JSON.stringify(result), {
-        headers: { 'Content-Type': 'application/json' }
+      const { post } = await request.json();
+      const DB = env.DB;
+
+      // 1) Load moderation rules
+      const keywords = await loadModerationKeywords(DB);
+
+      // 2) Run the check
+      const { status, notes } = checkModeration(post.content, keywords);
+
+      // 3) Insert into federated_posts
+      await DB.prepare(`
+        INSERT INTO federated_posts
+          (source_domain, title, content, author, published_at, source_url,
+          moderation_status, moderation_notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        post.source_domain,
+        post.title,
+        post.content,
+        post.author,
+        post.published_at,
+        post.source_url,
+        status,
+        notes
+      ).run();
+
+      // 4) Respond
+      return Response.json({
+        success: true,
+        message: status === 'pending'
+          ? 'Post received and pending moderation'
+          : 'Post received and auto-approved'
       });
     }
   },
@@ -792,63 +634,6 @@ export const adminRoutes = {
       });
     }
   },
-
-  '/federation/outbox' : {
-    GET: async (request, env) => {
-      const url = new URL(request.url);
-      const limit = parseInt(url.searchParams.get('limit') || '50');
-      const since = url.searchParams.get('since'); // ISO8601 string
-
-      let query = `
-        SELECT id, title, content, created_at, author_id, federation_metadata
-        FROM posts
-        WHERE post_type = 'federated'
-          AND published = 1
-      `;
-      const params = [];
-
-      if (since) {
-        query += ` AND created_at > ?`;
-        params.push(since);
-      }
-
-      query += ` ORDER BY created_at DESC LIMIT ?`;
-      params.push(limit);
-
-      const { results: posts } = await env.DB.prepare(query).bind(...params).all();
-
-      const items = posts.map(post => {
-        const meta = post.federation_metadata ? JSON.parse(post.federation_metadata) : {};
-        return {
-          id: `${url.origin}/posts/${post.id}`,
-          type: 'Create',
-          actor: meta.actor || `${url.origin}/actors/system`,
-          object: {
-            id: `${url.origin}/posts/${post.id}`,
-            type: 'Note',
-            content: post.content,
-            published: post.created_at,
-            attributedTo: meta.actor || `${url.origin}/actors/system`,
-            to: ['https://www.w3.org/ns/activitystreams#Public']
-          }
-        };
-      });
-
-      const response = {
-        '@context': 'https://www.w3.org/ns/activitystreams',
-        id: url.href,
-        type: 'OrderedCollectionPage',
-        partOf: `${url.origin}/federation/outbox`,
-        orderedItems: items,
-        next: null // Add pagination later
-      };
-
-      return new Response(JSON.stringify(response), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-  },
-
 
   '/admin/inject-emails': {
     GET: async (request, env) => {
@@ -1034,17 +819,6 @@ export const adminRoutes = {
     }
   },
 
-  '/admin/notifications': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
-      const notifications = await env.DB.prepare(`
-        SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50
-      `).bind(user.id).all();
-      // Render template
-    }
-  },
-
   '/admin/federation' : {
     GET: async (request, env) => {
       const user = await checkAuth(request, env);
@@ -1073,6 +847,7 @@ export const adminRoutes = {
     }
   },
 
+
   '/admin/moderation' : {
     GET: async (request, env) => {
       const user = await checkAuth(request, env);
@@ -1081,9 +856,15 @@ export const adminRoutes = {
         return Response.redirect(`${origin}/login`, 302);
       }
 
-      // grab all federated, pending posts
-      const { results: pendingPosts } = await env.DB.prepare(`
-        SELECT id, title, content, author_id, created_at, moderation_notes
+      // Pull federated posts waiting moderation
+      const { results: pending } = await env.DB.prepare(`
+        SELECT
+          id,
+          title,
+          content,
+          author_id,
+          created_at,
+          moderation_notes
         FROM posts
         WHERE post_type = 'federated'
           AND moderation_status = 'pending'
@@ -1091,52 +872,9 @@ export const adminRoutes = {
         LIMIT 100
       `).all();
 
-      // build table rows
-      const rows = pendingPosts.map(p => {
-        const date = new Date(p.created_at).toLocaleString();
-        const snippet = p.content.length > 100
-          ? p.content.slice(0, 100) + '…'
-          : p.content;
-        return `
-          <tr>
-            <td>${p.id}</td>
-            <td>${p.title}</td>
-            <td>${date}</td>
-            <td>${snippet}</td>
-            <td>
-              <form action="/admin/moderation/${p.id}/approve" method="POST" style="display:inline">
-                <button type="submit">Approve</button>
-              </form>
-              <form action="/admin/moderation/${p.id}/reject" method="POST" style="display:inline">
-                <input type="text" name="reason" placeholder="Reason" />
-                <button type="submit">Reject</button>
-              </form>
-            </td>
-          </tr>`;
-      }).join('');
-
-      const html = `
-        <h1>Federation Moderation Queue</h1>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Title</th>
-              <th>Received</th>
-              <th>Content</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-        <p><a href="/admin">← Back to Dashboard</a></p>
-      `;
-
-      return new Response(renderTemplate('Moderation Queue', html, user), {
-        headers: { 'Content-Type': 'text/html' }
-      });
+      return Response.json({ pending });
+      //Return JSON for your UI (or swap out for renderTemplate)
+      //return new Response(renderTemplate('Moderation', JSON.stringify(pending), user));
     }
   },
 

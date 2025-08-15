@@ -1,67 +1,61 @@
-// src/templates/blog/single.js
 import { renderTemplate } from '../base.js';
-import { renderMarkdown } from '../../../../lib.deadlight/core/src/markdown/processor.js';
-import { renderAuthorLink } from '../../utils/templates.js';
 
-export function renderSinglePost(post, user = null, navigation = null, config = null) {
-  const postDate = new Date(post.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
-  // Remove the <!--more--> marker from full post display
-  const fullContent = post.content.replace('<!--more-->', '');
-  
-  const content = `
-    <article class="single-post">
-      <header class="post-header">
-        <h1>${post.title}</h1>
-        <div class="post-meta">
-          <span>By ${renderAuthorLink(post.author_username)}</span>
-          <span class="separator">•</span>
-          <time datetime="${post.created_at}">${postDate}</time>
-          ${post.updated_at && post.updated_at !== post.created_at ? `
-            <span class="separator">•</span>
-            <span class="updated">Updated ${new Date(post.updated_at).toLocaleDateString()}</span>
+export function renderSinglePost(post, user, navigation, config, comments = []) {
+  if (!post) throw new Error('Post is undefined');
+
+  if (post.post_type === 'comment') {
+    const parentUrl = post.federation_metadata ? JSON.parse(post.federation_metadata).parent_url : null;
+    return renderTemplate('Comment', `
+      <h1 class="post-title">This is a Comment</h1>
+      <p>This content is a comment on <a href="${parentUrl}">${parentUrl}</a>.</p>
+      <p>Content: ${post.content}</p>
+      <p class="post-meta">By ${post.author_username} | ${new Date(post.created_at).toLocaleDateString()}</p>
+      ${user ? `
+        <div class="comment-actions">
+          <a href="/admin/comments/edit/${post.id}" class="button edit-button">Edit</a>
+          <a href="/admin/comments/delete/${post.id}" class="button delete-button">Delete</a>
+          <a href="/admin/comments/reply/${post.id}" class="button reply-button">Reply</a>
+        </div>
+      ` : ''}
+      <a href="${parentUrl || '/'}">Back to Post</a>
+    `, user, config);
+  }
+
+  const commentHtml = comments.length ? `
+    <div class="comment-list">
+      <h2>Comments</h2>
+      ${comments.map((comment, index) => `
+        <div class="comment" style="margin-left: ${comment.level * 20}px;">
+          <p class="post-content">${comment.content}</p>
+          <p class="post-meta">By ${comment.author} | ${new Date(comment.published_at).toLocaleDateString()}</p>
+          ${user ? `
+            <div class="comment-actions">
+              <a href="/admin/comments/edit/${comment.id}" class="button edit-button">Edit</a>
+              <a href="/admin/comments/delete/${comment.id}" class="button delete-button">Delete</a>
+              <a href="/admin/comments/reply/${comment.id}" class="button reply-button">Reply</a>
+            </div>
           ` : ''}
         </div>
-      </header>
-      
-      <div class="post-content">
-        ${renderMarkdown(fullContent)}
+      `).join('')}
+    </div>
+  ` : '<p class="no-comments">No comments yet.</p>';
+
+const content = `
+    <h1 class="post-title">${post.title}</h1>
+    <div class="post-meta">
+      <span>By ${post.author_username}</span>
+      <span>| ${new Date(post.created_at).toLocaleDateString()}</span>
+    </div>
+    <div class="post-content">${post.content}</div>
+    ${navigation ? `
+      <div class="post-navigation">
+        ${navigation.prev_id ? `<a href="/post/${navigation.prev_id}" class="button">Previous: ${navigation.prev_title}</a>` : ''}
+        ${navigation.next_id ? `<a href="/post/${navigation.next_id}" class="button">Next: ${navigation.next_title}</a>` : ''}
       </div>
-      
-      ${user ? `
-        <div class="post-actions">
-          <a href="/admin/edit/${post.id}" class="button edit-button">Edit Post</a>
-          <form class="delete-form" action="/admin/delete/${post.id}" method="POST" 
-                onsubmit="return confirm('Are you sure you want to delete this post?');">
-            <button type="submit" class="button delete-button">Delete Post</button>
-          </form>
-        </div>
-      ` : ''}
-      
-      ${navigation ? `
-        <nav class="post-navigation">
-          ${navigation.prev_id ? `
-            <a href="/post/${navigation.prev_id}" class="nav-prev">
-              <span class="nav-label">← Previous</span>
-              <span class="nav-title">${navigation.prev_title}</span>
-            </a>
-          ` : '<div></div>'}
-          
-          ${navigation.next_id ? `
-            <a href="/post/${navigation.next_id}" class="nav-next">
-              <span class="nav-label">Next →</span>
-              <span class="nav-title">${navigation.next_title}</span>
-            </a>
-          ` : '<div></div>'}
-        </nav>
-      ` : ''}
-    </article>
+    ` : ''}
+    ${user ? `<a href="/admin/add-comment/${post.id}" class="button">Add Comment</a>` : ''}
+    ${user ? `<a href="/admin/edit/${post.id}" class="button">Edit</a>` : ''}
+    ${commentHtml}
   `;
-  
-  // Pass config to renderTemplate for dynamic site title
   return renderTemplate(post.title, content, user, config);
 }

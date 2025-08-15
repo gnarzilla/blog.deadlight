@@ -23,8 +23,8 @@ export function renderPost(post, author) {
 export function renderPostActions(post) {
   return `
     <div class="post-actions">
-      <a href="/admin/edit/${post.id}" class="edit-button">Edit</a>
-      <a href="/admin/delete/${post.id}" class="delete-button">Delete</a>
+      <a href="/admin/edit/${post.id}" class="edit-button button">Edit</a>
+      <a href="/admin/delete/${post.id}" class="delete-button button">Delete</a>
     </div>
   `;
 }

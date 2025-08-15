@@ -1445,8 +1445,63 @@ const baseStyles = `
   .action-buttons {
     justify-content: center;
   }
-}
-`;
+
+  /* Comment Styles */
+  .comment-list {
+    margin-top: 20px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 20px;
+  }
+
+  .comment {
+    margin-left: 20px;
+    padding: 10px;
+    border-left: 2px solid var(--border-color);
+    margin-bottom: 10px;
+  }
+
+  .comment.nested {
+    margin-left: 40px;
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .no-comments {
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  .comment-actions .button {
+    padding: 5px 10px;
+    font-size: 0.85em;
+    margin-right: 5px;
+  }
+
+  .edit-button { background-color: #28a745; }
+  .edit-button:hover { background-color: #218838; }
+  .delete-button { background-color: #dc3545; }
+  .delete-button:hover { background-color: #c82333; }
+  .reply-button { background-color: #17a2b8; }
+  .reply-button:hover { background-color: #138496; }
+
+  .no-comments {
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  @media (max-width: 600px) {
+    .comment {
+      margin-left: 10px;
+    }
+    .comment.nested {
+      margin-left: 20px;
+    }
+    .comment-actions .button {
+      display: block;
+      margin-bottom: 5px;
+    }
+  }
+
+  }`;
 
 // Dark theme variables
 const darkTheme = `

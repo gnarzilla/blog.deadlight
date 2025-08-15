@@ -57,6 +57,14 @@ export class ProxyService {
         });
     }
 
+    // proxy.js
+    async sendSms(smsData) {
+        return await this.makeRequest('/api/sms/send', {
+            method: 'POST',
+            body: JSON.stringify(smsData)
+        });
+    }
+
     // Federation API endpoints (for decentralized social media)
     async sendFederatedPost(postData) {
         return await this.makeRequest('/api/federation/send', {

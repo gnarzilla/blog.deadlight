@@ -1,10 +1,14 @@
-# Deadlight Edge Bootstrap v4 - Secure, Modular Blog Platform with Integrated Proxy Management
+# Deadlight Edge Blog v4 - Secure, Modular Blog Platform with Integrated Proxy Management
 
 🌐 Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo)
 
 A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, and everything you need for a truly self-sovereign digital presence.
 
-![Main Blog - Dark Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/blog_bl_ylog_hero.png)
+---
+
+![Main Blog - Create Post](https://github.com/gnarzilla/deadlight/blob/main/src/assets/main-create_bw.png)
+
+---
 
 ### Serverless deployment via Cloudflare Workers free-tier in minutes (B.Y.O.D. - Bring your own domain)
 
@@ -13,112 +17,106 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 3. Set up KV namespace
 4. Deploy via Wrangler
 
-![Main Blog - Light Mode - Logged Out](https://github.com/gnarzilla/deadlight/blob/main/src/assets/blog_wh_nolog.png)
+---
 
-![Login - Light Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/login_wh.png)
+![Proxy Dash - Add New Post](https://github.com/gnarzilla/deadlight/blob/main/src/assets/proxydash_newpost_wb.png)
 
-![Main Blog - Light Mode - Logged In](https://github.com/gnarzilla/deadlight/blob/main/src/assets/blog_wh_ylog.png)
+![Proxy Test Email - User Management](https://github.com/gnarzilla/deadlight/blob/main/src/assets/proxytestemail_usermng_bw.png)
 
-![Create New Post - Dark Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/addPost_bl.png)
+![Proxy Dash - Admin Dash](https://github.com/gnarzilla/deadlight/blob/main/src/assets/proxydash_dash_wb.png)
 
-![Main Blog - Dark Mode - Logged In](https://github.com/gnarzilla/deadlight/blob/main/src/assets/blog_bl_ylog.png)
+## 1. Key Features
 
-![Main Blog - Light Mode - Logged In](https://github.com/gnarzilla/deadlight/blob/main/src/assets/blog_wh_log.png)
+### **Performance & Content**
+- **Near-zero latency**: Deployed on Cloudflare Workers to deliver content globally in milliseconds.
+- **D1 Database**: Uses D1 (SQLite at the edge) for fast, low-cost data access.
+- **Full Markdown support**: Write posts using a simple, intuitive syntax.
+- **SEO-friendly**: Generates clean URLs and post excerpts for better discoverability.
 
-## Admin Dashboard, Settings & User Management
+### **Security & Administration**
+- **CSRF & Rate Limiting**: All forms and endpoints are protected against common attacks.
+- **Enhanced Authentication**: Secure JWT implementation with role-based access control (admin, editor, viewer).
+- **Robust Framework**: Includes a comprehensive validation framework, structured logging, and secure headers for a hardened application.
+- **User Management**: A dashboard with a user management interface and activity logging.
 
-![Admin Dash - Light Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/admindash_wh.png)
+### Proxy Integration 
+- **Real-time Control**: Manage your local infrastructure from any browser.
+- **Email Protocol Bridge**: Connect Cloudflare Workers to your self-hosted email server via SMTP/IMAP.
+- **Decentralized Federation**: Test blog-to-blog communication and federation with other domains via email protocols.
+- **Privacy Proxy**: Manage SOCKS5 proxy access directly from the dashboard.
 
-![Login - Dark Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/settings_bl.png)
+---
 
-![Admin Dash - Dark Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/admindash_bl.png)
+![Proxy Dashboard](https://github.com/gnarzilla/deadlight/blob/main/src/assets/proxy-blog-site_multiview.png))
 
-![User Management - Light Mode](https://github.com/gnarzilla/deadlight/blob/main/src/assets/user_management_wh.png)
+---
 
-## Features
+## 2. **Architecture & Design**:
+Deadlight is designed as a modular, full-stack application built for maximum flexibility and performance.
+- **Modular Architecture**: Shared lib.deadlight library and reusable components enable a clean separation of concerns and a multi-app ecosystem.
+- **Text-First**: A deliberate design choice to focus on clean, markdown-based content and avoid the complexities of media management.
+- **Project Structure**: A clear directory structure that organizes the main application, shared libraries, and core functionality.
 
-### v3 Highlights
-
-🔐 **Security Focused**
-- CSRF protection on all forms
-- Rate limiting (configurable per endpoint)
-- Input validation and sanitization
-- Security headers middleware
-- XSS prevention built-in
-
-📦 **Modular Architecture**
-- Shared `lib.deadlight` library
-- Reusable components across projects
-- Clean separation of concerns
-- Ready for multi-app ecosystems
-
-🛡️ **Enhanced Authentication**
-- Improved JWT implementation
-- Role-based access control (admin/editor/viewer)
-- Secure session management
-- Password complexity validation
-
-📊 **Better Admin Experience**
-- Dashboard with real-time stats
-- User management interface
-- Improved error handling
-- Activity logging
-
-🏗️ **Developer Experience**
-- Comprehensive validation framework
-- Structured logging system
-- Database models with error handling
-- Clean route organization
-
-### Core Features (from v2):
-
-+ Near-zero cold start latency (~<5 ms typical)
-+ Multi-user authentication with JWT
-+ Full Markdown support
-+ Dark/Light theme switching
-+ D1 Database (SQLite at the edge)
-+ SEO-friendly URLs
-+ Smart pagination
-+ Post excerpts
-+ Request logging (privacy-respecting)
-
-## Integrated Proxy Server Management (NEW in v4)
-
-![Proxy Dashboard](https://github.com/gnarzilla/deadlight/blob/main/src/assets/ProxyDash.png)
-
-**Real-time control of your local proxy server through the web interface:**
-
-- 🔄 **Live Status Monitoring** - Real-time connection tracking and health checks
-- 📧 **Email Protocol Bridge** - SMTP/IMAP integration for self-hosted email
-- 🌐 **Federation Testing** - Domain-to-domain communication via email protocols  
-- 🔒 **Privacy Proxy** - SOCKS5 proxy management through web dashboard
-- ⚡ **Instant Deployment** - Global web interface managing local infrastructure
-
-**Architecture:**
-Web Dashboard (Global CDN) ←→ REST API ←→ proxy.deadlight (Your Hardware)
-blog.deadlight HTTP/JSON Multi-Protocol Bridge
-
-**What this enables:**
-- Deploy your blog globally via Cloudflare
-- Manage your local proxy server from any browser
-- Bridge modern web apps to legacy TCP protocols (SMTP, IMAP, SOCKS)
-- Test email federation between blog instances
-- Complete infrastructure sovereignty
-
-### Market Comparison
-
-```markdown
-| Feature           | WordPress | Ghost | Deadlight   |
-| ----------------- | --------- | ----- | ----------- |
-| Self-host on edge | ❌        | ❌   |    ✅       |
-| Proxy integration | ❌        | ❌   |    ✅       |  
-| Email federation  | ❌        | ❌   |    ✅       |
-| Real-time control | ❌        | ⚠️   |    ✅       |
-| Protocol bridge   | ❌        | ❌   |    ✅       |
-| Zero tracking     | ⚠️        | ✅   |    ✅       |
+```
+deadlight/
+├── blog.deadlight/          # Main blog application
+│   └── src/
+|         ├── assets/        # Static site media
+|         ├── config.js
+|         ├── index.js       # Main entry & routing
+|         ├── middleware/    # Application-level middleware
+|         │   ├── analytics.js
+|         │   ├── auth.js
+|         │   ├── error.js
+|         │   └── logging.js
+|         ├── routes/        # Route handlers for all endpoints
+|         │   ├── admin.js
+|         │   ├── auth.js
+|         │   ├── blog.js
+|         │   ├── inbox.js
+|         │   ├── index.js
+|         │   ├── proxy.js
+|         │   ├── static.js
+|         │   ├── styles.js
+|         │   └── user.js
+|         ├── services/      # Extenal service integration
+|         │   ├── config.js
+|         │   ├── outbox.js
+|         │   └── proxy.js
+|         ├── styles/
+|         ├── templates/     # HTML templates for all pages
+|         │   ├── admin/
+|         │   ├── auth/
+|         │   ├── base.js
+|         │   ├── blog/
+|         │   ├── landing.js
+|         │   └── user/
+|         └── utils/
+└── lib.deadlight/          # Shared library
+    └── core/
+        ├── auth/           # Authentication system
+        ├── db/             # Database layer
+        ├── security/       # Security features
+        └── ...
 ```
 
-## Quick Start
+## **3. Market Comparison**
+
+| Feature | WordPress | Ghost | Deadlight |
+|---|---|---|---|
+| Self-host on edge | ❌ | ❌ | ✅ |
+| Proxy integration | ❌ | ❌ | ✅ |
+| Email federation | ❌ | ❌ | ✅ |
+| Real-time control | ❌ | ⚠️ | ✅ |
+| Protocol bridge | ❌ | ❌ | ✅ |
+| Zero tracking | ⚠️ | ✅ | ✅ |
+
+## **4. Roadmap**
+- **Production Ready (v4)**: Proxy integration, email bridge, and federation testing.
+- **Active Development**: Full email client/server integration, SOCKS5 authentication, and production deployment guides.
+- **Future Considerations**: A privacy-first analytics service, a comments system, media management via R2, and an extensible plugin system.
+
+## 5. Quick Start
 
 ### Prerequisites
 - Cloudflare account (free tier works)
@@ -127,30 +125,25 @@ blog.deadlight HTTP/JSON Multi-Protocol Bridge
 
 ### Deploy in 5 minutes
 
-**Clone and install:**
 ```bash
 git clone https://github.com/gnarzilla/deadlight.boo.git
 cd deadlight.boo
 npm install
-```
-### Create your D1 database:
-```bash
+
+# Create your D1 database:
 wrangler d1 create your-db-name
+
+# Initialize the database:
+# Local development
+wrangler d1 execute your-db-name --local --file=schema.sql
+
+# Production
+wrangler d1 execute your-db-name --remote --file=schema.sql
+
+# Create KV namespace for rate limiting
+wrangler kv:namespace create "RATE_LIMIT"
+
 ```
-
-## Initialize the database:
-
-### Local development
-
-```wrangler d1 execute your-db-name --local --file=schema.sql```
-
-### Production
-
-```wrangler d1 execute your-db-name --remote --file=schema.sql```
-
-### Create KV namespace for rate limiting
-
-```wrangler kv:namespace create "RATE_LIMIT"```
 
 ### Configure your domain and bindings in wrangler.toml:
 ```toml
@@ -215,7 +208,6 @@ PROXY_URL = "http://localhost:8080" # For local development. For production http
 ## Set production secrets:
 
 ### Generate a secure JWT secret
-
 ```bash
 openssl rand -base64 32
 wrangler secret put JWT_SECRET
@@ -225,6 +217,7 @@ wrangler secret put JWT_SECRET
 ```bash
 wrangler deploy
 ```
+
 ### Create your admin user:
 ```bash
 # Generate secure credentials
@@ -248,91 +241,8 @@ wrangler d1 execute blog_content_new --remote --command "INSERT INTO users (user
 # Add to production database
 wrangler d1 execute blog_content --remote --command "INSERT INTO users (username, password, salt) VALUES ('admin', 'hash-here', 'salt-here')"
 ```
-## Project Structure:
-```
-deadlight/
-├── blog.deadlight/          # Main blog application
-│   └── src/
-│       ├── index.js         # Main entry & routing
-│       ├── config.js        # Site configuration
-│       ├── routes/          # Route handlers
-│       │   ├── admin.js     # Admin routes (CRUD + users)
-│       │   ├── auth.js      # Login/logout with CSRF
-│       │   ├── blog.js      # Public blog routes
-│       │   ├── inbox.js     # Inbox routing
-│       │   └── styles.js    # CSS delivery
-│       ├── templates/       # HTML templates
-│       └── utils/           # App-specific utilities
-│
-└── lib.deadlight/          # Shared library
-    └── core/
-        ├── auth/           # Authentication system
-        │   ├── jwt.js      # JWT handling
-        │   ├── password.js # Bcrypt hashing
-        │   └── errors.js   # Auth errors
-        ├── db/             # Database layer
-        │   ├── models/     # Data models
-        │   └── migrations.js
-        ├── security/       # Security features
-        │   ├── validation.js # Input validation
-        │   ├── ratelimit.js  # Rate limiting
-        │   ├── headers.js    # Security headers
-        │   └── middleware.js
-        ├── logging/        # Logging system
-        └── markdown/       # Markdown processing
-```
 
-## Proxy Integration Setup
-
-### Prerequisites
-- Linux/macOS system for running proxy.deadlight
-- GCC and development tools (`build-essential` on Ubuntu)
-- GLib 2.0+ development libraries
-
-### Quick Start
-```bash
-# Terminal 1: Build and start the proxy server
-git clone https://github.com/your-repo/proxy.deadlight.git
-cd proxy.deadlight/v4.0
-make
-./bin/deadlight -c deadlight.conf.example
-
-# Terminal 2: Start the blog with proxy integration  
-cd ../blog.deadlight
-wrangler dev
-```
-Access http://localhost:8787/admin/proxy for real-time proxy management.
-
-What you can do:
-- Test blog API connectivity
-- Monitor email system status
-- Test federation with other domains
-- Send test emails through proxy bridge
-- View live connection logs
-
-## Security Features
-
-### Authentication & Authorization
-- JWT-based sessions with secure cookies
-- Role-based access control (admin, editor, viewer)
-- Secure password hashing with bcrypt
-- Session expiration and renewal
-
-### Request Security
-- CSRF protection on all state-changing operations
-- Rate limiting with configurable windows
-- Input validation and sanitization
-- XSS prevention in templates
-- Security headers (CSP, X-Frame-Options, etc.)
-
-### Data Protection
-- Parameterized queries (no SQL injection)
-- HTML escaping in outputs
-- Markdown sanitization
-- Secure cookie flags
-
-
-## Configuration
+## 6. Configuration
 
 Edit `src/config.js` to customize:
 
@@ -342,8 +252,10 @@ Edit `src/config.js` to customize:
 - Theme defaults
 - Security settings
 
+Settings can be changed dynamically after deployment at `your-blog.com/admin/settings`
+
 ### Customize styling
-Edit theme variables in src/routes/styles.js. The CSS uses variables for easy customization.
+Edit theme variables in `src/routes/styles.js`. The CSS uses variables for easy customization.
 
 ### Add custom routes
 1. Create route handler in src/routes/
@@ -355,38 +267,16 @@ Edit theme variables in src/routes/styles.js. The CSS uses variables for easy cu
 - Validation rules: Edit lib.deadlight/core/src/security/validation.js
 - Security headers: Edit lib.deadlight/core/src/security/headers.js
 
-## Current Status & Roadmap
-
-### ✅ Production Ready (v4)
-- **proxy.deadlight integration** - Full web-based proxy management
-- **Email protocol bridge** - SMTP/IMAP connectivity for Cloudflare Workers
-- **Federation testing** - Blog-to-blog communication via email
-- **Real-time monitoring** - Live proxy status and connection tracking
-
-### 🚧 Active Development  
-- **comm.deadlight** - Full email client/server integration
-- **Production deployment** - VPS deployment guides for proxy server
-- **Enhanced federation** - Automatic blog post distribution via email
-- **SOCKS5 authentication** - Username/password proxy access
-
 ## Future Considerations
 ```
 -📊 Analytics service (privacy-first)
 -💬 Comments system (no tracking)
--🖼️ Media management with R2
 -📱 Mobile app API
 -🔌 Plugin system
--🌐 ActivityPub support
 ```
 
-## Migration from v2
-1. Export your posts: wrangler d1 execute blog_content --local --command "SELECT * FROM posts"
-2. Update your wrangler.toml with new bindings
-3. Run the v3 schema: wrangler d1 execute blog_content_new --local --file=schema.sql
-4. Import your data (script coming soon)
-5. Test locally before deploying
 
-## API Documentation
+## 7. API Documentation
 ### Public Endpoints
 - GET / - Home page with posts
 - GET /post/:id - Individual post

@@ -114,6 +114,6 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
     </div>
   `;
 
-  // Use renderTemplate to get consistent header with dynamic title
+
   return renderTemplate('Dashboard', content, user, config);
 }

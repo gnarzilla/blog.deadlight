@@ -1,5 +1,3 @@
-// src/middleware/logging.js
-
 // Utility to extract client IP from request
 function getClientIP(request) {
   return request.headers.get('cf-connecting-ip') || 
@@ -49,12 +47,12 @@ export const logRequest = async (request, response, env) => {
       analytics.path,
       analytics.method,
       duration,
-      response.status,
+      response?.status || 500,
       analytics.userAgent,
       analytics.ip,
       analytics.referer,
       analytics.country,
-      response.ok ? null : response.statusText
+      response?.ok ? null : (response?.statusText || 'Unknown error')
     ).run();
 
   } catch (error) {
@@ -70,7 +68,7 @@ export const loggingMiddleware = async (request, env, next) => {
     // Initialize logs table if needed
     await initLogsTable(env.DB);
     
-    // Collect request data
+    // Collect request data (avoid body)
     const requestData = {
       path: url.pathname,
       method: request.method,
@@ -80,7 +78,7 @@ export const loggingMiddleware = async (request, env, next) => {
       country: request.headers.get('cf-ipcountry') || 'unknown'
     };
     
-    // Add analytics data to request
+    // Add analytics data to request (no body access)
     request.analytics = requestData;
     request.timing = { startTime };
     
@@ -90,29 +88,18 @@ export const loggingMiddleware = async (request, env, next) => {
     // Log the completed request
     const duration = Date.now() - startTime;
     
-    // Don't await this - log asynchronously to not slow down response
-    env.DB.prepare(`
-      INSERT INTO request_logs (
-        path, method, duration, status_code, 
-        user_agent, ip, referer, country, error
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      requestData.path,
-      requestData.method,
-      duration,
-      response.status,
-      requestData.userAgent,
-      requestData.ip,
-      requestData.referer,
-      requestData.country,
-      response.ok ? null : response.statusText
-    ).run().catch(err => console.error('Failed to log request:', err));
+    if (response && typeof response.status === 'number') {
+      await logRequest(request, response, env);
+    } else {
+      await logRequest(request, { status: 500, ok: false, statusText: 'Invalid response' }, env);
+      console.warn('Response undefined or invalid, logged with status 500', { path: requestData.path });
+    }
     
     return response;
     
   } catch (error) {
     console.error('Logging middleware error:', error);
-    // If logging fails, still continue with the request
-    return await next();
+    const fallbackResponse = await next();
+    return fallbackResponse || new Response('Internal Server Error', { status: 500 });
   }
 };

@@ -1,6 +1,7 @@
 // src/services/outbox.js - Complete outbox queue management
 import { ProxyService } from './proxy.js';
 import { Logger } from '../../../../lib.deadlight/core/src/logging/logger.js';
+import { FederationService } from './federation.js';
 
 export class OutboxService {
     constructor(env) {
@@ -129,58 +130,30 @@ export class OutboxService {
         return processed;
     }
 
+    async queueMessage(type, data) {
+        if (type === 'email') return this.queueEmailReply(data);
+        if (type === 'notification') {
+            await this.db.prepare(`
+            INSERT INTO notifications (user_id, type, content, related_post_id)
+            VALUES (?, ?, ?, ?)
+            `).bind(data.user_id, data.type, data.content, data.post_id).run();
+            return { success: true };
+        }
+        if (type === 'sms') {
+            const smsMetadata = { to: data.to, message: data.message, queued_at: new Date().toISOString() };
+            await this.db.prepare(`
+                INSERT INTO notifications (user_id, type, content)
+                VALUES (?, ?, ?)
+            `).bind(data.user_id, 'sms', JSON.stringify(smsMetadata)).run();
+            return { success: true };
+        }
+        throw new Error('Unsupported message type');
+    }
+
     // Process federated posts (for decentralized social media)
     async processPendingFederatedPosts() {
-        this.logger.info('Processing pending federated posts');
-
-        const federatedPosts = await this.getPendingFederatedPosts();
-        let processed = 0;
-
-        for (const post of federatedPosts) {
-            try {
-                const federationData = JSON.parse(post.federation_metadata || '{}');
-                
-                // Send to each target domain
-                for (const domain of federationData.target_domains || []) {
-                    const federationPayload = {
-                        to: `blog@${domain}`,
-                        from: `blog@${this.getBlogDomain()}`,
-                        post: {
-                            id: post.id,
-                            title: post.title,
-                            content: post.content,
-                            author: federationData.author || 'Anonymous',
-                            published_at: post.created_at,
-                            source_url: `${this.getBlogUrl()}/post/${post.slug}`,
-                            federation_type: 'new_post'
-                        }
-                    };
-
-                    this.logger.info('Sending federated post', { 
-                        postId: post.id, 
-                        targetDomain: domain 
-                    });
-
-                    await this.proxyService.sendFederatedPost(federationPayload);
-                }
-
-                // Mark federation as sent
-                await this.markFederationSent(post.id);
-                processed++;
-
-                this.logger.info('Successfully sent federated post', { 
-                    postId: post.id,
-                    domains: federationData.target_domains?.length || 0
-                });
-
-            } catch (error) {
-                this.logger.error('Failed to send federated post', { 
-                    postId: post.id, 
-                    error: error.message 
-                });
-            }
-        }
-
+        const fedSvc = new FederationService(this.env);
+        const { processed } = await fedSvc.processFederationQueue();
         return processed;
     }
 
