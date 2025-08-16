@@ -1,3 +1,5 @@
+-- Full schema migration for new installations as of August 15, 2025
+
 -- USERS
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,9 +33,8 @@ CREATE TABLE posts (
     visibility TEXT DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
     moderation_status TEXT DEFAULT 'approved' CHECK (moderation_status IN ('approved', 'pending', 'rejected')),
     moderation_notes TEXT,
-    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
-    parent_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
-    thread_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
+    parent_id INTEGER,
+    thread_id INTEGER,
     federation_pending INTEGER DEFAULT 0,
     federation_sent_at TIMESTAMP,
     federation_metadata TEXT,
@@ -41,7 +42,10 @@ CREATE TABLE posts (
     retry_count INTEGER DEFAULT 0,
     last_error TEXT,
     last_attempt TIMESTAMP,
-    comments_enabled BOOLEAN DEFAULT TRUE
+    comments_enabled BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES posts(id) ON DELETE SET NULL,
+    FOREIGN KEY (thread_id) REFERENCES posts(id) ON DELETE SET NULL
 );
 
 -- REQUEST LOGS
@@ -112,7 +116,8 @@ CREATE TABLE notifications (
     content TEXT,
     related_post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
     is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    message_type TEXT CHECK (message_type IN ('email', 'sms', 'system', 'federated')) DEFAULT 'system'
 );
 
 -- TAGS
