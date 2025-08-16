@@ -50,7 +50,7 @@ function createExcerpt(content, maxLength = 300) {
   return defaultProcessor.render(excerptText);
 }
 
-// Alternative approach - create a proper markdown excerpt function
+// Ccreate a proper markdown excerpt function
 function createMarkdownExcerpt(content, maxLength = 300) {
   // Check for manual excerpt marker
   const moreIndex = content.indexOf('<!--more-->');

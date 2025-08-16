@@ -1,4 +1,6 @@
 import { renderTemplate } from '../base.js';
+import { renderMarkdown } from '../../../../lib.deadlight/core/src/markdown/processor.js';
+import { renderAuthorLink } from '../../utils/templates.js'
 
 export function renderSinglePost(post, user, navigation, config, comments = []) {
   if (!post) throw new Error('Post is undefined');
@@ -40,13 +42,15 @@ export function renderSinglePost(post, user, navigation, config, comments = []) 
     </div>
   ` : '<p class="no-comments">No comments yet.</p>';
 
+const fullContent = post.content.replace('<--!more-->', '');
+
 const content = `
     <h1 class="post-title">${post.title}</h1>
     <div class="post-meta">
-      <span>By ${post.author_username}</span>
+      <span>By ${renderAuthorLink(post.author_username)}</span>
       <span>| ${new Date(post.created_at).toLocaleDateString()}</span>
     </div>
-    <div class="post-content">${post.content}</div>
+    <div class="post-content">${renderMarkdown(fullContent)}</div>
     ${navigation ? `
       <div class="post-navigation">
         ${navigation.prev_id ? `<a href="/post/${navigation.prev_id}" class="button">Previous: ${navigation.prev_title}</a>` : ''}
