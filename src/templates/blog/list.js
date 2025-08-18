@@ -33,7 +33,7 @@ function createExcerpt(content, maxLength = 300) {
     .replace(/```[\s\S]*?```/g, '') // Remove code blocks
     .replace(/`(.+?)`/g, '$1') // Remove inline code
     .replace(/\n{2,}/g, ' ') // Replace multiple newlines with space
-    .replace(/\n/g, ' ') // Replace single newlines with space
+    .replace(/\n/g, '\n\n') // Keep blank lines ~Replace single newlines with space~
     .trim();
   
   let excerptText;
