@@ -11,7 +11,7 @@ export function renderSinglePost(post, user, navigation, config, comments = []) 
       <h1 class="post-title">This is a Comment</h1>
       <p>This content is a comment on <a href="${parentUrl}">${parentUrl}</a>.</p>
       <p>Content: ${post.content}</p>
-      <p class="post-meta">By ${post.author_username} | ${new Date(post.created_at).toLocaleDateString()}</p>
+      <p class="post-meta">By ${renderAuthorLink(post.author_username)}| ${new Date(post.created_at).toLocaleDateString()}</p>
       ${user ? `
         <div class="comment-actions">
           <a href="/admin/comments/edit/${post.id}" class="button edit-button">Edit</a>
@@ -29,7 +29,7 @@ export function renderSinglePost(post, user, navigation, config, comments = []) 
       ${comments.map((comment, index) => `
         <div class="comment" style="margin-left: ${comment.level * 20}px;">
           <p class="post-content">${comment.content}</p>
-          <p class="post-meta">By ${comment.author} | ${new Date(comment.published_at).toLocaleDateString()}</p>
+          <p class="post-meta">By ${renderAuthorLink(post.author_username)} | ${new Date(comment.published_at).toLocaleDateString()}</p>
           ${user ? `
             <div class="comment-actions">
               <a href="/admin/comments/edit/${comment.id}" class="button edit-button">Edit</a>
