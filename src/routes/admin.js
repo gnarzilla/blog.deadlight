@@ -214,7 +214,7 @@ export const adminRoutes = {
       }
 
       try {
-        const { SettingsModel } = await import('../../../../lib.deadlight/core/src/db/models/index.js');
+        const { SettingsModel } = await import('../../../lib.deadlight/core/src/db/models/index.js');
         const settingsModel = new SettingsModel(env.DB);
         const settings = await settingsModel.getAll();
         
@@ -236,7 +236,7 @@ export const adminRoutes = {
 
       try {
         const formData = await request.formData();
-        const { SettingsModel } = await import('../../../../lib.deadlight/core/src/db/models/index.js');
+        const { SettingsModel } = await import('../../../lib.deadlight/core/src/db/models/index.js');
         const settingsModel = new SettingsModel(env.DB);
         
         // Update text/number settings

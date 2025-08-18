@@ -1,6 +1,6 @@
 // src/services/outbox.js - Complete outbox queue management
 import { ProxyService } from './proxy.js';
-import { Logger } from '../../../../lib.deadlight/core/src/logging/logger.js';
+import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { FederationService } from './federation.js';
 
 export class OutboxService {
