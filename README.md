@@ -316,13 +316,7 @@ This is an open source project! Contributions welcome:
 ```
 
 ## License
-MIT - Use this however you want!
-
-## Acknowledgments
-Built with Cloudflare Workers, D1, and KV
-Security patterns inspired by OWASP guidelines
-Thanks to the Cloudflare Workers community
-Maintained with ❤️ and Diet Mountain Dew
+MIT
 
 ## Support
 
