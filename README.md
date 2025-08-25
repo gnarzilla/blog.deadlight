@@ -28,9 +28,9 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 ## 1. Key Features
 
 ### **Performance & Content**
-- **Near-zero latency**: Deployed on Cloudflare Workers to deliver content globally in milliseconds.
+- **Minimal latency**: Deployed on Cloudflare Workers to deliver content globally in milliseconds.
 - **D1 Database**: Uses D1 (SQLite at the edge) for fast, low-cost data access.
-- **Full Markdown support**: Write posts using a simple, intuitive syntax.
+- **Markdown support**: Write posts using a simple, intuitive syntax.
 - **SEO-friendly**: Generates clean URLs and post excerpts for better discoverability.
 
 ### **Security & Administration**
