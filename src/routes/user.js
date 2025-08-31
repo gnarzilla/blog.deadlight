@@ -1,5 +1,5 @@
 // src/routes/user.js
-import { checkAuth } from '../utils/auth.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 
 // Username validation (reusing your slug pattern)
 function validateUsername(username) {

@@ -216,7 +216,7 @@ const baseStyles = `
   /* Add to baseStyles */
   .post-excerpt {
     margin: 1rem 0;
-    color: var(--text-color);
+    color: var(--text-primary);
     line-height: 1.6;
     max-width: 100%;  /* Ensure it doesn't overflow */
     padding-bottom: 1rem;
@@ -226,7 +226,7 @@ const baseStyles = `
 
   /* For really long single-line excerpts */
   .post-excerpt p {
-    margin: 0;
+    margin-bottom: 1em; /* Or adjust to 1.5em etc. to match your theme's "blank line" feel */
     word-wrap: break-word;
     overflow-wrap: break-word;
   }

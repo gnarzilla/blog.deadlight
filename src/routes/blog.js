@@ -1,6 +1,6 @@
 import { renderPostList } from '../templates/blog/list.js';
 import { renderSinglePost } from '../templates/blog/single.js';
-import { checkAuth } from '../utils/auth.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { FederationService } from '../services/federation.js';
 
 export const blogRoutes = {

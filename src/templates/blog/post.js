@@ -1,6 +1,6 @@
 // src/templates/blog/post.js
 import { renderTemplate } from '../base.js';
-import { renderAuthorLink } from '../../utils/templates.js';
+import { renderAuthorLink } from '../../../../lib.deadlight/core/src/utils/templates.js'
 
 export function renderPost(post, author) {
   return `

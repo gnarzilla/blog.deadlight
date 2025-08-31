@@ -1,6 +1,6 @@
 import { renderTemplate } from '../base.js';
 import { renderMarkdown } from '../../../../lib.deadlight/core/src/markdown/processor.js';
-import { renderAuthorLink } from '../../utils/templates.js'
+import { renderAuthorLink } from '../../../../lib.deadlight/core/src/utils/templates.js'
 
 export function renderSinglePost(post, user, navigation, config, comments = []) {
   if (!post) throw new Error('Post is undefined');
