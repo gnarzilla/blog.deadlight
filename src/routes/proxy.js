@@ -3,6 +3,7 @@ import { ProxyService } from '../services/proxy.js';
 import { EnhancedOutboxService } from '../services/enhanced-outbox.js';
 import { FederationService } from '../services/federation.js';
 import { proxyDashboardTemplate } from '../templates/admin/proxyDashboard.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 
 export async function handleProxyRoutes(request, env, user) {
     try {
@@ -343,6 +344,93 @@ export const handleProxyTests = {
         }
     },
 
+    async statusStream(request, env) {
+        const user = await checkAuth(request, env);
+        if (!user) {
+            return new Response('Unauthorized', { status: 401 });
+        }
+
+        // Create SSE stream
+        const stream = new ReadableStream({
+            async start(controller) {
+                const encoder = new TextEncoder();
+                
+                // Send initial data
+                const sendUpdate = async () => {
+                    try {
+                        const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
+                        const outboxService = new EnhancedOutboxService(env);
+                        const federationService = new FederationService(env); // Add this
+                        
+                        const [proxyStatus, queueStatus, federationStatus] = await Promise.allSettled([
+                            proxyService.healthCheck(),
+                            outboxService.getStatus(),
+                            getFederationRealtimeStatus(env) // New function
+                        ]);
+                        
+                        const data = {
+                            timestamp: new Date().toISOString(),
+                            proxy_connected: proxyStatus.status === 'fulfilled' && proxyStatus.value.proxy_connected,
+                            blogApi: proxyStatus.status === 'fulfilled' ? proxyStatus.value.blog_api : null,
+                            emailApi: proxyStatus.status === 'fulfilled' ? proxyStatus.value.email_api : null,
+                            queueCount: queueStatus.status === 'fulfilled' ? queueStatus.value.queued_operations?.total || 0 : 0,
+                            circuitState: proxyService.getCircuitState(),
+                            
+                            // NEW: Federation real-time status
+                            federation: federationStatus.status === 'fulfilled' ? federationStatus.value : {
+                                connected_domains: 0,
+                                pending_posts: 0,
+                                recent_activity: [],
+                                trust_relationships: []
+                            }
+                        };
+                        
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+                    } catch (error) {
+                        console.error('SSE update error:', error);
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                            error: error.message,
+                            timestamp: new Date().toISOString(),
+                            proxy_connected: false
+                        })}\n\n`));
+                    }
+                };
+                
+                // Send initial update
+                await sendUpdate();
+                
+                // Set up interval for periodic updates
+                const interval = setInterval(sendUpdate, 5000); // Every 5 seconds
+                
+                // Cleanup when client disconnects
+                request.signal?.addEventListener('abort', () => {
+                    clearInterval(interval);
+                    controller.close();
+                });
+                
+                // Keep connection alive with heartbeat
+                const heartbeat = setInterval(() => {
+                    try {
+                        controller.enqueue(encoder.encode(': heartbeat\n\n'));
+                    } catch (error) {
+                        clearInterval(heartbeat);
+                        clearInterval(interval);
+                    }
+                }, 30000); // Every 30 seconds
+            }
+        });
+
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Cache-Control',
+            }
+        });
+    },
+
     async getCircuitStatus(request, env) {
         try {
             const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
@@ -384,4 +472,88 @@ export const handleProxyTests = {
         
         return recommendations;
     }
+    
 };
+
+// New function for real-time federation monitoring
+async function getFederationRealtimeStatus(env) {
+    const federationService = new FederationService(env);
+    
+    const [domains, pendingPosts, recentActivity] = await Promise.allSettled([
+        federationService.getConnectedDomains(),
+        getPendingFederationPosts(env.DB),
+        getRecentFederationActivity(env.DB)
+    ]);
+    
+    return {
+        connected_domains: domains.status === 'fulfilled' ? domains.value.length : 0,
+        trust_levels: domains.status === 'fulfilled' 
+            ? domains.value.reduce((acc, d) => { 
+                acc[d.trust_level] = (acc[d.trust_level] || 0) + 1; 
+                return acc; 
+              }, {})
+            : {},
+        pending_posts: pendingPosts.status === 'fulfilled' ? pendingPosts.value : 0,
+        recent_activity: recentActivity.status === 'fulfilled' ? recentActivity.value : [],
+        last_outgoing: await getLastFederationSent(env.DB),
+        last_incoming: await getLastFederationReceived(env.DB)
+    };
+}
+
+async function getPendingFederationPosts(db) {
+    const result = await db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM posts 
+        WHERE federation_pending = 1
+    `).first();
+    return result?.count || 0;
+}
+
+async function getRecentFederationActivity(db, limit = 5) {
+    const result = await db.prepare(`
+        SELECT 
+            id, title, 
+            json_extract(federation_metadata, '$.source_domain') as source_domain,
+            json_extract(federation_metadata, '$.received_at') as received_at,
+            post_type,
+            moderation_status
+        FROM posts 
+        WHERE post_type IN ('federated', 'comment') 
+            AND federation_metadata IS NOT NULL
+        ORDER BY created_at DESC 
+        LIMIT ?
+    `).bind(limit).all();
+    
+    return (result.results || []).map(row => ({
+        type: row.post_type,
+        title: row.title,
+        domain: row.source_domain,
+        timestamp: row.received_at,
+        status: row.moderation_status
+    }));
+}
+
+async function getLastFederationSent(db) {
+    const result = await db.prepare(`
+        SELECT federation_sent_at, title
+        FROM posts 
+        WHERE federation_sent_at IS NOT NULL 
+        ORDER BY federation_sent_at DESC 
+        LIMIT 1
+    `).first();
+    return result ? { timestamp: result.federation_sent_at, title: result.title } : null;
+}
+
+async function getLastFederationReceived(db) {
+    const result = await db.prepare(`
+        SELECT 
+            json_extract(federation_metadata, '$.received_at') as received_at,
+            title
+        FROM posts 
+        WHERE post_type = 'federated' 
+            AND federation_metadata IS NOT NULL
+        ORDER BY created_at DESC 
+        LIMIT 1
+    `).first();
+    return result ? { timestamp: result.received_at, title: result.title } : null;
+}

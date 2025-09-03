@@ -1256,5 +1256,53 @@ export const adminRoutes = {
         });
       }
     }
+  },
+  '/admin/proxy/status-stream': {
+    GET: async (request, env) => {
+      const user = await checkAuth(request, env);
+      if (!user) {
+        return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+
+      return await handleProxyTests.statusStream(request, env);
+    }
+  },
+
+  // Also add a JSON status endpoint for fallback
+  '/admin/proxy/status': {
+    GET: async (request, env) => {
+      const user = await checkAuth(request, env);
+      if (!user) {
+        return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+
+      try {
+        const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
+        const outboxService = new EnhancedOutboxService(env);
+        
+        const [proxyStatus, queueStatus] = await Promise.allSettled([
+          proxyService.healthCheck(),
+          outboxService.getStatus()
+        ]);
+        
+        return Response.json({
+          success: true,
+          data: {
+            proxy_connected: proxyStatus.status === 'fulfilled' && proxyStatus.value.proxy_connected,
+            blogApi: proxyStatus.status === 'fulfilled' ? proxyStatus.value.blog_api : null,
+            emailApi: proxyStatus.status === 'fulfilled' ? proxyStatus.value.email_api : null,
+            queueCount: queueStatus.status === 'fulfilled' ? queueStatus.value.queued_operations?.total || 0 : 0,
+            circuitState: proxyService.getCircuitState(),
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (error) {
+        return Response.json({
+          success: false,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
   }
 };
