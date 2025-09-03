@@ -100,17 +100,6 @@ deadlight/
         └── ...
 ```
 
-## **3. Market Comparison**
-
-| Feature | WordPress | Ghost | Deadlight |
-|---|---|---|---|
-| Self-host on edge | ❌ | ❌ | ✅ |
-| Proxy integration | ❌ | ❌ | ✅ |
-| Email federation | ❌ | ❌ | ✅ |
-| Real-time control | ❌ | ⚠️ | ✅ |
-| Protocol bridge | ❌ | ❌ | ✅ |
-| Zero tracking | ⚠️ | ✅ | ✅ |
-
 ## **4. Roadmap**
 - **Production Ready (v4)**: Proxy integration, email bridge, and federation testing.
 - **Active Development**: Full email client/server integration, SOCKS5 authentication, and production deployment guides.
@@ -126,8 +115,8 @@ deadlight/
 ### Deploy in 5 minutes
 
 ```bash
-git clone https://github.com/gnarzilla/deadlight.boo.git
-cd deadlight.boo
+git clone https://github.com/gnarzilla/blog.deadlight
+cd blog.deadlight
 npm install
 
 # Create your D1 database:
@@ -178,12 +167,12 @@ binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "blog_content_new"
-database_id = "05792bea-8178-4509-8927-bc79bfeb8340"
+database_name = "your-db-name"
+database_id = "your-database-id"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "4d39b9218b8e40dcbf1dc1b52f112dec"
+id = "your-kv-namespace-id"
 
 [env.production]
 name = "your-domain"
@@ -252,7 +241,7 @@ wrangler deploy
 $chmod +x scripts/gen-admin/seed-dev.sh
 $ ./scripts/gen-admin/seed-dev.sh -v
 Enter admin username: admin
-Enter admin email: admin@deadlight.boo
+Enter admin email: admin@your-domain.tld
 Enter admin password:
 Duplicate check result: 0 existing user(s) found.
 
@@ -280,7 +269,7 @@ Edit `src/config.js` to customize:
 - Theme defaults
 - Security settings
 
-Settings can be changed dynamically after deployment at `your-blog.com/admin/settings`
+Settings can be changed dynamically after deployment at `your-blog.tld/admin/settings`
 
 ### Customize styling
 Edit theme variables in `src/routes/styles.js`. The CSS uses variables for easy customization.
@@ -330,18 +319,6 @@ All responses include:
 - X-XSS-Protection: 1; mode=block
 - Referrer-Policy: strict-origin-when-cross-origin
 - Content-Security-Policy (configurable)
-
-## Contributing
-This is an open source project! Contributions welcome:
-```
-🐛 Report bugs via issues
-💡 Suggest features
-🔧 Submit PRs for fixes
-📖 Improve documentation
-🎨 Create themes
-🌍 Add translations
-🔒 Security audit
-```
 
 ## License
 MIT - Use this however you want!
