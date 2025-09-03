@@ -238,7 +238,11 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             };
 
             console.log('Proxy Dashboard JavaScript ready');
+
+        
+            
         })();
+        
         </script>
     `;
 
