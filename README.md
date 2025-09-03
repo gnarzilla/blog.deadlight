@@ -135,10 +135,10 @@ wrangler d1 create your-db-name
 
 # Initialize the database:
 # Local development
-wrangler d1 execute your-db-name --local --file=schema.sql
+wrangler d1 execute your-db-name --local --file=migrations/20250815_schema.sql
 
 # Production
-wrangler d1 execute your-db-name --remote --file=schema.sql
+wrangler d1 execute your-db-name --remote --file=migrations/20250815_schema.sql
 
 # Create KV namespace for rate limiting
 wrangler kv:namespace create "RATE_LIMIT"
@@ -147,33 +147,61 @@ wrangler kv:namespace create "RATE_LIMIT"
 
 ### Configure your domain and bindings in wrangler.toml:
 ```toml
-name = "yourdomain.com"
+name = "your-domain.tld"
 main = "src/index.js"
 compatibility_date = "2023-10-20"
 
+# Main domain (landing page)
 [[routes]]
-pattern = "yourdomain.com/*"
+pattern = "your-domain.tld/*"
 zone_id = "your-zone-id"
 
-pattern = "proxy.yourdomain.com/*"
-zone_id = "your-zone-id"
+# All subdomains (including blog and user subdomains)
+[[routes]]
+pattern = "*.your-domain.tld/*"
+zone_id = "your-zone-ida"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "your-db-name"
-database_id = "your-database-id-here"
-
-[[kv_namespaces]]
-binding = "RATE_LIMIT"
-id = "your-kv-namespace-id"
+[observability.logs]
+enabled = true
 
 [build]
 command = "npm install"
 
+# Non-sensitive vars here
 [vars]
-JWT_SECRET = "your-jwt-secret"
-X_API_KEY = "your-x-api-key"
-PROXY_URL = "http://localhost:8080" # For local development. For production http://[your-ip-address]:8080 Use curl ifconfig.me to determine local IP
+SITE_URL = "https://your-domain.tld"
+ENABLE_QUEUE_PROCESSING = "true"  
+
+[assets]
+directory = "./src/static"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "blog_content_new"
+database_id = "05792bea-8178-4509-8927-bc79bfeb8340"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "4d39b9218b8e40dcbf1dc1b52f112dec"
+
+[env.production]
+name = "your-domain"
+
+[env.production.vars]
+PROXY_URL = "https://proxy.your-domain.tld"
+SITE_URL = "https://your-domanin.tld"
+ENABLE_QUEUE_PROCESSING = "true"  # Explicitly set for production
+
+# Copy bindings to production env
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "your-db-name"
+database_id = "your-db-id"
+
+[[env.production.kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "your-kv-namespace-id"
 
 ```
 
