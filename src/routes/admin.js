@@ -678,6 +678,17 @@ export const adminRoutes = {
       return await handleProxyRoutes(request, env, user);
     }
   },
+  // Add this to your adminRoutes in routes/admin.js
+  '/admin/proxy/discover-domain': {
+    POST: async (request, env) => {
+      const user = await checkAuth(request, env);
+      if (!user) {
+        return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+
+      return await handleProxyTests.discoverDomain(request, env);
+    }
+  },
 
   // Proxy API Test Endpoints
   '/admin/proxy/test-blog-api': {
