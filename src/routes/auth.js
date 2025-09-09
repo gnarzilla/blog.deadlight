@@ -1,4 +1,4 @@
-// src/routes/auth.js - Updated with better rate limiting
+// src/routes/auth.js - Enhanced with proxy auth integration
 import { renderLoginForm } from '../templates/auth/index.js';
 import { hashPassword, verifyPassword } from '../../../lib.deadlight/core/src/auth/password.js';
 import { createJWT } from '../../../lib.deadlight/core/src/auth/jwt.js';
@@ -6,41 +6,81 @@ import { UserModel } from '../../../lib.deadlight/core/src/db/models/user.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { Validator, FormValidator, CSRFProtection } from '../../../lib.deadlight/core/src/security/validation.js';
 import { authLimiter } from '../../../lib.deadlight/core/src/security/ratelimit.js';
+import { authService } from '../services/auth-proxy.js';
 
 export const authRoutes = {
   '/login': {
     GET: async (request, env) => {
-      // Generate simple CSRF token
+      // Check if already logged in
+      const existingToken = request.headers.get('Cookie')?.match(/token=([^;]+)/)?.[1];
+      if (existingToken) {
+        try {
+          // Verify with proxy if enabled
+          if (env.USE_PROXY_AUTH) {
+            const verification = await authService.verify(existingToken);
+            if (verification.valid) {
+              return new Response(null, {
+                status: 302,
+                headers: { 'Location': '/' }
+              });
+            }
+          } else {
+            // Fallback to local verification
+            const { verifyJWT } = await import('../../../lib.deadlight/core/src/auth/jwt.js');
+            const user = await verifyJWT(existingToken, env.JWT_SECRET);
+            if (user) {
+              return new Response(null, {
+                status: 302,
+                headers: { 'Location': '/' }
+              });
+            }
+          }
+        } catch (error) {
+          // Invalid token, continue to login page
+        }
+      }
+      
+      // Generate CSRF token as before
       const csrfToken = CSRFProtection.generateToken();
       
-      // Set CSRF cookie
       const headers = new Headers({
         'Content-Type': 'text/html',
         'Set-Cookie': `csrf_token=${csrfToken}; HttpOnly; SameSite=Strict; Path=/`
       });
       
-      return new Response(renderLoginForm({ csrfToken }), { headers });
+      return new Response(renderLoginForm({ 
+        csrfToken,
+        useProxyAuth: env.USE_PROXY_AUTH 
+      }), { headers });
     },
 
     POST: async (request, env) => {
       const userModel = new UserModel(env.DB);
       const logger = new Logger({ context: 'auth' });
       
-      // Check rate limit first
-      const rateLimitResult = await authLimiter.isAllowed(request, env);
-      if (!rateLimitResult.allowed) {
-        const retryAfter = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
-        logger.warn('Login rate limit exceeded');
-        
-        return new Response(renderLoginForm({ 
-          error: `Too many login attempts. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`
-        }), {
-          status: 429,
-          headers: { 
-            'Content-Type': 'text/html',
-            'Retry-After': retryAfter.toString()
-          }
-        });
+      // Add debug logging BEFORE formData usage
+      logger.info('Login POST request', { 
+        useProxyAuth: env.USE_PROXY_AUTH,
+        hasBody: request.body !== null
+      });
+      
+      // For proxy auth, rate limiting is handled by the proxy
+      if (!env.USE_PROXY_AUTH) {
+        const rateLimitResult = await authLimiter.isAllowed(request, env);
+        if (!rateLimitResult.allowed) {
+          const retryAfter = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+          logger.warn('Login rate limit exceeded');
+          
+          return new Response(renderLoginForm({ 
+            error: `Too many login attempts. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`
+          }), {
+            status: 429,
+            headers: { 
+              'Content-Type': 'text/html',
+              'Retry-After': retryAfter.toString()
+            }
+          });
+        }
       }
       
       try {
@@ -52,19 +92,19 @@ export const authRoutes = {
 
         const formData = await formDataRequest.formData();
         
-        // Get CSRF tokens
+        // NOW we can log formData info
+        logger.info('Login form data received', { 
+          hasUsername: !!formData.get('username'),
+          hasPassword: !!formData.get('password')
+        });
+        
+        // CSRF validation...
         const cookieToken = CSRFProtection.getTokenFromCookie(request);
         const formToken = formData.get('csrf_token');
         
-        // Simple CSRF validation - just check they match
         if (!cookieToken || !formToken || cookieToken !== formToken) {
-          logger.warn('Invalid CSRF token in login attempt', { 
-            hasCookie: !!cookieToken, 
-            hasForm: !!formToken,
-            match: cookieToken === formToken 
-          });
+          logger.warn('Invalid CSRF token in login attempt');
           
-          // Generate new token
           const newToken = CSRFProtection.generateToken();
           const headers = new Headers({
             'Content-Type': 'text/html',
@@ -80,27 +120,35 @@ export const authRoutes = {
           });
         }
         
-        // Validate form inputs
-        const validation = await FormValidator.validateFormData(formData, {
-          username: Validator.username,
-          password: Validator.password
-        });
+        // Now fix the validation to work with your Validator class
+        const usernameValidation = Validator.username(formData.get('username'));
+        const passwordValidation = Validator.password(formData.get('password'));
         
-        if (!validation.success) {
-          logger.info('Login validation failed', { errors: validation.errors });
+        const errors = {};
+        if (!usernameValidation.valid) {
+          errors.username = usernameValidation.error;
+        }
+        if (!passwordValidation.valid) {
+          errors.password = passwordValidation.error;
+        }
+        
+        if (Object.keys(errors).length > 0) {
+          logger.info('Login validation failed', { errors });
           
           return new Response(renderLoginForm({
             error: 'Please correct the following errors',
-            validationErrors: validation.errors,
+            validationErrors: errors,
             username: Validator.escapeHTML(formData.get('username') || ''),
-            csrfToken: cookieToken // Keep same token
+            csrfToken: cookieToken
           }), {
             status: 400,
             headers: { 'Content-Type': 'text/html' }
           });
         }
         
-        const { username, password } = validation.data;
+        const username = formData.get('username');
+        const password = formData.get('password');
+        
         logger.info('Login attempt', { username, passwordLength: password?.length });
 
         // Authenticate user
@@ -112,14 +160,14 @@ export const authRoutes = {
           return new Response(renderLoginForm({
             error: 'Invalid username or password',
             username: Validator.escapeHTML(username),
-            csrfToken: cookieToken // Keep same token
+            csrfToken: cookieToken
           }), {
             status: 401,
             headers: { 'Content-Type': 'text/html' }
           });
         }
 
-        // SUCCESS - Clear rate limit
+        // SUCCESS - rest of your code...
         const identifier = request.headers.get('CF-Connecting-IP') || 
                           request.headers.get('X-Forwarded-For') || 
                           'unknown';
@@ -138,9 +186,8 @@ export const authRoutes = {
         const url = new URL(request.url);
         const isSecure = url.protocol === 'https:';
         
-        // Clear CSRF and set auth token
         const headers = new Headers({
-          'Location': url.origin + '/'
+          'Location': user.role === 'admin' ? '/admin' : '/'
         });
         
         headers.append('Set-Cookie', `token=${token}; HttpOnly; ${isSecure ? 'Secure; ' : ''}SameSite=Strict; Path=/`);
@@ -156,7 +203,6 @@ export const authRoutes = {
       } catch (error) {
         logger.error('Login error', { error: error.message, stack: error.stack });
         
-        // Generate new token for error
         const newToken = CSRFProtection.generateToken();
         const headers = new Headers({
           'Content-Type': 'text/html',
@@ -174,24 +220,85 @@ export const authRoutes = {
     }
   },
 
+  '/auth/refresh': {
+    POST: async (request, env) => {
+      if (!env.USE_PROXY_AUTH) {
+        return new Response('Not available', { status: 404 });
+      }
+      
+      const logger = new Logger({ context: 'auth-refresh' });
+      
+      try {
+        // Get refresh token from cookie
+        const refreshToken = request.headers.get('Cookie')?.match(/refresh_token=([^;]+)/)?.[1];
+        
+        if (!refreshToken) {
+          return new Response(JSON.stringify({ error: 'No refresh token' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        
+        // Call proxy refresh endpoint
+        const result = await authService.refresh(refreshToken);
+        
+        // Return new tokens
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        
+        // Update access token cookie
+        headers.append('Set-Cookie', 
+          `token=${result.accessToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600`
+        );
+        
+        // Update refresh token cookie if provided
+        if (result.refreshToken) {
+          headers.append('Set-Cookie', 
+            `refresh_token=${result.refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/auth/refresh; Max-Age=${30 * 24 * 60 * 60}`
+          );
+        }
+        
+        return new Response(JSON.stringify({
+          access_token: result.accessToken,
+          expires_in: 3600
+        }), { headers });
+        
+      } catch (error) {
+        logger.error('Refresh token error', { error: error.message });
+        
+        return new Response(JSON.stringify({ error: 'Invalid refresh token' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+  },
+
   '/logout': {
     GET: async (request, env) => {
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': '/',
-          'Set-Cookie': `token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`
-        }
-      });
+      return authRoutes['/logout'].POST(request, env);
     },
+    
     POST: async (request, env) => {
-      return new Response(null, {
-        status: 302,
-        headers: {
-          'Location': '/',
-          'Set-Cookie': `token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`
+      const logger = new Logger({ context: 'auth-logout' });
+      
+      // If using proxy auth, notify it
+      if (env.USE_PROXY_AUTH) {
+        const token = request.headers.get('Cookie')?.match(/token=([^;]+)/)?.[1];
+        if (token) {
+          try {
+            await authService.logout(token);
+          } catch (error) {
+            logger.warn('Proxy logout failed', { error: error.message });
+          }
         }
-      });
+      }
+      
+      // Clear all auth cookies
+      const headers = new Headers({ 'Location': '/' });
+      headers.append('Set-Cookie', `token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
+      headers.append('Set-Cookie', `refresh_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
+      
+      return new Response(null, { status: 302, headers });
     }
   },
 
@@ -204,6 +311,7 @@ export const authRoutes = {
       });
     }
   },
+
   '/generate-admin': {
     GET: async (request, env) => {
       const { hashPassword } = await import('../../../lib.deadlight/core/src/auth/password.js');

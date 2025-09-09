@@ -860,6 +860,83 @@ export const adminRoutes = {
     }
   },
 
+  '/admin/federate-post/(?<id>[^/]+)': {
+      GET: async (request, env) => {  // Changed to GET
+          const user = await checkAuth(request, env);
+          if (!user) {
+              return Response.redirect(`${new URL(request.url).origin}/login`);
+          }
+
+          try {
+              const postId = request.params.id;
+              const federationService = new FederationService(env);
+              
+              // Get the post
+              const post = await env.DB.prepare('SELECT * FROM posts WHERE id = ?').bind(postId).first();
+              if (!post) {
+                  return Response.json({ success: false, error: 'Post not found' });
+              }
+
+              // Get trusted domains
+              const domains = await federationService.getConnectedDomains();
+              const targetDomains = domains.map(d => d.domain);
+              
+              if (targetDomains.length === 0) {
+                  return Response.json({ success: false, error: 'No federated domains found' });
+              }
+
+              // Send federation
+              const results = await federationService.sendFederatedPost(post, targetDomains);
+              
+              return Response.json({ 
+                  success: true, 
+                  message: `Post "${post.title}" federated to ${targetDomains.length} domains`,
+                  results 
+              });
+          } catch (error) {
+              console.error('Federation error:', error);
+              return Response.json({ success: false, error: error.message });
+          }
+      },
+      POST: async (request, env) => {
+          const user = await checkAuth(request, env);
+          if (!user) {
+              return Response.redirect(`${new URL(request.url).origin}/login`);
+          }
+
+          try {
+              const postId = request.params.id;
+              const federationService = new FederationService(env);
+              
+              // Get the post
+              const post = await env.DB.prepare('SELECT * FROM posts WHERE id = ?').bind(postId).first();
+              if (!post) {
+                  return Response.json({ success: false, error: 'Post not found' });
+              }
+
+              // Get trusted domains
+              const domains = await federationService.getConnectedDomains();
+              const targetDomains = domains.map(d => d.domain);
+              
+              if (targetDomains.length === 0) {
+                  return Response.json({ success: false, error: 'No federated domains found' });
+              }
+
+              // Send federation
+              const results = await federationService.sendFederatedPost(post, targetDomains);
+              
+              return Response.json({ 
+                  success: true, 
+                  message: `Post federated to ${targetDomains.length} domains`,
+                  results 
+              });
+          } catch (error) {
+              console.error('Federation error:', error);
+              return Response.json({ success: false, error: error.message });
+          }
+      }
+  },
+
 
   '/admin/inject-emails': {
     GET: async (request, env) => {
