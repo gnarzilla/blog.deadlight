@@ -1,4 +1,4 @@
-// src/routes/index.js
+// src/routes/index.js - Enhanced Router with group method
 export class Router {
   constructor() {
     this.routes = new Map();
@@ -13,16 +13,28 @@ export class Router {
     return this;
   }
 
-  register(path, handlers) {
+  // Enhanced register method with optional middleware
+  register(path, handlers, routeMiddleware = []) {
     console.log('Registering route:', path);
     const routePattern = path.replace(/\/:(\w+)/g, '/(?<$1>[^/]+)');
     this.routes.set(routePattern, {
       pattern: new RegExp(`^${routePattern}$`),
-      handlers
+      handlers,
+      middleware: Array.isArray(routeMiddleware) ? routeMiddleware : [routeMiddleware]
     });
   }
 
-  async handle(request, env) {
+  // NEW METHOD: Register multiple routes with shared middleware
+  group(middleware, registerFunc) {
+    const groupRouter = {
+      register: (path, handlers) => {
+        this.register(path, handlers, middleware);
+      }
+    };
+    registerFunc(groupRouter);
+  }
+
+  async handle(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
     
@@ -31,6 +43,7 @@ export class Router {
 
     // Find matching route
     let matchedRoute = null;
+    let routeMiddleware = [];
     let params = {};
     
     for (const [_, route] of this.routes) {
@@ -40,6 +53,7 @@ export class Router {
         if (handler) {
           matchedRoute = handler;
           params = match.groups || {};
+          routeMiddleware = route.middleware || [];
           break;
         }
       }
@@ -53,23 +67,23 @@ export class Router {
     request.params = params;
     request.query = Object.fromEntries(url.searchParams);
 
-    // Create middleware chain
-    const chain = [...this.middlewares];
+    // Combine global and route-specific middleware
+    const allMiddleware = [...this.middlewares, ...routeMiddleware];
     
     // Build the chain from the inside out
-    let handler = matchedRoute;
+    let handler = (req, env, ctx) => matchedRoute(req, env, ctx);
     
-    for (let i = chain.length - 1; i >= 0; i--) {
-      const middleware = chain[i];
+    for (let i = allMiddleware.length - 1; i >= 0; i--) {
+      const middleware = allMiddleware[i];
       const nextHandler = handler;
-      handler = async (req, env) => {
-        return await middleware(req, env, async () => {
-          return await nextHandler(req, env);
+      handler = async (req, env, ctx) => {
+        return await middleware(req, env, ctx, async () => {
+          return await nextHandler(req, env, ctx);
         });
       };
     }
 
-    // Execute the chain
-    return await handler(request, env);
+    // Execute the chain with ctx
+    return await handler(request, env, ctx);
   }
 }

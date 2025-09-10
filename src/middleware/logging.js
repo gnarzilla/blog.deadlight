@@ -1,4 +1,4 @@
-// Utility to extract client IP from request
+// src/middleware/logging.js - Updated to work with ctx parameter
 function getClientIP(request) {
   return request.headers.get('cf-connecting-ip') || 
          request.headers.get('x-real-ip') || 
@@ -6,7 +6,6 @@ function getClientIP(request) {
          'unknown';
 }
 
-// Create the logs table if it doesn't exist
 const initLogsTable = async (db) => {
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS request_logs (
@@ -25,7 +24,7 @@ const initLogsTable = async (db) => {
   `).run();
 };
 
-// Separate function to log the completed request
+// Keep your existing logRequest function
 export const logRequest = async (request, response, env) => {
   try {
     const duration = Date.now() - request.timing.startTime;
@@ -60,7 +59,15 @@ export const logRequest = async (request, response, env) => {
   }
 };
 
-export const loggingMiddleware = async (request, env, next) => {
+// Updated middleware with ctx support
+export const loggingMiddleware = async (request, env, ctx, next) => {
+  // Handle both old (3 params) and new (4 params) signature
+  if (typeof ctx === 'function' && !next) {
+    // Old signature: (request, env, next)
+    next = ctx;
+    ctx = null;
+  }
+  
   const startTime = Date.now();
   const url = new URL(request.url);
   
@@ -68,7 +75,7 @@ export const loggingMiddleware = async (request, env, next) => {
     // Initialize logs table if needed
     await initLogsTable(env.DB);
     
-    // Collect request data (avoid body)
+    // Collect request data
     const requestData = {
       path: url.pathname,
       method: request.method,
@@ -78,7 +85,7 @@ export const loggingMiddleware = async (request, env, next) => {
       country: request.headers.get('cf-ipcountry') || 'unknown'
     };
     
-    // Add analytics data to request (no body access)
+    // Add analytics data to request
     request.analytics = requestData;
     request.timing = { startTime };
     
@@ -86,10 +93,14 @@ export const loggingMiddleware = async (request, env, next) => {
     const response = await next();
     
     // Log the completed request
-    const duration = Date.now() - startTime;
-    
     if (response && typeof response.status === 'number') {
-      await logRequest(request, response, env);
+      if (ctx && ctx.waitUntil) {
+        // Use waitUntil for async logging if available
+        ctx.waitUntil(logRequest(request, response, env));
+      } else {
+        // Otherwise await it
+        await logRequest(request, response, env);
+      }
     } else {
       await logRequest(request, { status: 500, ok: false, statusText: 'Invalid response' }, env);
       console.warn('Response undefined or invalid, logged with status 500', { path: requestData.path });

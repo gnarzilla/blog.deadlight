@@ -1,3 +1,4 @@
+// src/index.js - Updated with route-specific middleware
 import { Router } from './routes/index.js';
 import { styleRoutes } from './routes/styles.js';
 import { staticRoutes } from './routes/static.js';
@@ -5,37 +6,84 @@ import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
 import { blogRoutes } from './routes/blog.js';
 import { inboxRoutes } from './routes/inbox.js';
+import { apiRoutes } from './routes/api.js';
 import { userRoutes } from './routes/user.js';
-import { errorMiddleware } from './middleware/error.js';
-import { loggingMiddleware } from './middleware/logging.js';
+import { errorMiddleware, loggingMiddleware } from './middleware/index.js';
+import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './middleware/index.js';
 import { rateLimitMiddleware, securityHeadersMiddleware } from '../../lib.deadlight/core/src/security/middleware.js';
 import { OutboxService } from './services/outbox.js';
 
 const router = new Router();
 
-// Add middleware
+// Global middleware - applied to all routes
 router.use(errorMiddleware);
 router.use(loggingMiddleware);
 
-// Register routes
-[
-  { name: 'blog', routes: blogRoutes },
-  { name: 'user', routes: userRoutes },
-  { name: 'style', routes: styleRoutes },
-  { name: 'static', routes: staticRoutes },
-  { name: 'auth', routes: authRoutes },
-  { name: 'admin', routes: adminRoutes },
-  { name: 'inbox', routes: inboxRoutes }
-].forEach(({ name, routes }) => {
-  console.log(`Registering ${name} routes:`, Object.keys(routes));
-  Object.entries(routes).forEach(([path, handlers]) => {
-    router.register(path, handlers);
+// Public routes (no auth required)
+router.group([], (r) => {
+  // Blog routes - public
+  Object.entries(blogRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
+  });
+  
+  // Style routes - public
+  Object.entries(styleRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
+  });
+  
+  // Static routes - public
+  Object.entries(staticRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
+  });
+  
+  // Auth routes - public (login/logout)
+  Object.entries(authRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
+  });
+  
+  // Public API endpoints
+  r.register('/api/health', apiRoutes['/api/health']);
+  r.register('/api/status', apiRoutes['/api/status']);
+  r.register('/api/blog/status', apiRoutes['/api/blog/status']);
+  r.register('/api/blog/posts', apiRoutes['/api/blog/posts']);
+});
+
+// Authenticated user routes
+router.group([authMiddleware], (r) => {
+  // User routes - require auth
+  Object.entries(userRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
+  });
+  
+  // Inbox routes - require auth
+  Object.entries(inboxRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
   });
 });
 
+// Admin routes - require auth + admin
+router.group([authMiddleware, requireAdminMiddleware], (r) => {
+  Object.entries(adminRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
+  });
+});
+
+// Protected API routes - use API auth
+router.group([apiAuthMiddleware], (r) => {
+  // Email endpoints
+  r.register('/api/email/receive', apiRoutes['/api/email/receive']);
+  r.register('/api/email/fetch', apiRoutes['/api/email/fetch']);
+  r.register('/api/email/pending-replies', apiRoutes['/api/email/pending-replies']);
+  
+  // Any other protected API endpoints would go here
+});
+
+// Log registered routes for debugging
+console.log('Routes registered:', Array.from(router.routes.keys()));
+
 // Start queue processor when Worker initializes
 let queueProcessorStarted = false;
-async function startQueueProcessor(env, intervalMs = 300000) { // 5 minutes
+async function startQueueProcessor(env, intervalMs = 300000) {
   if (!env.ENABLE_QUEUE_PROCESSING) {
     console.log('Queue processing disabled');
     return;
@@ -58,9 +106,17 @@ async function startQueueProcessor(env, intervalMs = 300000) { // 5 minutes
 
 export default {
   async fetch(request, env, ctx) {
-    // Start queue processor on first request
     ctx.waitUntil(startQueueProcessor(env));
-    // Apply security middleware
+    
+    // Check if rate limiting is enabled
+    if (env.DISABLE_RATE_LIMITING === 'true') {
+      // Skip rate limiting entirely
+      return securityHeadersMiddleware(request, env, ctx, () =>
+        router.handle(request, env, ctx)
+      );
+    }
+    
+    // Normal flow with rate limiting
     return rateLimitMiddleware(request, env, ctx, () =>
       securityHeadersMiddleware(request, env, ctx, () =>
         router.handle(request, env, ctx)
