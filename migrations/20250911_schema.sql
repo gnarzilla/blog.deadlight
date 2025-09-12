@@ -1,7 +1,7 @@
 -- Full schema migration for new installations as of August 15, 2025
 
 -- USERS
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE users (
 );
 
 -- POSTS
-CREATE TABLE posts (
+CREATE TABLE IF NOT EXISTS posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE posts (
 );
 
 -- REQUEST LOGS
-CREATE TABLE request_logs (
+CREATE TABLE IF NOT EXISTS request_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     path TEXT NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE request_logs (
 );
 
 -- SETTINGS
-CREATE TABLE settings (
+CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
     type TEXT DEFAULT 'string',
@@ -72,14 +72,14 @@ CREATE TABLE settings (
 );
 
 -- USER SETTINGS
-CREATE TABLE user_settings (
+CREATE TABLE IF NOT EXISTS user_settings (
     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     key TEXT NOT NULL,
     value TEXT
 );
 
 -- FEDERATION TRUST
-CREATE TABLE federation_trust (
+CREATE TABLE IF NOT EXISTS federation_trust (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     domain TEXT UNIQUE NOT NULL,
     public_key TEXT NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE federation_trust (
 );
 
 -- API TOKENS
-CREATE TABLE api_tokens (
+CREATE TABLE IF NOT EXISTS api_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     token TEXT UNIQUE NOT NULL,
@@ -100,7 +100,7 @@ CREATE TABLE api_tokens (
 );
 
 -- POST META
-CREATE TABLE post_meta (
+CREATE TABLE IF NOT EXISTS post_meta (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
     key TEXT NOT NULL,
@@ -109,7 +109,7 @@ CREATE TABLE post_meta (
 );
 
 -- NOTIFICATIONS
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     type TEXT CHECK (type IN ('comment', 'like', 'mention', 'follow', 'system')),
@@ -121,23 +121,40 @@ CREATE TABLE notifications (
 );
 
 -- TAGS
-CREATE TABLE tags (
+CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL
 );
 
 -- POST TAGS
-CREATE TABLE post_tags (
+CREATE TABLE IF NOT EXISTS post_tags (
     post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
     tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
     PRIMARY KEY (post_id, tag_id)
 );
 
 -- POST REACTIONS
-CREATE TABLE post_reactions (
+CREATE TABLE IF NOT EXISTS post_reactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     reaction TEXT CHECK (reaction IN ('like', 'dislike')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ANALYTICS MIDDLEWARE
+CREATE TABLE IF NOT EXISTS analytics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    path TEXT NOT NULL,
+    method TEXT NOT NULL,
+    status INTEGER,
+    duration INTEGER,
+    ip TEXT,
+    country TEXT,
+    user_agent TEXT,
+    referer TEXT,
+    error TEXT,
+    date_bucket TEXT GENERATED ALWAYS AS (date(timestamp)) STORED,
+    hour_bucket INTEGER GENERATED ALWAYS AS (strftime('%H', timestamp)) STORED
 );

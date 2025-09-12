@@ -14,6 +14,14 @@ import { renderTemplate } from '../templates/base.js';
 import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { DatabaseError } from '../../../lib.deadlight/core/src/db/base.js';
+import { renderAnalyticsTemplate } from '../templates/admin/analytics.js'
+import { getAnalyticsSummary, getTopPaths, getCountryStats, getHourlyTraffic } from '../middleware/analytics.js';
+import { ProxyService } from '../services/proxy.js';
+import { EnhancedOutboxService } from '../services/enhanced-outbox.js';
+import { configService } from '../services/config.js';
+import { renderAdminDashboard } from '../templates/admin/index.js';
+import { SettingsModel } from '../../../lib.deadlight/core/src/db/models/index.js';        
+import { renderSettings } from '../templates/admin/settings.js';
 
 export const adminRoutes = {
   '/admin': {
@@ -25,7 +33,6 @@ export const adminRoutes = {
 
       try {
         // Get dynamic config
-        const { configService } = await import('../services/config.js');
         const config = await configService.getConfig(env.DB);
 
         // Gather stats using direct DB queries
@@ -37,7 +44,7 @@ export const adminRoutes = {
         };
 
         let posts = [];
-        let requestStats = []; // You can implement this later if needed
+        let requestStats = []; // can implement this later if needed
 
         try {
           // Count total posts (excluding emails)
@@ -79,11 +86,9 @@ export const adminRoutes = {
 
         } catch (dbError) {
           console.error('Database query error in admin dashboard:', dbError);
-          // Keep default empty stats if queries fail
         }
 
-        // Your template expects: renderAdminDashboard(stats, posts, requestStats, user, config)
-        const { renderAdminDashboard } = await import('../templates/admin/dashboard.js');
+        // template expects: renderAdminDashboard(stats, posts, requestStats, user, config)
         return new Response(renderAdminDashboard(stats, posts, requestStats, user, config), {
           headers: { 'Content-Type': 'text/html' }
         });
@@ -93,7 +98,6 @@ export const adminRoutes = {
         
         // Fallback with minimal stats
         const fallbackStats = { totalPosts: 0, totalUsers: 0, postsToday: 0, publishedPosts: 0 };
-        const { renderAdminDashboard } = await import('../templates/admin/dashboard.js');
         
         try {
           return new Response(renderAdminDashboard(fallbackStats, [], [], user, config), {
@@ -122,8 +126,6 @@ export const adminRoutes = {
       }
 
       try {
-        // Get dynamic config
-        const { configService } = await import('../services/config.js');
         const config = await configService.getConfig(env.DB);
         
         const postId = request.params.id;
@@ -214,11 +216,10 @@ export const adminRoutes = {
       }
 
       try {
-        const { SettingsModel } = await import('../../../lib.deadlight/core/src/db/models/index.js');
+
         const settingsModel = new SettingsModel(env.DB);
         const settings = await settingsModel.getAll();
-        
-        const { renderSettings } = await import('../templates/admin/settings.js');
+
         return new Response(renderSettings(settings, user), {
           headers: { 'Content-Type': 'text/html' }
         });
@@ -1345,6 +1346,7 @@ export const adminRoutes = {
       }
     }
   },
+
   '/admin/proxy/status-stream': {
     GET: async (request, env) => {
       const user = await checkAuth(request, env);
@@ -1356,7 +1358,6 @@ export const adminRoutes = {
     }
   },
 
-  // Also add a JSON status endpoint for fallback
   '/admin/proxy/status': {
     GET: async (request, env) => {
       const user = await checkAuth(request, env);
@@ -1391,6 +1392,83 @@ export const adminRoutes = {
           timestamp: new Date().toISOString()
         });
       }
+    }
+  },
+  // Temp dev route
+  '/admin/analytics-debug': {
+    GET: async (request, env, ctx) => {
+      try {
+        // Check if analytics table exists
+        const tableCheck = await env.DB.prepare(`
+          SELECT name FROM sqlite_master 
+          WHERE type='table' AND name='analytics'
+        `).first();
+        
+        if (!tableCheck) {
+          return new Response('Analytics table does not exist', { status: 404 });
+        }
+        
+        // Get table schema
+        const schema = await env.DB.prepare(`
+          SELECT sql FROM sqlite_master 
+          WHERE type='table' AND name='analytics'
+        `).first();
+        
+        // Get column info
+        const columns = await env.DB.prepare(`
+          PRAGMA table_info(analytics)
+        `).all();
+        
+        // Try a simple count
+        let count = 0;
+        try {
+          const countResult = await env.DB.prepare(`
+            SELECT COUNT(*) as count FROM analytics
+          `).first();
+          count = countResult.count;
+        } catch (e) {
+          count = `Error: ${e.message}`;
+        }
+        
+        return new Response(JSON.stringify({
+          exists: true,
+          schema: schema.sql,
+          columns: columns.results,
+          rowCount: count
+        }, null, 2), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: error.message,
+          stack: error.stack
+        }, null, 2), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+  },
+
+  '/admin/analytics': {
+    GET: async (request, env, ctx) => {
+      const [summary, topPaths, hourly, countries] = await Promise.all([
+        getAnalyticsSummary(env, 7),
+        getTopPaths(env, 7, 10),
+        getHourlyTraffic(env, 1),
+        getCountryStats(env, 7)
+      ]);
+      
+      // Render analytics dashboard
+      return new Response(renderAnalyticsTemplate({
+        summary,
+        topPaths,
+        hourlyTraffic: hourly,
+        countryStats: countries
+      }), {
+        headers: { 'Content-Type': 'text/html' }
+      });
     }
   }
 };

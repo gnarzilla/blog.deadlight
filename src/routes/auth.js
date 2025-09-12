@@ -172,7 +172,10 @@ export const authRoutes = {
                           request.headers.get('X-Forwarded-For') || 
                           'unknown';
         const rateLimitKey = `rl:auth:${identifier}`;
-        await env.RATE_LIMIT.delete(rateLimitKey);
+
+        if (env.DISABLE_RATE_LIMITING !== 'true' && env.RATE_LIMIT) {
+          await env.RATE_LIMIT.delete(rateLimitKey);
+        }
         logger.info('Cleared rate limit after successful login', { identifier });
 
         const { user } = authResult;
