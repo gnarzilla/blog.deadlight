@@ -1,7 +1,7 @@
 // src/templates/admin/analytics.js
 import { renderTemplate } from '../base.js';
 
-export function renderAnalyticsTemplate({ summary, topPaths, hourlyTraffic, countryStats }) {
+export function renderAnalyticsTemplate({ summary, topPaths, hourlyTraffic, countryStats, user, config=null }) {
   const maxRequests = Math.max(...hourlyTraffic.map(h => h.requests), 1);
 
   const content = `
@@ -109,5 +109,5 @@ export function renderAnalyticsTemplate({ summary, topPaths, hourlyTraffic, coun
     </body>
     </html>
   `;
-  return renderTemplate('Analytics', content);
+  return renderTemplate('Analytics', content, user, config);
 }

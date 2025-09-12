@@ -59,6 +59,7 @@ const content = `
     ` : ''}
     ${user ? `<a href="/admin/add-comment/${post.id}" class="button">Add Comment</a>` : ''}
     ${user ? `<a href="/admin/edit/${post.id}" class="button">Edit</a>` : ''}
+    ${user ? `<a href="/admin/federate-post/${post.id}" class="button">Federate Post</a>` : ''}
     ${commentHtml}
   `;
   return renderTemplate(post.title, content, user, config);

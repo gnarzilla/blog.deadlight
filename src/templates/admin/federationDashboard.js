@@ -15,6 +15,9 @@ export function federationDashboard(federatedPosts, domains, user, config) {
         <h3 id="federated-posts-count">${federatedPosts.length}</h3>
         <p>Federated Posts</p>
       </div>
+      <div class="stat-card">
+        <h3 id="connected-blogs">${domains.list}</h3>
+        <p>Connected Domains</p>
     </div>
 
     <div class="federation-actions">

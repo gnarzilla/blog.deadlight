@@ -984,10 +984,10 @@ export const adminRoutes = {
           {
             subject: "Test Email for Deadlight Comm",
             body: "Hello,\n\nThis is a test email to check if the inbox rendering works correctly in Deadlight Comm.\n\nBest regards,\nTest User",
-            from: "Test User <test@example.com>",
+            from: "Thatch <gnarzilla@deadlight.boo>",
             to: "deadlight.boo@gmail.com",
             date: "Sun, 03 Aug 2025 10:00:00 -0700",
-            message_id: "test-1234567890@example.com"
+            message_id: "test-1234567890@deadlight.boo"
           }
         ];
 
@@ -1131,34 +1131,6 @@ export const adminRoutes = {
         SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50
       `).bind(user.id).all();
       // Render template
-    }
-  },
-
-  '/admin/federation' : {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
-      if (!user) {
-        return Response.redirect(`${new URL(request.url).origin}/login`);
-      }
-
-      // load dynamic config
-      const { configService } = await import('../services/config.js');
-      const config = await configService.getConfig(env.DB);
-
-      // instantiate service
-      const fed = new FederationService(env);
-
-      // fetch stats
-      const [domains, posts] = await Promise.all([
-        fed.getConnectedDomains(),
-        fed.getFederatedPosts(),
-      ]);
-
-      // render
-      return new Response(
-        federationDashboard(posts, domains, user, config),
-        { headers: { 'Content-Type': 'text/html' } }
-      );
     }
   },
 
@@ -1451,8 +1423,40 @@ export const adminRoutes = {
     }
   },
 
+  '/admin/federation' : {
+    GET: async (request, env) => {
+      const user = await checkAuth(request, env);
+      if (!user) {
+        return Response.redirect(`${new URL(request.url).origin}/login`);
+      }
+
+      // load dynamic config
+      const config = await configService.getConfig(env.DB);
+
+      // instantiate service
+      const fed = new FederationService(env);
+
+      // fetch stats
+      const [domains, posts] = await Promise.all([
+        fed.getConnectedDomains(),
+        fed.getFederatedPosts(),
+      ]);
+
+      // render
+      return new Response(
+        federationDashboard(posts, domains, user, config),
+        { headers: { 'Content-Type': 'text/html' } }
+      );
+    }
+  },
+
   '/admin/analytics': {
     GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env);
+      if (!user){
+        return Response.redirect(`${new URL(request.url).origin}/login`)
+      }
+      const config = await configService.getConfig(env.DB)
       const [summary, topPaths, hourly, countries] = await Promise.all([
         getAnalyticsSummary(env, 7),
         getTopPaths(env, 7, 10),
@@ -1465,7 +1469,9 @@ export const adminRoutes = {
         summary,
         topPaths,
         hourlyTraffic: hourly,
-        countryStats: countries
+        countryStats: countries,
+        user,
+        config
       }), {
         headers: { 'Content-Type': 'text/html' }
       });

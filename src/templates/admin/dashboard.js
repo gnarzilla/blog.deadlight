@@ -49,6 +49,16 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
             <a href="/admin/add" class="button">Create New Post</a>
             <a href="/admin/users" class="button">Manage Users</a>
             <a href="/admin/settings" class="button">Settings</a>
+            <a href="/admin/proxy" class="button">Proxy Dashboard</a>
+            <a href="/admin/federation" class="button">Federation</a>
+            <a href="/admin/analytics" class="button">Analytics</a>
+            <a href="/inbox" class="button">Inbox</a>
+            <a href="/admin/inject-emails" class="button">Inject Emails (for testing)</a>
+            <a href="/admin/moderation" class="button">Moderation</a>
+            <a href="/admin/pending-replies" class="button">Pending Replies</a>
+            <a href="/admin/proxy/status-stream" class="button">Proxy Status Stream</a>
+            <a href="/admin/notifications" class="button">Notifications</a>
+            <a href="/api/status" class="button">API Status</a>
             <a href="/" class="button">View Blog</a>
           </div>
         </div>

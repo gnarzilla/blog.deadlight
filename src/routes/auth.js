@@ -1,7 +1,7 @@
 // src/routes/auth.js - Enhanced with proxy auth integration
 import { renderLoginForm } from '../templates/auth/index.js';
 import { hashPassword, verifyPassword } from '../../../lib.deadlight/core/src/auth/password.js';
-import { createJWT } from '../../../lib.deadlight/core/src/auth/jwt.js';
+import { createJWT, verifyJWT } from '../../../lib.deadlight/core/src/auth/jwt.js';
 import { UserModel } from '../../../lib.deadlight/core/src/db/models/user.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { Validator, FormValidator, CSRFProtection } from '../../../lib.deadlight/core/src/security/validation.js';
@@ -26,7 +26,6 @@ export const authRoutes = {
             }
           } else {
             // Fallback to local verification
-            const { verifyJWT } = await import('../../../lib.deadlight/core/src/auth/jwt.js');
             const user = await verifyJWT(existingToken, env.JWT_SECRET);
             if (user) {
               return new Response(null, {
@@ -306,18 +305,17 @@ export const authRoutes = {
   },
 
   // Remove these temporary routes in production
-  '/check-users': {
-    GET: async (request, env) => {
-      const result = await env.DB.prepare('SELECT id, username, role FROM users').all();
-      return new Response(JSON.stringify(result.results, null, 2), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-  },
+  //'/check-users': {
+  //  GET: async (request, env) => {
+  //    const result = await env.DB.prepare('SELECT id, username, role FROM users').all();
+  //    return new Response(JSON.stringify(result.results, null, 2), {
+  //      headers: { 'Content-Type': 'application/json' }
+  //    });
+  //  }
+  // },
 
   '/generate-admin': {
     GET: async (request, env) => {
-      const { hashPassword } = await import('../../../lib.deadlight/core/src/auth/password.js');
       
       const password = 'gross-gnar';
       const { hash, salt } = await hashPassword(password);
