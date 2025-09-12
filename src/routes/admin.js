@@ -25,93 +25,83 @@ import { renderSettings } from '../templates/admin/settings.js';
 
 export const adminRoutes = {
   '/admin': {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       const user = await checkAuth(request, env);
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
 
       try {
-        // Get dynamic config
         const config = await configService.getConfig(env.DB);
-
-        // Gather stats using direct DB queries
-        let stats = {
-          totalPosts: 0,
-          totalUsers: 0,
-          postsToday: 0,
-          publishedPosts: 0
-        };
-
-        let posts = [];
-        let requestStats = []; // can implement this later if needed
-
+        const postModel = new PostModel(env.DB);
+        const userModel = new UserModel(env.DB);
+        
+        // Get recent posts using getPaginated
+        const recentPostsResult = await postModel.getPaginated({ 
+          limit: 5, 
+          page: 1, 
+          includeAuthor: true,
+          orderBy: 'created_at',
+          orderDirection: 'DESC',
+          publishedOnly: false  // Show all posts in admin
+        });
+        
+        // Get basic stats with corrected method signatures
+        const [totalPosts, publishedPosts, totalUsers] = await Promise.all([
+          postModel.count(false),          // Total posts (all)
+          postModel.count(true),           // Published only
+          userModel.count()                // Total users
+        ]);
+        
+        // Get posts created today
+        const postsTodayResult = await env.DB.prepare(`
+          SELECT COUNT(*) as count 
+          FROM posts 
+          WHERE date(created_at) = date('now')
+        `).first();
+        
+        // Get analytics data from request_logs
+        let requestStats = [];
         try {
-          // Count total posts (excluding emails)
-          const postsCount = await env.DB.prepare(`
-            SELECT COUNT(*) as count FROM posts 
-            WHERE (is_email = 0 OR is_email IS NULL)
-          `).first();
-          stats.totalPosts = postsCount?.count || 0;
-
-          // Count total users
-          const usersCount = await env.DB.prepare('SELECT COUNT(*) as count FROM users').first();
-          stats.totalUsers = usersCount?.count || 0;
-
-          // Count posts created today
-          const today = new Date().toISOString().split('T')[0];
-          const todayCount = await env.DB.prepare(`
-            SELECT COUNT(*) as count FROM posts 
-            WHERE DATE(created_at) = ? AND (is_email = 0 OR is_email IS NULL)
-          `).bind(today).first();
-          stats.postsToday = todayCount?.count || 0;
-
-          // Count published posts
-          const publishedCount = await env.DB.prepare(`
-            SELECT COUNT(*) as count FROM posts 
-            WHERE published = 1 AND (is_email = 0 OR is_email IS NULL)
-          `).first();
-          stats.publishedPosts = publishedCount?.count || 0;
-
-          // Get recent posts with author info
-          const recentPostsQuery = await env.DB.prepare(`
-            SELECT p.id, p.title, p.slug, p.created_at, p.published, p.author_id, u.username as author_username
-            FROM posts p
-            LEFT JOIN users u ON p.author_id = u.id
-            WHERE (p.is_email = 0 OR p.is_email IS NULL)
-            ORDER BY p.created_at DESC 
-            LIMIT 10
+          const analyticsData = await env.DB.prepare(`
+            SELECT 
+              date(timestamp) as day,
+              COUNT(*) as requests,
+              COUNT(DISTINCT ip) as unique_visitors
+            FROM request_logs
+            WHERE timestamp >= date('now', '-7 days')
+            GROUP BY date(timestamp)
+            ORDER BY day DESC
           `).all();
-          posts = recentPostsQuery.results || [];
-
-        } catch (dbError) {
-          console.error('Database query error in admin dashboard:', dbError);
+          
+          requestStats = analyticsData.results || [];
+        } catch (analyticsError) {
+          console.error('Analytics query failed:', analyticsError);
         }
-
-        // template expects: renderAdminDashboard(stats, posts, requestStats, user, config)
-        return new Response(renderAdminDashboard(stats, posts, requestStats, user, config), {
+        
+        const stats = {
+          totalPosts,
+          publishedPosts,
+          postsToday: postsTodayResult.count || 0,
+          totalUsers
+        };
+        
+        // Use recentPostsResult.posts to get the posts array
+        const recentPosts = recentPostsResult.posts;
+        
+        return new Response(
+          renderAdminDashboard(stats, recentPosts, requestStats, request.user, config),
+          { headers: { 'Content-Type': 'text/html' } }
+        );
+      } catch (templateError) {
+        console.error('Dashboard error:', templateError);
+        return new Response(`
+          <h1>Admin Dashboard</h1>
+          <p>Dashboard temporarily unavailable. <a href="/admin/add">Add Post</a> | <a href="/admin/users">Manage Users</a></p>
+          <p>Error: ${templateError.message}</p>
+        `, {
           headers: { 'Content-Type': 'text/html' }
         });
-
-      } catch (error) {
-        console.error('Admin dashboard error:', error);
-        
-        // Fallback with minimal stats
-        const fallbackStats = { totalPosts: 0, totalUsers: 0, postsToday: 0, publishedPosts: 0 };
-        
-        try {
-          return new Response(renderAdminDashboard(fallbackStats, [], [], user, config), {
-            headers: { 'Content-Type': 'text/html' }
-          });
-        } catch (templateError) {
-          // Ultimate fallback
-          return new Response(`
-            <h1>Admin Dashboard</h1>
-            <p>Dashboard temporarily unavailable. <a href="/admin/add">Add Post</a> | <a href="/admin/users">Manage Users</a></p>
-          `, {
-            headers: { 'Content-Type': 'text/html' }
-          });
-        }
       }
     }
   },
