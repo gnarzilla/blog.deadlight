@@ -1,12 +1,25 @@
-# Deadlight Edge Blog v4 - Secure, Modular Blog Platform with Integrated Proxy Management
+# Deadlight Edge Blog - Secure, Modular Blog Platform with Integrated Proxy Management
 
-🌐 Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo)
+🌐 Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo) | [Other Separate Instance](https://threat-level-midnight.deadlight.boo)
 
 A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, and everything you need for a truly self-sovereign digital presence.
 
 ---
 
-![Main Blog - Create Post](https://github.com/gnarzilla/deadlight/blob/main/src/assets/main-create_bw.png)
+![Main Blog - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/blog_dual_nolog.png)
+
+---
+### Table of Contents
+1.  [Overview](#overview)
+2.  [Architecture](#architecture)
+3.  [Features](#features)
+4.  [Roadmap](#roadmap)
+5.  [Getting Started](#getting-started)
+6.  [Usage](#usage)
+7.  [Extending Deadlight](#extending-deadlight)
+8.  [Project Structure](#project-structure)
+9.  [License](#license)
+10. [Support](#support) 
 
 ---
 
@@ -19,13 +32,11 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 ---
 
-![Proxy Dash - Add New Post](https://github.com/gnarzilla/deadlight/blob/main/src/assets/proxydash_newpost_wb.png)
+![Admin Dash - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/admin_dual.png)
 
-![Proxy Test Email - User Management](https://github.com/gnarzilla/deadlight/blob/main/src/assets/proxytestemail_usermng_bw.png)
+![Proxy/Analytics - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/proxy_anal_dual.png)
 
-![Proxy Dash - Admin Dash](https://github.com/gnarzilla/deadlight/blob/main/src/assets/proxydash_dash_wb.png)
-
-## 1. Key Features
+## Key Features
 
 ### **Performance & Content**
 - **Near-zero latency**: Deployed on Cloudflare Workers to deliver content globally in milliseconds.
@@ -47,11 +58,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 ---
 
-![Proxy Dashboard](https://github.com/gnarzilla/deadlight/blob/main/src/assets/proxy-blog-site_multiview.png))
-
----
-
-## 2. **Architecture & Design**:
+## **Architecture & Design**:
 Deadlight is designed as a modular, full-stack application built for maximum flexibility and performance.
 - **Modular Architecture**: Shared lib.deadlight library and reusable components enable a clean separation of concerns and a multi-app ecosystem.
 - **Text-First**: A deliberate design choice to focus on clean, markdown-based content and avoid the complexities of media management.
@@ -100,12 +107,12 @@ deadlight/
         └── ...
 ```
 
-## **4. Roadmap**
+## **Roadmap**
 - **Production Ready (v4)**: Proxy integration, email bridge, and federation testing.
 - **Active Development**: Full email client/server integration, SOCKS5 authentication, and production deployment guides.
 - **Future Considerations**: A privacy-first analytics service, a comments system, media management via R2, and an extensible plugin system.
 
-## 5. Quick Start
+## Quick Start
 
 ### Prerequisites
 - Cloudflare account (free tier works)
@@ -259,7 +266,7 @@ wrangler d1 execute blog_content_new --remote --command "INSERT INTO users (user
 wrangler d1 execute blog_content --remote --command "INSERT INTO users (username, password, salt) VALUES ('admin', 'hash-here', 'salt-here')"
 ```
 
-## 6. Configuration
+## Configuration
 
 Edit `src/config.js` to customize:
 
@@ -293,7 +300,7 @@ Edit theme variables in `src/routes/styles.js`. The CSS uses variables for easy 
 ```
 
 
-## 7. API Documentation
+## API Documentation
 ### Public Endpoints
 - GET / - Home page with posts
 - GET /post/:id - Individual post
@@ -324,10 +331,7 @@ All responses include:
 MIT - Use this however you want!
 
 ## Acknowledgments
-Built with Cloudflare Workers, D1, and KV
-Security patterns inspired by OWASP guidelines
-Thanks to the Cloudflare Workers community
-Maintained with ❤️ and Diet Mountain Dew
+Maintained with ❤️ Rage and Diet Mountain Dew
 
 ## Support
 
