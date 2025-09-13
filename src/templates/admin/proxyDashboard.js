@@ -1,140 +1,385 @@
-// src/templates/admin/proxyDashboard.js - Clean template with external JS
+// src/templates/admin/proxyDashboard.js - Enhanced version (continued)
+// src/templates/admin/proxyDashboard.js - Enhanced version
 import { renderTemplate } from '../base.js';
 
 export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0) {
     const { status, queue, federation, config: proxyConfig, error } = proxyData;
     const proxyConnected = status?.proxy_connected || false;
 
-    // Define serviceCards array
+    // Enhanced service cards with more details
     const serviceCards = [
         {
             key: 'blog-api',
             title: 'Blog API',
+            icon: '📝',
             status: status?.blog_api ? 'running' : 'error',
-            details: [
-                status?.blog_api ? 'Version: 5.0.0' : 'Not responding',
-                `Circuit: ${proxyConfig?.circuitState?.state || 'Unknown'}`
-            ],
+            statusText: status?.blog_api ? 'Operational' : 'Offline',
+            metrics: {
+                'Version': '5.0.0',
+                'Uptime': status?.blog_api?.uptime || 'Unknown',
+                'Response Time': status?.blog_api?.responseTime || 'N/A'
+            },
+            circuitState: proxyConfig?.circuitState,
             testHandler: 'handleTestBlogApi'
         },
         {
             key: 'email-api', 
-            title: 'Email API',
+            title: 'Email Service',
+            icon: '📧',
             status: status?.email_api ? 'running' : 'error',
-            details: [
-                `Queue Size: ${queue?.status?.queued_operations?.email || 0}`,
-                `Last Processed: ${queue?.status?.last_processed || 'Never'}`
-            ],
+            statusText: status?.email_api ? 'Processing' : 'Offline',
+            metrics: {
+                'Queued': queue?.status?.queued_operations?.email || 0,
+                'Processed Today': queue?.stats?.processed_today || 0,
+                'Failed': queue?.stats?.failed_today || 0
+            },
+            lastActivity: queue?.status?.last_processed,
             testHandler: 'handleTestEmailApi'
         },
         {
             key: 'federation',
-            title: 'Email-based Federation',
-            status: federation?.status === 'online' ? 'healthy' : 'error',
-            details: [
-                'Protocol: Email Bridge',
-                `Connected Domains: ${federation?.connected_domains?.length || 0}`,
-                'Purpose: Instance-to-instance communication'
-            ],
+            title: 'Federation Network',
+            icon: '🌐',
+            status: federation?.status === 'online' ? 'healthy' : 'warning',
+            statusText: federation?.status === 'online' ? 'Connected' : 'Limited',
+            metrics: {
+                'Active Domains': federation?.connected_domains?.length || 0,
+                'Pending Sync': federation?.pending_posts || 0,
+                'Trust Level': federation?.trust_level || 'Verified'
+            },
+            connectedDomains: federation?.connected_domains || [],
             testHandler: 'handleTestFederation'
-        },
-        {
-            key: 'config',
-            title: 'Configuration',
-            status: proxyConnected ? 'healthy' : 'error',
-            details: [
-                `Proxy URL: ${proxyConfig?.proxyUrl || 'Not configured'}`,
-                `Connection: ${proxyConnected ? 'Active' : 'Inactive'}`,
-                status?.timestamp ? `Last Check: ${new Date(status.timestamp).toLocaleString()}` : 'No recent checks'
-            ],
-            testHandler: null
-        },
-        {
-            key: 'federation-activity',
-            title: 'Federation Activity',
-            status: 'healthy',
-            details: [
-                'Protocol: Email Bridge',
-                `Connected Domains: ${federation?.connected_domains?.length || 0}`,
-                `Pending Posts: ${federation?.pending_posts || 0}`,
-                'Recent Activity: Live monitoring'
-            ],
-            testHandler: 'handleDiscoverDomain'
         }
     ];
 
     const content = `
-        <div class="proxy-dashboard">
+        <div class="proxy-dashboard enhanced">
             <header class="dashboard-header">
-                <h2>Proxy Server Management</h2>
-                <div class="status-indicator ${proxyConnected ? 'connected' : 'disconnected'}">
-                    ${proxyConnected ? '🟢 Connected' : '🔴 Disconnected'}
+                <div class="header-content">
+                    <h2>Proxy Server Dashboard</h2>
+                    <div class="connection-status">
+                        <div class="status-indicator ${proxyConnected ? 'connected' : 'disconnected'}">
+                            <span class="status-dot"></span>
+                            ${proxyConnected ? 'Connected' : 'Disconnected'}
+                        </div>
+                        ${proxyConfig?.proxyUrl ? `
+                            <span class="proxy-url">${proxyConfig.proxyUrl}</span>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button onclick="startLiveMonitoring()" class="button small ${proxyConnected ? '' : 'disabled'}">
+                        <span id="monitor-status">▶</span> Live Monitor
+                    </button>
+                    <button onclick="location.reload()" class="button small">↻ Refresh</button>
                 </div>
             </header>
 
             ${error ? `
-                <section class="error-banner">
-                    <h3>Connection Error</h3>
-                    <p>${error}</p>
-                    <button onclick="location.reload()">Retry Connection</button>
-                </section>
+                <div class="alert alert-error">
+                    <strong>Connection Error:</strong> ${error}
+                    <button onclick="retryConnection()" class="button small">Retry</button>
+                </div>
             ` : ''}
 
-            <section class="queue-status">
-                <h3>Outbox Queue</h3>
-                <p><span class="queue-count">${queue?.status?.queued_operations?.total || 0}</span> operations pending</p>
-                <p class="last-check">Last check: <span class="last-check-time">${new Date().toLocaleTimeString()}</span></p>
-                ${proxyConnected ? `
-                    <button onclick="handleProcessQueue()" class="button">Process Queue Now</button>
-                ` : `
-                    <p class="queue-waiting">Waiting for proxy connection...</p>
-                `}
-            </section>
-
-            <section class="proxy-services-grid">
-                ${serviceCards.map(card => `
-                    <div class="service-card" data-service="${card.key}">
-                        <h3>${card.title}</h3>
-                        <div class="service-status ${card.status === 'running' || card.status === 'healthy' ? 'healthy' : 'error'}">
-                            Status: ${card.status || 'Unknown'}
-                        </div>
-                        <div class="service-details">
-                            ${card.details.map(d => `<p>${d}</p>`).join('')}
-                        </div>
-                        ${card.testHandler ? `
-                            <button onclick="${card.testHandler}()" class="button small-button">Test</button>
-                        ` : `
-                            <button onclick="location.reload()" class="button small-button">Refresh</button>
-                        `}
+            <!-- Real-time Metrics Dashboard -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <h4>Queue Status</h4>
+                    <div class="metric-value" id="queue-total">${queue?.status?.queued_operations?.total || 0}</div>
+                    <div class="metric-label">Pending Operations</div>
+                    <div class="metric-trend" id="queue-trend"></div>
+                </div>
+                
+                <div class="metric-card">
+                    <h4>Processing Rate</h4>
+                    <div class="metric-value" id="process-rate">0</div>
+                    <div class="metric-label">ops/min</div>
+                    <div class="metric-trend" id="rate-trend"></div>
+                </div>
+                
+                <div class="metric-card">
+                    <h4>Federation Health</h4>
+                    <div class="metric-value" id="fed-health">${federation?.connected_domains?.length || 0}</div>
+                    <div class="metric-label">Active Connections</div>
+                    <div class="metric-status ${federation?.status === 'online' ? 'healthy' : 'warning'}"></div>
+                </div>
+                
+                <div class="metric-card">
+                    <h4>Circuit Breaker</h4>
+                    <div class="metric-value circuit-${proxyConfig?.circuitState?.state?.toLowerCase() || 'unknown'}">
+                        ${proxyConfig?.circuitState?.state || 'Unknown'}
                     </div>
-                `).join('')}
-            </section>
-
-            <section class="federation-live-activity">
-                <h3>Live Federation Activity</h3>
-                <div class="federation-status">
-                    <div class="trust-levels" id="trust-levels">
-                        <p>Loading trust relationships...</p>
+                    <div class="metric-label">
+                        Failures: ${proxyConfig?.circuitState?.failures || 0}/${proxyConfig?.circuitState?.threshold || 5}
                     </div>
                 </div>
-                <div class="activity-stream" id="federation-activity">
-                    <p>Connecting to federation activity stream...</p>
+            </section>
+
+            <!-- Service Status Cards -->
+            <section class="services-section">
+                <h3>Service Status</h3>
+                <div class="service-cards-grid">
+                    ${serviceCards.map(card => `
+                        <div class="service-card ${card.status}" data-service="${card.key}">
+                            <div class="card-header">
+                                <span class="service-icon">${card.icon}</span>
+                                <h4>${card.title}</h4>
+                                <span class="status-badge ${card.status}">${card.statusText}</span>
+                            </div>
+                            
+                            <div class="card-metrics">
+                                ${Object.entries(card.metrics).map(([key, value]) => `
+                                    <div class="metric-row">
+                                        <span class="metric-key">${key}:</span>
+                                        <span class="metric-val">${value}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            ${card.circuitState ? `
+                                <div class="circuit-info">
+                                    <span class="circuit-state ${card.circuitState.state?.toLowerCase()}">
+                                        Circuit: ${card.circuitState.state}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            
+                            ${card.lastActivity ? `
+                                <div class="last-activity">
+                                    Last: ${new Date(card.lastActivity).toRelativeTime()}
+                                </div>
+                            ` : ''}
+                            
+                            <div class="card-actions">
+                                ${card.testHandler ? `
+                                    <button onclick="${card.testHandler}()" class="button small">Test</button>
+                                ` : ''}
+                                <button onclick="viewServiceDetails('${card.key}')" class="button small secondary">Details</button>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             </section>
 
-            <section class="proxy-actions">
-                <h3>Quick Actions</h3>
-                <div class="action-buttons">
-                    <button onclick="handleSendTestEmail()" class="button">Send Test Email</button>
-                    <button onclick="handleTestFederation()" class="button">Test Federation</button>
-                    <button onclick="handleDiscoverDomain()" class="button">Discover New Domain</button>
-                    <button onclick="location.reload()" class="button">Refresh All Status</button>
+            <!-- Live Activity Feed -->
+            <section class="activity-section">
+                <div class="section-header">
+                    <h3>Live Activity Stream</h3>
+                    <div class="stream-controls">
+                        <select id="activity-filter" onchange="filterActivity(this.value)">
+                            <option value="all">All Activity</option>
+                            <option value="email">Email</option>
+                            <option value="federation">Federation</option>
+                            <option value="errors">Errors Only</option>
+                        </select>
+                        <button onclick="clearActivityLog()" class="button small">Clear</button>
+                    </div>
+                </div>
+                
+                <div class="activity-stream" id="activity-stream">
+                    <div class="activity-placeholder">
+                        Waiting for activity...
+                    </div>
+                </div>
+            </section>
+
+            <!-- Federation Management -->
+            <section class="federation-section">
+                <h3>Federation Network</h3>
+                
+                <div class="federation-grid">
+                    <div class="connected-domains">
+                        <h4>Connected Domains</h4>
+                        <div class="domain-list" id="domain-list">
+                            ${federation?.connected_domains?.length ? 
+                                federation.connected_domains.map(domain => `
+                                    <div class="domain-item">
+                                        <span class="domain-name">${domain.domain}</span>
+                                        <span class="domain-trust ${domain.trust_level}">${domain.trust_level}</span>
+                                        <button onclick="manageDomain('${domain.domain}')" class="button tiny">Manage</button>
+                                    </div>
+                                `).join('') : 
+                                '<p class="empty-state">No connected domains</p>'
+                            }
+                        </div>
+                        <button onclick="handleDiscoverDomain()" class="button small">+ Add Domain</button>
+                    </div>
+                    
+                    <div class="federation-stats">
+                        <h4>Federation Stats</h4>
+                        <div class="stats-grid">
+                            <div class="stat">
+                                <span class="stat-value">${federation?.stats?.posts_sent || 0}</span>
+                                <span class="stat-label">Posts Sent</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">${federation?.stats?.posts_received || 0}</span>
+                                <span class="stat-label">Posts Received</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">${federation?.stats?.comments_synced || 0}</span>
+                                <span class="stat-label">Comments Synced</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Action Panel -->
+            <section class="actions-section">
+                <h3>Management Actions</h3>
+                <div class="action-grid">
+                    <div class="action-group">
+                        <h4>Queue Management</h4>
+                        <button onclick="handleProcessQueue()" class="button ${!proxyConnected ? 'disabled' : ''}">
+                            Process Queue Now
+                        </button>
+                        <button onclick="viewQueueDetails()" class="button secondary">View Queue Details</button>
+                        <button onclick="clearFailedOperations()" class="button danger">Clear Failed</button>
+                    </div>
+                    
+                    <div class="action-group">
+                        <h4>Testing</h4>
+                        <button onclick="handleSendTestEmail()" class="button">Send Test Email</button>
+                        <button onclick="runHealthCheck()" class="button">Full Health Check</button>
+                        <button onclick="testAllServices()" class="button">Test All Services</button>
+                    </div>
+                    
+                    <div class="action-group">
+                        <h4>Configuration</h4>
+                        <button onclick="viewProxyConfig()" class="button">View Config</button>
+                        <button onclick="resetCircuitBreaker()" class="button">Reset Circuit</button>
+                        <button onclick="exportLogs()" class="button secondary">Export Logs</button>
+                    </div>
                 </div>
             </section>
         </div>
 
+        <style>
+            /* Enhanced styles for the dashboard */
+            .proxy-dashboard.enhanced {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 2rem;
+            }
+            
+            .dashboard-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 2rem;
+                padding-bottom: 1rem;
+                border-bottom: 1px solid #333;
+            }
+            
+            .connection-status {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+            
+            .status-dot {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                margin-right: 0.5rem;
+                animation: pulse 2s infinite;
+            }
+            
+            .connected .status-dot { background: #4ade80; }
+            .disconnected .status-dot { background: #f87171; }
+            
+            .metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+                margin-bottom: 2rem;
+            }
+            
+            .metric-card {
+                background: #1a1a1a;
+                border: 1px solid #333;
+                padding: 1.5rem;
+                border-radius: 8px;
+                text-align: center;
+            }
+            
+            .metric-value {
+                font-size: 2.5rem;
+                font-weight: bold;
+                color: #4a9eff;
+            }
+            
+            .service-cards-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 1.5rem;
+                margin-bottom: 2rem;
+            }
+            
+            .service-card {
+                background: #1a1a1a;
+                border: 1px solid #333;
+                padding: 1.5rem;
+                border-radius: 8px;
+                transition: transform 0.2s;
+            }
+            
+            .service-card:hover {
+                transform: translateY(-2px);
+                border-color: #4a9eff;
+            }
+            
+            .status-badge {
+                padding: 0.25rem 0.75rem;
+                border-radius: 12px;
+                font-size: 0.875rem;
+            }
+            
+            .status-badge.running,
+            .status-badge.healthy { 
+                background: rgba(74, 222, 128, 0.1); 
+                color: #4ade80; 
+            }
+            
+            .status-badge.error { 
+                background: rgba(248, 113, 113, 0.1); 
+                color: #f87171; 
+            }
+            
+            .activity-stream {
+                background: #0a0a0a;
+                border: 1px solid #333;
+                border-radius: 8px;
+                height: 300px;
+                overflow-y: auto;
+                padding: 1rem;
+                font-family: monospace;
+            }
+            
+            @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.5; }
+                100% { opacity: 1; }
+            }
+        </style>
+
         <script src="/admin/proxyDashboard.js"></script>
+        <script>
+            // Add relative time formatting
+            Date.prototype.toRelativeTime = function() {
+                const seconds = Math.floor((new Date() - this) / 1000);
+                if (seconds < 60) return seconds + 's ago';
+                const minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return minutes + 'm ago';
+                const hours = Math.floor(minutes / 60);
+                if (hours < 24) return hours + 'h ago';
+                return this.toLocaleDateString();
+            };
+        </script>
     `;
 
-    return renderTemplate('Proxy Server Management', content, user, config);
+    return renderTemplate('Proxy Server Dashboard', content, user, config);
 }

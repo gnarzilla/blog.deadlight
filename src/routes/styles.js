@@ -1678,6 +1678,38 @@ const baseStyles = `
   .form-actions .button.primary {
     flex: 1;
   }
+
+  /* Add to your styles */
+  .user-settings {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .settings-form fieldset {
+    border: 1px solid #333;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: 4px;
+  }
+
+  .settings-form legend {
+    padding: 0 0.5rem;
+    font-weight: bold;
+  }
+
+  .danger-zone {
+    margin-top: 3rem;
+    padding: 1.5rem;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: rgba(255, 0, 0, 0.05);
+  }
+
+  .danger-zone h3 {
+    color: #ff6b6b;
+    margin-top: 0;
+  }
   }`;
 
 // Dark theme variables

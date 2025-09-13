@@ -4,6 +4,7 @@ import { renderUserProfile } from '../templates/user/profile.js';
 import { configService } from '../services/config.js';
 import { renderUserPostForm } from '../templates/admin/addPost.js'
 import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js'
+import { renderUserSettings } from '../templates/user/settings.js';
 
 // Username validation (reusing your slug pattern)
 function validateUsername(username) {
@@ -98,7 +99,6 @@ export const userRoutes = {
           previousPage: page - 1
         };
         
-        // Create user profile template
         return new Response(renderUserProfile(user, posts.results, currentUser, config, pagination), {
           headers: { 'Content-Type': 'text/html' }
         });
@@ -106,6 +106,104 @@ export const userRoutes = {
       } catch (error) {
         console.error('User profile error:', error);
         return new Response('Internal server error', { status: 500 });
+      }
+    }
+  },
+
+  '/user/:username/settings': {
+    GET: async (request, env, ctx) => {
+      const currentUser = await checkAuth(request, env);
+      const username = request.params.username;
+      
+      // Users can only edit their own settings
+      if (!currentUser || currentUser.username !== username) {
+        return Response.redirect(new URL('/login', request.url).toString(), 302);
+      }
+      
+      // Get user's current settings
+      const user = await env.DB.prepare(`
+        SELECT * FROM users WHERE id = ?
+      `).bind(currentUser.id).first();
+      
+      // Get any additional settings from user_settings table
+      const additionalSettings = await env.DB.prepare(`
+        SELECT key, value FROM user_settings WHERE user_id = ?
+      `).bind(currentUser.id).all();
+      
+      const config = await configService.getConfig(env.DB);
+      
+      const { renderUserSettings } = await import('../templates/user/settings.js');
+      return new Response(renderUserSettings(user, additionalSettings.results || [], config), {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    },
+    
+    POST: async (request, env, ctx) => {
+      const currentUser = await checkAuth(request, env);
+      const username = request.params.username;
+      
+      if (!currentUser || currentUser.username !== username) {
+        return new Response('Unauthorized', { status: 403 });
+      }
+      
+      try {
+        const formData = await request.formData();
+        
+        // Update main user fields
+        await env.DB.prepare(`
+          UPDATE users SET 
+            email = ?,
+            profile_title = ?,
+            profile_description = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).bind(
+          formData.get('email') || null,
+          formData.get('profile_title') || null,
+          formData.get('profile_description') || null,
+          currentUser.id
+        ).run();
+        
+        // Handle password change if provided
+        const newPassword = formData.get('new_password');
+        const confirmPassword = formData.get('confirm_password');
+        
+        if (newPassword) {
+          if (newPassword !== confirmPassword) {
+            throw new Error('Passwords do not match');
+          }
+          
+          if (newPassword.length < 8) {
+            throw new Error('Password must be at least 8 characters');
+          }
+          
+          // Use your existing password hashing
+          const { hashPassword } = await import('../../../lib.deadlight/core/src/auth/password.js');
+          const { hash, salt } = await hashPassword(newPassword);
+          
+          await env.DB.prepare(`
+            UPDATE users SET password = ?, salt = ? WHERE id = ?
+          `).bind(hash, salt, currentUser.id).run();
+        }
+        
+        // Redirect back to profile
+        const redirectUrl = new URL(`/user/${username}`, request.url).toString();
+        return Response.redirect(redirectUrl, 302);
+        
+      } catch (error) {
+        // Re-fetch data and show form with error
+        const user = await env.DB.prepare(`
+          SELECT * FROM users WHERE id = ?
+        `).bind(currentUser.id).first();
+        
+        const { configService } = await import('../services/config.js');
+        const config = await configService.getConfig(env.DB);
+        
+        const { renderUserSettings } = await import('../templates/user/settings.js');
+        return new Response(renderUserSettings(user, [], config, error.message), {
+          status: 400,
+          headers: { 'Content-Type': 'text/html' }
+        });
       }
     }
   },

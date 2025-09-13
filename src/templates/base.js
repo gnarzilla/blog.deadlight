@@ -20,8 +20,8 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
     if (isAdmin) {
       authLinks = commonLinks + `
         <a href="/admin/add">Post</a> |
-        <a href="/admin">Dashboard</a> |
-        <a href="/admin/proxy">Proxy Server</a> |
+        <a href="/admin">Dash</a> |
+        <a href="/admin/proxy">Proxy</a> |
         <a href="/logout">Logout</a>
       `;
     } else {
