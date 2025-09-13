@@ -32,7 +32,7 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
     }
   } else {
     authLinks = `
-    <a href="/Register">Register</a> |
+    <a href="/register">Register</a> |
     <a href="/login">Login</a>
     `;
   }
