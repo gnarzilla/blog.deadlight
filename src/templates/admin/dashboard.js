@@ -1,4 +1,4 @@
-// src/templates/admin/dashboard.js
+// src/templates/admin/dashboard.js - Remove the database calls
 import { renderTemplate } from '../base.js';
 
 export function renderAdminDashboard(stats, posts, requestStats = [], user, config = null) { 
@@ -19,6 +19,12 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
     <div class="container">
       <div class="page-header">
         <h1>Dashboard</h1>
+        ${stats.activeVisitors > 0 ? `
+          <div class="active-visitors">
+            <span class="pulse"></span>
+            ${stats.activeVisitors} active visitor${stats.activeVisitors !== 1 ? 's' : ''} now
+          </div>
+        ` : ''}
       </div>
       
       <div class="admin-dashboard">
@@ -27,20 +33,39 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
           <div class="stat-card">
             <h3>TOTAL POSTS</h3>
             <div class="stat-number">${stats.totalPosts}</div>
+            <a href="/admin/analytics?filter=posts" class="stat-link">View analytics →</a>
           </div>
           <div class="stat-card">
             <h3>TOTAL USERS</h3>
             <div class="stat-number">${stats.totalUsers || 0}</div>
+            <a href="/admin/users" class="stat-link">View users →</a>
           </div>
           <div class="stat-card">
             <h3>POSTS TODAY</h3>
             <div class="stat-number">${stats.postsToday || 0}</div>
+            
           </div>
           <div class="stat-card">
             <h3>PUBLISHED</h3>
             <div class="stat-number">${stats.publishedPosts || 0}</div>
+            <a href="/" class="stat-link">View posts →</a>
           </div>
         </div>
+
+        <!-- Browser Stats (if available) -->
+        ${stats.browserStats && stats.browserStats.length > 0 ? `
+          <div class="browser-stats">
+            <h3>Browser Usage</h3>
+            <div class="browser-list">
+              ${stats.browserStats.map(browser => `
+                <div class="browser-item">
+                  <span>${browser.browser}</span>
+                  <span>${browser.count}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Quick Actions -->
         <div class="quick-actions">
@@ -52,18 +77,11 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
             <a href="/admin/proxy" class="button">Proxy Dashboard</a>
             <a href="/admin/federation" class="button">Federation</a>
             <a href="/admin/analytics" class="button">Analytics</a>
-            <a href="/inbox" class="button">Inbox</a>
-            <a href="/admin/inject-emails" class="button">Inject Emails (for testing)</a>
-            <a href="/admin/moderation" class="button">Moderation</a>
-            <a href="/admin/pending-replies" class="button">Pending Replies</a>
-            <a href="/admin/proxy/status-stream" class="button">Proxy Status Stream</a>
-            <a href="/admin/notifications" class="button">Notifications</a>
-            <a href="/api/status" class="button">API Status</a>
             <a href="/" class="button">View Blog</a>
           </div>
         </div>
 
-        <!-- Request Chart -->
+        <!-- Rest of your template remains the same -->
         ${chartData.length > 0 ? `
           <div class="chart-section">
             <h2>Requests (Last 7 Days)</h2>
@@ -79,7 +97,7 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
           </div>
         ` : ''}
 
-        <!-- Recent Posts -->
+        <!-- Recent Posts section continues as before -->
         <div class="recent-posts-section">
           <h2>Recent Posts</h2>
           ${posts.length > 0 ? `
@@ -123,7 +141,6 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
       </div>
     </div>
   `;
-
 
   return renderTemplate('Dashboard', content, user, config);
 }

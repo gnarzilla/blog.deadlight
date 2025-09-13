@@ -12,12 +12,14 @@ import { errorMiddleware, loggingMiddleware } from './middleware/index.js';
 import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './middleware/index.js';
 import { rateLimitMiddleware, securityHeadersMiddleware } from '../../lib.deadlight/core/src/security/middleware.js';
 import { OutboxService } from './services/outbox.js';
+import { analyticsMiddleware } from './middleware/analytics.js';
 
 const router = new Router();
 
-// Global middleware - applied to all routes
+// Global middleware - analytics should be here
 router.use(errorMiddleware);
 router.use(loggingMiddleware);
+router.use(analyticsMiddleware);
 
 // Public routes (no auth required)
 router.group([], (r) => {

@@ -12,7 +12,7 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
       <a href="/admin/proxy">Proxy Server</a> |
       <a href="/logout">Logout</a>
       `
-    : `<a href="/login">Login</a>`;
+    : `<a href="/login">Login</a> | <a href="/register">Register</a>`;
 
   return `
     <!DOCTYPE html>

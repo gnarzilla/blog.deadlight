@@ -7,6 +7,9 @@ import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { Validator, FormValidator, CSRFProtection } from '../../../lib.deadlight/core/src/security/validation.js';
 import { authLimiter } from '../../../lib.deadlight/core/src/security/ratelimit.js';
 import { authService } from '../services/auth-proxy.js';
+import { configService } from '../services/config.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
+import { renderRegistrationForm } from '../templates/auth/register.js';
 
 export const authRoutes = {
   '/login': {
@@ -166,7 +169,7 @@ export const authRoutes = {
           });
         }
 
-        // SUCCESS - rest of your code...
+        // SUCCESS
         const identifier = request.headers.get('CF-Connecting-IP') || 
                           request.headers.get('X-Forwarded-For') || 
                           'unknown';
@@ -217,6 +220,121 @@ export const authRoutes = {
         }), {
           status: 500,
           headers
+        });
+      }
+    }
+  },
+
+  '/register': {
+    GET: async (request, env, ctx) => {
+      // Check if registration is enabled
+      const config = await configService.getConfig(env.DB);
+      if (!config.enableRegistration) {
+        return new Response('Registration is currently disabled', { status: 403 });
+      }
+      
+      // Check if user is already logged in
+      const existingUser = await checkAuth(request, env);
+      if (existingUser) {
+        return Response.redirect('/admin', 302);
+      }
+      
+      return new Response(renderRegistrationForm(config), {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    },
+    
+// src/routes/auth.js - Update registration validation
+POST: async (request, env, ctx) => {
+  const config = await configService.getConfig(env.DB);
+  if (!config.enableRegistration) {
+    return new Response('Registration is currently disabled', { status: 403 });
+  }
+  
+  try {
+    const formData = await request.formData();
+    const username = formData.get('username');
+    const password = formData.get('password');
+    const confirmPassword = formData.get('confirmPassword');
+    const email = formData.get('email');
+    
+    // Enhanced username validation
+    if (!username || !password) {
+      throw new Error('Username and password are required');
+    }
+    
+    // Block suspicious usernames
+    const suspiciousPatterns = [
+      /https?:\/\//i,              // URLs
+      /\.com|\.org|\.net/i,        // Domain extensions
+      /bitcoin|btc|crypto|eth/i,   // Crypto terms
+      /exclusive.*deal/i,          // Spam phrases
+      /\d{10,}/,                   // Long number sequences
+      /[^\w\-_]/,                  // Non-alphanumeric except dash/underscore
+      /.{50,}/                     // Too long
+    ];
+    
+    if (suspiciousPatterns.some(pattern => pattern.test(username))) {
+      throw new Error('Invalid username format');
+    }
+    
+    // Reasonable username constraints
+    if (username.length < 3 || username.length > 20) {
+      throw new Error('Username must be 3-20 characters');
+    }
+    
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      throw new Error('Username can only contain letters, numbers, underscore, and hyphen');
+    }
+    
+    // Rest of your validation...
+        
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+        
+        if (password.length < 8) {
+          throw new Error('Password must be at least 8 characters');
+        }
+        
+        // Check if username exists
+        const userModel = new UserModel(env.DB);
+        const existing = await userModel.getByUsername(username);
+        if (existing) {
+          throw new Error('Username already taken');
+        }
+        
+        // Create user (non-admin by default)
+        const newUser = await userModel.create({
+          username,
+          password,
+          email,
+          role: 'user' // Not admin!
+        });
+        
+        // Log them in automatically
+        const token = await createJWT({
+          id: newUser.id,
+          username: newUser.username,
+          role: newUser.role
+        }, env.JWT_SECRET);
+        
+        // Create redirect URL
+        const redirectUrl = new URL(`/user/${newUser.username}`, request.url).toString();
+        
+        // Create response with both redirect and cookie
+        return new Response(null, {
+          status: 302,
+          headers: {
+            'Location': redirectUrl,
+            'Set-Cookie': `token=${token}; HttpOnly; Secure; SameSite=Strict; Path=/`
+          }
+        });
+        
+      } catch (error) {
+        return new Response(renderRegistrationForm(config, error.message), {
+          status: 400,
+          headers: { 'Content-Type': 'text/html' }
         });
       }
     }
@@ -276,21 +394,35 @@ export const authRoutes = {
   },
 
   '/logout': {
-    GET: async (request, env) => {
-      return authRoutes['/logout'].POST(request, env);
+    GET: async (request, env, ctx) => {
+      return authRoutes['/logout'].POST(request, env, ctx); // Add ctx parameter
     },
     
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const logger = new Logger({ context: 'auth-logout' });
       
       // If using proxy auth, notify it
-      if (env.USE_PROXY_AUTH) {
+      if (env.USE_PROXY_AUTH === 'true') { // Check string value
         const token = request.headers.get('Cookie')?.match(/token=([^;]+)/)?.[1];
         if (token) {
           try {
-            await authService.logout(token);
+            // If authService uses browser APIs, skip it in Worker environment
+            if (typeof document === 'undefined') {
+              // We're in a Worker, make a direct HTTP call to proxy instead
+              await fetch(`${env.PROXY_URL}/api/auth/logout`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+            } else {
+              // Browser environment (shouldn't happen in Worker)
+              await authService.logout(token);
+            }
           } catch (error) {
             logger.warn('Proxy logout failed', { error: error.message });
+            // Don't throw - continue with local logout even if proxy fails
           }
         }
       }
@@ -348,4 +480,4 @@ export const authRoutes = {
       });
     }
   }
-};
+}

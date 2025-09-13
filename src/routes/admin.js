@@ -14,7 +14,6 @@ import { renderTemplate } from '../templates/base.js';
 import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { DatabaseError } from '../../../lib.deadlight/core/src/db/base.js';
-import { renderAnalyticsTemplate } from '../templates/admin/analytics.js'
 import { getAnalyticsSummary, getTopPaths, getCountryStats, getHourlyTraffic } from '../middleware/analytics.js';
 import { ProxyService } from '../services/proxy.js';
 import { EnhancedOutboxService } from '../services/enhanced-outbox.js';
@@ -22,8 +21,10 @@ import { configService } from '../services/config.js';
 import { renderAdminDashboard } from '../templates/admin/index.js';
 import { SettingsModel } from '../../../lib.deadlight/core/src/db/models/index.js';        
 import { renderSettings } from '../templates/admin/settings.js';
+import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
 
 export const adminRoutes = {
+  // src/routes/admin.js - Update the dashboard route
   '/admin': {
     GET: async (request, env, ctx) => {
       const user = await checkAuth(request, env);
@@ -43,14 +44,14 @@ export const adminRoutes = {
           includeAuthor: true,
           orderBy: 'created_at',
           orderDirection: 'DESC',
-          publishedOnly: false  // Show all posts in admin
+          publishedOnly: false
         });
         
-        // Get basic stats with corrected method signatures
+        // Get basic stats
         const [totalPosts, publishedPosts, totalUsers] = await Promise.all([
-          postModel.count(false),          // Total posts (all)
-          postModel.count(true),           // Published only
-          userModel.count()                // Total users
+          postModel.count(false),
+          postModel.count(true),
+          userModel.count()
         ]);
         
         // Get posts created today
@@ -60,9 +61,13 @@ export const adminRoutes = {
           WHERE date(created_at) = date('now')
         `).first();
         
-        // Get analytics data from request_logs
+        // Get analytics data
         let requestStats = [];
+        let browserStats = [];
+        let activeVisitors = 0;
+        
         try {
+          // Get request stats for chart
           const analyticsData = await env.DB.prepare(`
             SELECT 
               date(timestamp) as day,
@@ -73,8 +78,33 @@ export const adminRoutes = {
             GROUP BY date(timestamp)
             ORDER BY day DESC
           `).all();
-          
           requestStats = analyticsData.results || [];
+          
+          // Get browser stats
+          const browserData = await env.DB.prepare(`
+            SELECT 
+              CASE 
+                WHEN user_agent LIKE '%Chrome%' THEN 'Chrome'
+                WHEN user_agent LIKE '%Safari%' THEN 'Safari'
+                WHEN user_agent LIKE '%Firefox%' THEN 'Firefox'
+                ELSE 'Other'
+              END as browser,
+              COUNT(*) as count
+            FROM analytics
+            WHERE timestamp >= datetime('now', '-7 days')
+            GROUP BY browser
+            ORDER BY count DESC
+          `).all();
+          browserStats = browserData.results || [];
+          
+          // Get active visitors
+          const activeVisitorsResult = await env.DB.prepare(`
+            SELECT COUNT(DISTINCT ip) as active
+            FROM analytics
+            WHERE timestamp >= datetime('now', '-5 minutes')
+          `).first();
+          activeVisitors = activeVisitorsResult.active || 0;
+          
         } catch (analyticsError) {
           console.error('Analytics query failed:', analyticsError);
         }
@@ -83,10 +113,11 @@ export const adminRoutes = {
           totalPosts,
           publishedPosts,
           postsToday: postsTodayResult.count || 0,
-          totalUsers
+          totalUsers,
+          activeVisitors, // Add this to stats
+          browserStats   // Add this to stats
         };
         
-        // Use recentPostsResult.posts to get the posts array
         const recentPosts = recentPostsResult.posts;
         
         return new Response(
@@ -105,6 +136,7 @@ export const adminRoutes = {
       }
     }
   },
+  
 
   '/admin/edit/:id': {
     GET: async (request, env) => {
@@ -1412,6 +1444,23 @@ export const adminRoutes = {
       }
     }
   },
+  '/admin/analytics-check': {
+    GET: async (request, env, ctx) => {
+      const tableInfo = await env.DB.prepare(`
+        SELECT COUNT(*) as count FROM analytics
+      `).first();
+        
+      const recentEntries = await env.DB.prepare(`
+        SELECT * FROM analytics ORDER BY timestamp DESC LIMIT 5
+      `).all();
+      
+      return Response.json({
+        totalRows: tableInfo.count,
+        recentEntries: recentEntries.results || [],
+        message: tableInfo.count === 0 ? 'Analytics table is empty. Visit some pages to generate data!' : 'Analytics data found'
+      });
+    }
+  },
 
   '/admin/federation' : {
     GET: async (request, env) => {
@@ -1442,29 +1491,134 @@ export const adminRoutes = {
 
   '/admin/analytics': {
     GET: async (request, env, ctx) => {
-      const user = await checkAuth(request, env);
-      if (!user){
-        return Response.redirect(`${new URL(request.url).origin}/login`)
+      const config = await configService.getConfig(env.DB);
+      const timeRange = request.query.range || '7d'; // Get from query param
+
+      let timeClause;
+      switch(timeRange) {
+        case '24h':
+          timeClause = "datetime('now', '-24 hours')";
+          break;
+        case '7d':
+          timeClause = "datetime('now', '-7 days')";
+          break;
+        case '30d':
+          timeClause = "datetime('now', '-30 days')";
+          break;
+        default:
+          timeClause = "datetime('now', '-7 days')";
       }
-      const config = await configService.getConfig(env.DB)
-      const [summary, topPaths, hourly, countries] = await Promise.all([
-        getAnalyticsSummary(env, 7),
-        getTopPaths(env, 7, 10),
-        getHourlyTraffic(env, 1),
-        getCountryStats(env, 7)
-      ]);
+
+      // Then use in your queries:
+      // WHERE timestamp >= ${timeClause}
       
-      // Render analytics dashboard
-      return new Response(renderAnalyticsTemplate({
-        summary,
-        topPaths,
-        hourlyTraffic: hourly,
-        countryStats: countries,
-        user,
-        config
-      }), {
-        headers: { 'Content-Type': 'text/html' }
-      });
+      try {
+        // Get analytics summary (last 7 days)
+        const summary = await env.DB.prepare(`
+          SELECT 
+            COUNT(*) as total_requests,
+            COUNT(DISTINCT ip) as unique_visitors,
+            AVG(duration) as avg_duration,
+            MAX(duration) as max_duration,
+            SUM(CASE WHEN status >= 400 THEN 1 ELSE 0 END) as error_count
+          FROM analytics
+          WHERE timestamp >= datetime('now', '-7 days')
+        `).first();
+        
+        // Get hourly traffic (last 24 hours)
+        const hourlyTraffic = await env.DB.prepare(`
+          SELECT 
+            hour_bucket as hour,
+            COUNT(*) as requests,
+            COUNT(DISTINCT ip) as unique_visitors
+          FROM analytics
+          WHERE timestamp >= datetime('now', '-24 hours')
+          GROUP BY hour_bucket
+          ORDER BY hour_bucket
+        `).all();
+        
+        // Get top paths (last 7 days)
+        const topPaths = await env.DB.prepare(`
+          SELECT 
+            path,
+            COUNT(*) as hit_count,
+            AVG(duration) as avg_duration,
+            COUNT(DISTINCT ip) as unique_visitors
+          FROM analytics
+          WHERE timestamp >= datetime('now', '-7 days')
+          GROUP BY path
+          ORDER BY hit_count DESC
+          LIMIT 10
+        `).all();
+        
+        // Get country stats (last 7 days)
+        const countryStats = await env.DB.prepare(`
+          SELECT 
+            country,
+            COUNT(*) as requests,
+            COUNT(DISTINCT ip) as unique_visitors
+          FROM analytics
+          WHERE timestamp >= datetime('now', '-7 days') 
+            AND country IS NOT NULL 
+            AND country != 'unknown'
+          GROUP BY country
+          ORDER BY requests DESC
+          LIMIT 20
+        `).all();
+        
+        // Ensure we have arrays even if queries return no results
+        const analyticsData = {
+          summary: summary || { 
+            total_requests: 0, 
+            unique_visitors: 0, 
+            avg_duration: 0, 
+            error_count: 0 
+          },
+          topPaths: topPaths?.results || [],
+          hourlyTraffic: hourlyTraffic?.results || [],
+          countryStats: countryStats?.results || []
+        };
+        
+        // Fill in missing hours for the chart
+        const hoursData = new Map();
+        for (let i = 0; i < 24; i++) {
+          hoursData.set(i, { hour: i, requests: 0, unique_visitors: 0 });
+        }
+        
+        // Update with actual data
+        analyticsData.hourlyTraffic.forEach(hour => {
+          hoursData.set(hour.hour, hour);
+        });
+        
+        // Convert back to sorted array
+        analyticsData.hourlyTraffic = Array.from(hoursData.values()).sort((a, b) => a.hour - b.hour);
+        
+        return new Response(
+          renderAnalyticsTemplate({
+            ...analyticsData,
+            user: request.user,
+            config
+          }),
+          { headers: { 'Content-Type': 'text/html' } }
+        );
+        
+      } catch (error) {
+        console.error('Analytics error:', error);
+        
+        // Return page with empty data
+        return new Response(
+          renderAnalyticsTemplate({
+            summary: { total_requests: 0, unique_visitors: 0, avg_duration: 0, error_count: 0 },
+            topPaths: [],
+            hourlyTraffic: [],
+            countryStats: [],
+            user: request.user,
+            config
+          }),
+          { headers: { 'Content-Type': 'text/html' } }
+        );
+      }
     }
   }
+
 };
