@@ -1,5 +1,9 @@
 // src/routes/user.js
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
+import { renderUserProfile } from '../templates/user/profile.js';
+import { configService } from '../services/config.js';
+import { renderUserPostForm } from '../templates/admin/addPost.js'
+import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js'
 
 // Username validation (reusing your slug pattern)
 function validateUsername(username) {
@@ -31,13 +35,12 @@ function validateUsername(username) {
 
 export const userRoutes = {
   '/user/:username': {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       try {
         const username = request.params.username.toLowerCase();
         const currentUser = await checkAuth(request, env);
         
         // Get dynamic config
-        const { configService } = await import('../services/config.js');
         const config = await configService.getConfig(env.DB);
         
         // Find user by subdomain (which should match username)
@@ -96,7 +99,6 @@ export const userRoutes = {
         };
         
         // Create user profile template
-        const { renderUserProfile } = await import('../templates/user/profile.js');
         return new Response(renderUserProfile(user, posts.results, currentUser, config, pagination), {
           headers: { 'Content-Type': 'text/html' }
         });
@@ -105,6 +107,139 @@ export const userRoutes = {
         console.error('User profile error:', error);
         return new Response('Internal server error', { status: 500 });
       }
+    }
+  },
+  // Add new post creation route
+  '/user/:username/new-post': {
+    GET: async (request, env, ctx) => {
+      const currentUser = await checkAuth(request, env);
+      const username = request.params.username;
+      
+      if (!currentUser || currentUser.username !== username) {
+        return Response.redirect(new URL('/login', request.url).toString(), 302);
+      }
+      
+      const config = await configService.getConfig(env.DB);
+      
+      return new Response(renderUserPostForm(currentUser, config), {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    },
+    
+    POST: async (request, env, ctx) => {
+      const currentUser = await checkAuth(request, env);
+      const username = request.params.username;
+      
+      if (!currentUser || currentUser.username !== username) {
+        return new Response('Unauthorized', { status: 403 });
+      }
+      
+      try {
+        const formData = await request.formData();
+        const postModel = new PostModel(env.DB);
+        
+        // Auto-generate slug from title for regular users
+        const postTitle = formData.get('title');
+        const postSlug = postModel.generateSlug(postTitle);
+        
+        const post = await postModel.create({
+          title: postTitle,
+          content: formData.get('content'),
+          slug: postSlug,  // Auto-generated
+          excerpt: '',     // No excerpt for simplified form
+          author_id: currentUser.id,
+          published: formData.get('publish') === 'true'
+        });
+        
+        // Fix: Construct full URL for redirect
+        const redirectUrl = new URL(`/user/${username}`, request.url).toString();
+        return Response.redirect(redirectUrl, 302);
+        
+      } catch (error) {
+        const config = await configService.getConfig(env.DB);
+        return new Response(renderUserPostForm(currentUser, config, error.message), {
+          status: 400,
+          headers: { 'Content-Type': 'text/html' }
+        });
+      }
+    }
+  },
+
+  // Edit post route
+  '/user/:username/edit/:postId': {
+    GET: async (request, env, ctx) => {
+      const currentUser = await checkAuth(request, env);
+      const username = request.params.username;
+      const postId = request.params.postId;
+      
+      if (!currentUser || currentUser.username !== username) {
+        return Response.redirect('/login', 302);
+      }
+      
+      const postModel = new PostModel(env.DB);
+      const post = await postModel.getById(postId);
+      
+      // Verify ownership
+      if (!post || post.author_id !== currentUser.id) {
+        return new Response('Not found', { status: 404 });
+      }
+      
+      const config = await configService.getConfig(env.DB);
+      
+      return new Response(renderUserPostForm(currentUser, config, null, post), {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    },
+    
+    POST: async (request, env, ctx) => {
+      const currentUser = await checkAuth(request, env);
+      const username = request.params.username;
+      const postId = request.params.postId;
+      
+      if (!currentUser || currentUser.username !== username) {
+        return new Response('Unauthorized', { status: 403 });
+      }
+      
+      const postModel = new PostModel(env.DB);
+      const post = await postModel.getById(postId);
+      
+      if (!post || post.author_id !== currentUser.id) {
+        return new Response('Not found', { status: 404 });
+      }
+      
+      const formData = await request.formData();
+      await postModel.update(postId, {
+        title: formData.get('title'),
+        content: formData.get('content'),
+        slug: formData.get('slug'),
+        excerpt: formData.get('excerpt'),
+        published: formData.get('publish') === 'true'
+      });
+      
+      return Response.redirect(`/user/${username}`, 302);
+    }
+  },
+
+  // Quick publish route for drafts
+  '/user/:username/publish/:postId': {
+    POST: async (request, env, ctx) => {
+      const currentUser = await checkAuth(request, env);
+      const username = request.params.username;
+      const postId = request.params.postId;
+      
+      if (!currentUser || currentUser.username !== username) {
+        return new Response('Unauthorized', { status: 403 });
+      }
+      
+      const postModel = new PostModel(env.DB);
+      const post = await postModel.getById(postId);
+      
+      if (!post || post.author_id !== currentUser.id) {
+        return new Response('Not found', { status: 404 });
+      }
+      
+      await postModel.togglePublished(postId);
+      return Response.redirect(`/user/${username}`, 302);
     }
   }
 };

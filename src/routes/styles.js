@@ -1629,6 +1629,55 @@ const baseStyles = `
     color: #4a9eff;
     text-decoration: none;
   }
+  
+  /* Add to your styles */
+  .post-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .post-form .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .post-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+  }
+
+  .post-form input[type="text"],
+  .post-form textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #333;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    border-radius: 4px;
+  }
+
+  .post-form textarea {
+    resize: vertical;
+    font-family: monospace;
+  }
+
+  .form-help {
+    display: block;
+    margin-top: 0.25rem;
+    color: #888;
+    font-size: 0.875rem;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .form-actions .button.primary {
+    flex: 1;
+  }
   }`;
 
 // Dark theme variables

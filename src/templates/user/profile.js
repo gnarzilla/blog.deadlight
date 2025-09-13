@@ -35,12 +35,12 @@ export function renderUserProfile(user, posts, currentUser, config, pagination) 
         
         ${currentUser && currentUser.id === user.id ? `
           <div class="profile-actions">
-            <a href="/admin/add" class="button">Write Post</a>
+
+            <a href="/user/${user.username}/new-post" class="button">Write Post</a>
             <a href="/user/${user.username}/settings" class="button secondary">Edit Profile</a>
           </div>
         ` : ''}
       </header>
-
       <div class="posts-section">
         <h2>Posts</h2>
         ${posts && posts.length > 0 ? `
@@ -83,9 +83,9 @@ export function renderUserProfile(user, posts, currentUser, config, pagination) 
         ` : `
           <div class="empty-state">
             <p>${user.username} hasn't posted anything yet.</p>
-            ${currentUser && currentUser.id === user.id ? `
-              <a href="/admin/add" class="button">Write your first post</a>
-            ` : ''}
+              ${currentUser && currentUser.id === user.id ? `
+                <a href="/user/${user.username}/new-post" class="button">Write your first post</a>
+              ` : ''}
           </div>
         `}
       </div>

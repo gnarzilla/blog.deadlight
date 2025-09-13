@@ -15,7 +15,7 @@ export function renderUserAddPostForm(user, config = null) {
           <textarea id="content" name="content" rows="20" required 
                     placeholder="Write your post content here...
 
-Use **bold** and *italic* text, add [links](https://example.com), and more!
+Use **bold** and *italic* text, add [links](https://wikipedia.org), and more!
 
 ## Headings
 ### Subheadings

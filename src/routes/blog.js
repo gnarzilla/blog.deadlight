@@ -124,5 +124,44 @@ export const blogRoutes = {
         return new Response('Internal server error', { status: 500 });
       }
     }
+  },
+  '/post/:slug/comment': {
+    POST: async (request, env, ctx) => {
+      const currentUser = await checkAuth(request, env);
+      if (!currentUser) {
+        return Response.redirect('/login', 302);
+      }
+      
+      const slug = request.params.slug;
+      const formData = await request.formData();
+      const content = formData.get('content');
+      
+      if (!content || content.trim().length === 0) {
+        return Response.redirect(`/post/${slug}`, 302);
+      }
+      
+      const postModel = new PostModel(env.DB);
+      const parentPost = await postModel.getBySlug(slug);
+      
+      if (!parentPost || !parentPost.comments_enabled) {
+        return new Response('Comments disabled', { status: 403 });
+      }
+      
+      // Create comment
+      await env.DB.prepare(`
+        INSERT INTO posts (
+          title, content, slug, author_id, published, 
+          parent_id, post_type, created_at
+        ) VALUES (?, ?, ?, ?, 1, ?, 'comment', CURRENT_TIMESTAMP)
+      `).bind(
+        `Comment on ${parentPost.title}`,
+        content,
+        `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        currentUser.id,
+        parentPost.id
+      ).run();
+      
+      return Response.redirect(`/post/${slug}#comments`, 302);
+    }
   }
 };

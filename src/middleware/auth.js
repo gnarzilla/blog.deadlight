@@ -77,7 +77,7 @@ export async function authMiddleware(request, env, ctx, next) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    return Response.redirect(new URL('/auth/login', request.url).toString(), 302);
+    return Response.redirect(new URL('/login', request.url).toString(), 302);
   }
   
   request.user = user;
@@ -123,7 +123,7 @@ export const requireAuth = (handler) => async (request, env, ctx) => {
     if (request.url.includes('/api/')) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    return Response.redirect(new URL('/auth/login', request.url).toString(), 302);
+    return Response.redirect(new URL('/login', request.url).toString(), 302);
   }
   request.user = user;
   return handler(request, env, ctx);

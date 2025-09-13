@@ -169,7 +169,7 @@ export const authRoutes = {
           });
         }
 
-        // SUCCESS
+        // SUCCESS - rest of your code...
         const identifier = request.headers.get('CF-Connecting-IP') || 
                           request.headers.get('X-Forwarded-For') || 
                           'unknown';
@@ -243,51 +243,82 @@ export const authRoutes = {
         headers: { 'Content-Type': 'text/html' }
       });
     },
-    
-// src/routes/auth.js - Update registration validation
-POST: async (request, env, ctx) => {
-  const config = await configService.getConfig(env.DB);
-  if (!config.enableRegistration) {
-    return new Response('Registration is currently disabled', { status: 403 });
-  }
-  
-  try {
-    const formData = await request.formData();
-    const username = formData.get('username');
-    const password = formData.get('password');
-    const confirmPassword = formData.get('confirmPassword');
-    const email = formData.get('email');
-    
-    // Enhanced username validation
-    if (!username || !password) {
-      throw new Error('Username and password are required');
-    }
-    
-    // Block suspicious usernames
-    const suspiciousPatterns = [
-      /https?:\/\//i,              // URLs
-      /\.com|\.org|\.net/i,        // Domain extensions
-      /bitcoin|btc|crypto|eth/i,   // Crypto terms
-      /exclusive.*deal/i,          // Spam phrases
-      /\d{10,}/,                   // Long number sequences
-      /[^\w\-_]/,                  // Non-alphanumeric except dash/underscore
-      /.{50,}/                     // Too long
-    ];
-    
-    if (suspiciousPatterns.some(pattern => pattern.test(username))) {
-      throw new Error('Invalid username format');
-    }
-    
-    // Reasonable username constraints
-    if (username.length < 3 || username.length > 20) {
-      throw new Error('Username must be 3-20 characters');
-    }
-    
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      throw new Error('Username can only contain letters, numbers, underscore, and hyphen');
-    }
-    
-    // Rest of your validation...
+    POST: async (request, env, ctx) => {
+      const config = await configService.getConfig(env.DB);
+      if (!config.enableRegistration) {
+        return new Response('Registration is currently disabled', { status: 403 });
+      }
+      
+      try {
+        const formData = await request.formData();
+        const username = formData.get('username');
+        const password = formData.get('password');
+        const confirmPassword = formData.get('confirmPassword');
+        const email = formData.get('email');
+        
+        // Check registration rate limit by IP
+        const clientIp = request.headers.get('cf-connecting-ip') || 'unknown';
+        
+        // Store recent registrations in a simple way
+        const recentAttempts = await env.DB.prepare(`
+          SELECT COUNT(*) as count 
+          FROM users 
+          WHERE created_at > datetime('now', '-1 hour')
+        `).first();
+        
+        // For now, just limit total registrations per hour (not per IP)
+        if (recentAttempts.count >= 10) {
+          throw new Error('Registration temporarily limited. Please try again later.');
+        }
+        
+        // Alternative: Use request_logs table to check IP-based limits
+        const ipAttempts = await env.DB.prepare(`
+          SELECT COUNT(DISTINCT path) as count 
+          FROM request_logs 
+          WHERE ip = ? 
+            AND path = '/register'
+            AND method = 'POST'
+            AND timestamp > datetime('now', '-1 hour')
+        `).bind(clientIp).first();
+        
+        if (ipAttempts.count >= 3) {
+          throw new Error('Too many registration attempts from your IP. Please try again later.');
+        }
+        
+        // Verify captcha
+        const captchaAnswer = formData.get('captcha');
+        const captchaHash = formData.get('captcha_hash');
+        if (!captchaAnswer || !captchaHash || btoa(captchaAnswer) !== captchaHash) {
+          throw new Error('Incorrect security answer');
+        }
+        
+        // Enhanced username validation
+        if (!username || !password) {
+          throw new Error('Username and password are required');
+        }
+        
+        // Block suspicious usernames
+        const suspiciousPatterns = [
+          /https?:\/\//i,              // URLs
+          /\.com|\.org|\.net/i,        // Domain extensions
+          /bitcoin|btc|crypto|eth/i,   // Crypto terms
+          /exclusive.*deal/i,          // Spam phrases
+          /\d{10,}/,                   // Long number sequences
+          /.{50,}/                     // Too long
+        ];
+        
+        if (suspiciousPatterns.some(pattern => pattern.test(username))) {
+          throw new Error('Invalid username format');
+        }
+        
+        // Reasonable username constraints
+        if (username.length < 3 || username.length > 20) {
+          throw new Error('Username must be 3-20 characters');
+        }
+        
+        if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+          throw new Error('Username can only contain letters, numbers, underscore, and hyphen');
+        }
         
         if (password !== confirmPassword) {
           throw new Error('Passwords do not match');
@@ -309,7 +340,7 @@ POST: async (request, env, ctx) => {
           username,
           password,
           email,
-          role: 'user' // Not admin!
+          role: 'user'
         });
         
         // Log them in automatically
@@ -332,6 +363,7 @@ POST: async (request, env, ctx) => {
         });
         
       } catch (error) {
+        // Pass the error back to show in the form
         return new Response(renderRegistrationForm(config, error.message), {
           status: 400,
           headers: { 'Content-Type': 'text/html' }
@@ -481,3 +513,4 @@ POST: async (request, env, ctx) => {
     }
   }
 }
+

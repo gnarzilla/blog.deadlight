@@ -5,14 +5,37 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
   const siteTitle = config?.title || 'D E A D L I G H T';
   const pageTitle = title === 'home' ? siteTitle : `${title} | ${siteTitle}`;
   
-  const authLinks = user 
-    ? `
-      <a href="/admin/add">Create New Post</a> |
-      <a href="/admin">Dashboard</a> |
-      <a href="/admin/proxy">Proxy Server</a> |
-      <a href="/logout">Logout</a>
-      `
-    : `<a href="/login">Login</a> | <a href="/register">Register</a>`;
+  let authLinks = '';
+  
+  // Alternative with more features for regular users
+  if (user) {
+    const isAdmin = user.role === 'admin' || user.isAdmin;
+    
+    // Common links for all logged-in users
+    let commonLinks = `
+      <a href="/user/${user.username}">${user.username}</a> |
+      
+    `;
+    // <a href="/inbox">Inbox</a> |
+    if (isAdmin) {
+      authLinks = commonLinks + `
+        <a href="/admin/add">Post</a> |
+        <a href="/admin">Dashboard</a> |
+        <a href="/admin/proxy">Proxy Server</a> |
+        <a href="/logout">Logout</a>
+      `;
+    } else {
+      authLinks = commonLinks + `
+        <a href="/user/${user.username}/new-post">Post</a> |
+        <a href="/logout">Logout</a>
+      `;
+    }
+  } else {
+    authLinks = `
+    <a href="/Register">Register</a> |
+    <a href="/login">Login</a>
+    `;
+  }
 
   return `
     <!DOCTYPE html>
