@@ -11,7 +11,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 ---
 ### Table of Contents
 1.  [Key Features](#key-features)
-2.  [Architecture](#architecture-&-design)
+2.  [Architecture & Design](#architecture-&-design)
 3.  [Features](#features)
 4.  [Roadmap](#roadmap)
 5.  [Getting Started](#getting-started)
