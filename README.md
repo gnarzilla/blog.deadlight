@@ -11,10 +11,10 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 ---
 ### Table of Contents
 1.  [Key Features](#key-features)
-2.  [Architecture & Design](#architecture-&-design)
+2.  [Architecture](#architecture)
 3.  [Features](#features)
 4.  [Roadmap](#roadmap)
-5.  [Getting Started](#getting-started)
+5.  [Quickstart](#quickstart)
 6.  [Usage](#usage)
 7.  [Extending Deadlight](#extending-deadlight)
 8.  [Project Structure](#project-structure)
@@ -49,7 +49,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 ---
 
-## **Architecture & Design**:
+## **Architecture**:
 Deadlight is designed as a modular, full-stack application built for maximum flexibility and performance.
 - **Modular Architecture**: Shared lib.deadlight library and reusable components enable a clean separation of concerns and a multi-app ecosystem.
 - **Text-First**: A deliberate design choice to focus on clean, markdown-based content and avoid the complexities of media management.
