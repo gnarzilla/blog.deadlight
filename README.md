@@ -265,7 +265,7 @@ Edit theme variables in `src/routes/styles.js`. The CSS uses variables for easy 
 ## API Documentation
 These expose blog content as JSON. Useful for headless consumption (mobile apps, static site builders, integrations).
 
-1. Public Monitoring Endpoints
+### Public Monitoring Endpoints
 
 These endpoints do not require authentication and are safe to expose for uptime checks and monitoring.
 
@@ -307,10 +307,9 @@ proxy → health check against env.PROXY_URL
 worker → always reported from current worker context
 
 
-
 ---
 
-2. Blog API Endpoints
+### Blog API Endpoints
 
 These expose blog content as JSON. Useful for headless consumption (mobile apps, static site builders, integrations).
 
@@ -359,7 +358,7 @@ Response:
 
 ---
 
-3. Email Integration Endpoints
+### Email Integration Endpoints
 
 These routes enable email → blog workflows and inbox/reply handling.
 Authentication is required (middleware sets request.user).
@@ -478,7 +477,7 @@ Response:
 
 ---
 
-4. Legacy & Admin Endpoints
+### Legacy & Admin Endpoints
 
 These routes remain for backward compatibility and administrative use:
 
@@ -490,7 +489,7 @@ These routes remain for backward compatibility and administrative use:
 
 ---
 
-5. Federation Workflow
+### Federation Workflow
 
 Although federation does not yet expose direct endpoints, it is triggered automatically by:
 
