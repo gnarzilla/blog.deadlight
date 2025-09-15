@@ -14,7 +14,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 2.  [Architecture](#architecture)
 3.  [Features](#features)
 4.  [Roadmap](#roadmap)
-5.  [Quickstart](#quickstart)
+5.  [Quick Start](#quick-start)
 6.  [Usage](#usage)
 7.  [Extending Deadlight](#extending-deadlight)
 8.  [Project Structure](#project-structure)
