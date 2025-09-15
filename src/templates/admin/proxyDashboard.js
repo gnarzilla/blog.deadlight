@@ -256,116 +256,6 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             </section>
         </div>
 
-        <style>
-            /* Enhanced styles for the dashboard */
-            .proxy-dashboard.enhanced {
-                max-width: 1400px;
-                margin: 0 auto;
-                padding: 2rem;
-            }
-            
-            .dashboard-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 2rem;
-                padding-bottom: 1rem;
-                border-bottom: 1px solid #333;
-            }
-            
-            .connection-status {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-            }
-            
-            .status-dot {
-                display: inline-block;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                margin-right: 0.5rem;
-                animation: pulse 2s infinite;
-            }
-            
-            .connected .status-dot { background: #4ade80; }
-            .disconnected .status-dot { background: #f87171; }
-            
-            .metrics-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 1rem;
-                margin-bottom: 2rem;
-            }
-            
-            .metric-card {
-                background: #1a1a1a;
-                border: 1px solid #333;
-                padding: 1.5rem;
-                border-radius: 8px;
-                text-align: center;
-            }
-            
-            .metric-value {
-                font-size: 2.5rem;
-                font-weight: bold;
-                color: #4a9eff;
-            }
-            
-            .service-cards-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 1.5rem;
-                margin-bottom: 2rem;
-            }
-            
-            .service-card {
-                background: #1a1a1a;
-                border: 1px solid #333;
-                padding: 1.5rem;
-                border-radius: 8px;
-                transition: transform 0.2s;
-            }
-            
-            .service-card:hover {
-                transform: translateY(-2px);
-                border-color: #4a9eff;
-            }
-            
-            .status-badge {
-                padding: 0.25rem 0.75rem;
-                border-radius: 12px;
-                font-size: 0.875rem;
-            }
-            
-            .status-badge.running,
-            .status-badge.healthy { 
-                background: rgba(74, 222, 128, 0.1); 
-                color: #4ade80; 
-            }
-            
-            .status-badge.error { 
-                background: rgba(248, 113, 113, 0.1); 
-                color: #f87171; 
-            }
-            
-            .activity-stream {
-                background: #0a0a0a;
-                border: 1px solid #333;
-                border-radius: 8px;
-                height: 300px;
-                overflow-y: auto;
-                padding: 1rem;
-                font-family: monospace;
-            }
-            
-            @keyframes pulse {
-                0% { opacity: 1; }
-                50% { opacity: 0.5; }
-                100% { opacity: 1; }
-            }
-        </style>
-
         <script src="/admin/proxyDashboard.js"></script>
         <script>
             // Add relative time formatting
@@ -378,7 +268,95 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 if (hours < 24) return hours + 'h ago';
                 return this.toLocaleDateString();
             };
-        </script>
+            // Real-time activity monitoring
+            let activitySocket = null;
+            let activityBuffer = [];
+            const MAX_ACTIVITY_ITEMS = 100;
+
+            function startLiveMonitoring() {
+            const monitorBtn = document.querySelector('#monitor-status');
+            
+            if (activitySocket) {
+                // Stop monitoring
+                activitySocket.close();
+                activitySocket = null;
+                monitorBtn.textContent = '▶';
+                return;
+            }
+            
+            // Start monitoring
+            monitorBtn.textContent = '⏸';
+            
+            // Connect to EventSource for real-time updates
+            const eventSource = new EventSource('/admin/proxy/status-stream');
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateDashboard(data);
+                addActivityItem(data);
+            };
+            
+            eventSource.onerror = (error) => {
+                console.error('EventSource error:', error);
+                monitorBtn.textContent = '▶';
+            };
+            
+            activitySocket = eventSource;
+            }
+
+            function addActivityItem(data) {
+                const stream = document.getElementById('activity-stream');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const item = document.createElement('div');
+                item.className = 'activity-item ' + (data.type || 'info');
+                item.innerHTML = 
+                    '<span class="activity-time">' + timestamp + '</span>' +
+                    '<span class="activity-type">[' + (data.type || 'INFO').toUpperCase() + ']</span>' +
+                    '<span class="activity-message">' + (data.message || '') + '</span>';
+                
+                // Remove placeholder if it exists
+                const placeholder = stream.querySelector('.activity-placeholder');
+                if (placeholder) placeholder.remove();
+                
+                // Add new item at top
+                stream.insertBefore(item, stream.firstChild);
+                
+                // Keep buffer size limited
+                while (stream.children.length > MAX_ACTIVITY_ITEMS) {
+                    stream.removeChild(stream.lastChild);
+                }
+                }
+                
+                function updateDashboard(data) {
+                // Update metrics
+                if (data.queue) {
+                    const queueTotal = document.getElementById('queue-total');
+                    if (queueTotal) queueTotal.textContent = data.queue.total || 0;
+                }
+                
+                if (data.federation) {
+                    const fedHealth = document.getElementById('fed-health');
+                    if (fedHealth) fedHealth.textContent = data.federation.connected || 0;
+                }
+                
+                // Update service statuses
+                if (data.services) {
+                    Object.entries(data.services).forEach(function(entry) {
+                    const service = entry[0];
+                    const status = entry[1];
+                    const card = document.querySelector('[data-service="' + service + '"]');
+                    if (card) {
+                        const statusBadge = card.querySelector('.status-badge');
+                        if (statusBadge) {
+                        statusBadge.textContent = status.operational ? 'Operational' : 'Offline';
+                        statusBadge.className = 'status-badge ' + (status.operational ? 'healthy' : 'error');
+                        }
+                    }
+                    });
+                }
+                }
+            </script>
     `;
 
     return renderTemplate('Proxy Server Dashboard', content, user, config);
