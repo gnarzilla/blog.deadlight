@@ -551,9 +551,6 @@ All responses include:
 ## License
 MIT - Use this however you want!
 
-## Acknowledgments
-Maintained with ❤️ Rage and Diet Mountain Dew
-
 ## Support
 
 ☕  [Support is greatly appreciated! Buy me a coffee](coff.ee/gnarzillah)
