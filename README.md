@@ -12,14 +12,11 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 ### Table of Contents
 1.  [Key Features](#key-features)
 2.  [Architecture](#architecture)
-3.  [Features](#features)
-4.  [Roadmap](#roadmap)
-5.  [Quick Start](#quick-start)
-6.  [Usage](#usage)
-7.  [Extending Deadlight](#extending-deadlight)
-8.  [Project Structure](#project-structure)
-9.  [License](#license)
-10. [Support](#support) 
+3.  [Quick Start](#quick-start)
+4.  [Configuarwtion](#congifuration)
+5.  [Roadmap](#roadmap)
+6.  [License](#license)
+7.  [Support](#support) 
 
 ---
 
@@ -103,7 +100,7 @@ deadlight/
 - Proxy integration - testing
 - email bridge/federation - testing
 - plugin system - active
-- Integrated locoalized (private) analytice collection and dashboard - beta
+- Integrated locoalized (private) analytics collection and dashboard - active
 - **Active Development**: Full email client/server integration, production deployment guides.
 
 ## Quick Start
@@ -112,8 +109,6 @@ deadlight/
 - Cloudflare account (free tier works)
 - Node.js 20+
 - Wrangler CLI (`npm install -g wrangler`)
-
-### Deploy in 5 minutes
 
 ```bash
 git clone https://github.com/gnarzilla/blog.deadlight
@@ -129,9 +124,6 @@ wrangler d1 execute your-db-name --local --file=migrations/20250815_schema.sql
 
 # Production
 wrangler d1 execute your-db-name --remote --file=migrations/20250815_schema.sql
-
-# Create KV namespace for rate limiting
-wrangler kv:namespace create "RATE_LIMIT"
 
 ```
 
@@ -171,10 +163,6 @@ binding = "DB"
 database_name = "your-db-name"
 database_id = "your-database-id"
 
-[[kv_namespaces]]
-binding = "RATE_LIMIT"
-id = "your-kv-namespace-id"
-
 [env.production]
 name = "your-domain"
 
@@ -188,10 +176,6 @@ ENABLE_QUEUE_PROCESSING = "true"  # Explicitly set for production
 binding = "DB"
 database_name = "your-db-name"
 database_id = "your-db-id"
-
-[[env.production.kv_namespaces]]
-binding = "RATE_LIMIT"
-id = "your-kv-namespace-id"
 
 ```
 
@@ -284,15 +268,6 @@ Edit theme variables in `src/routes/styles.js`. The CSS uses variables for easy 
 - Rate limits: Edit lib.deadlight/core/src/security/ratelimit.js
 - Validation rules: Edit lib.deadlight/core/src/security/validation.js
 - Security headers: Edit lib.deadlight/core/src/security/headers.js
-
-## Future Considerations
-```
--📊 Analytics service (privacy-first)
--💬 Comments system (no tracking)
--📱 Mobile app API
--🔌 Plugin system
-```
-
 
 ## API Documentation
 ### Public Endpoints
