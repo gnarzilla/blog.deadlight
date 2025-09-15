@@ -14,9 +14,10 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 2.  [Architecture](#architecture)
 3.  [Quick Start](#quick-start)
 4.  [Configuarwtion](#congifuration)
-5.  [Roadmap](#roadmap)
-6.  [License](#license)
-7.  [Support](#support) 
+5.  [API Documentation](#api-documentation)
+6.  [Roadmap](#roadmap)
+7.  [License](#license)
+8.  [Support](#support) 
 
 ---
 
