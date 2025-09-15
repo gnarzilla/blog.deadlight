@@ -268,6 +268,10 @@ Edit theme variables in `src/routes/styles.js`. The CSS uses variables for easy 
 - GET /post/:id - Individual post
 - GET /login - Login form
 - POST /login - Authenticate
+- GET /api/health          → {"status":"ok","timestamp":"...","version":"5.0.0"}
+- GET /api/status          → {"status":"operational","components":{...}}
+- GET /api/blog/status     → {"status":"running","features":["email_integration","federation","proxy_support"]}
+- GET /api/blog/posts      → list of published posts (JSON, supports limit/offset)
 
 ### Protected Endpoints (require auth)
 - GET /admin - Admin dashboard
@@ -279,6 +283,12 @@ Edit theme variables in `src/routes/styles.js`. The CSS uses variables for easy 
 - GET /admin/users - User management
 - POST /admin/users/add - Create user
 - POST /admin/users/delete/:id - Delete user
+
+### Email & Federation
+- POST /api/email/receive  → ingest email (JSON body), optional auto-federation
+- POST /api/email/fetch    → bulk import emails (JSON body {emails: [...]})
+- GET  /api/email/pending-replies → list queued reply drafts
+- POST /api/email/pending-replies → mark reply as sent
 
 ## Security Headers
 All responses include:
