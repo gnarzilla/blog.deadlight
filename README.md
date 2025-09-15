@@ -2,7 +2,7 @@
 
 🌐 Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo) | [Other Separate Instance](https://threat-level-midnight.deadlight.boo)
 
-A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, locoalized real-time analytics.
+A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, localized real-time analytics.
 
 ---
 
@@ -13,7 +13,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 1.  [Key Features](#key-features)
 2.  [Architecture](#architecture)
 3.  [Quick Start](#quick-start)
-4.  [Configuarwtion](#congifuration)
+4.  [Configuration](#congifuration)
 5.  [API Documentation](#api-documentation)
 6.  [Roadmap](#roadmap)
 7.  [License](#license)
@@ -161,7 +161,7 @@ name = "your-domain"
 
 [env.production.vars]
 PROXY_URL = "https://proxy.your-domain.tld"
-SITE_URL = "https://your-domanin.tld"
+SITE_URL = "https://your-domain.tld"
 ENABLE_QUEUE_PROCESSING = "true"  # Explicitly set for production
 
 # Copy bindings to production env
