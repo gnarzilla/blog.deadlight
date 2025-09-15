@@ -263,7 +263,6 @@ Edit theme variables in `src/routes/styles.js`. The CSS uses variables for easy 
 - Security headers: Edit lib.deadlight/core/src/security/headers.js
 
 ## API Documentation
-These expose blog content as JSON. Useful for headless consumption (mobile apps, static site builders, integrations).
 
 ### Public Monitoring Endpoints
 
