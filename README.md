@@ -2,7 +2,7 @@
 
 🌐 Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo) | [Other Separate Instance](https://threat-level-midnight.deadlight.boo)
 
-A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, and everything you need for a truly self-sovereign digital presence.
+A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, locoalized real-time analytics.
 
 ---
 
@@ -42,7 +42,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 - **Real-time Control**: Manage your local infrastructure from any browser.
 - **Email Protocol Bridge**: Connect Cloudflare Workers to your self-hosted email server via SMTP/IMAP.
 - **Decentralized Federation**: Test blog-to-blog communication and federation with other domains via email protocols.
-- **Privacy Proxy**: Manage SOCKS5 proxy access directly from the dashboard.
+- **Privacy Proxy**: Manage proxy access directly from the dashboard.
 
 ---
 
@@ -94,14 +94,6 @@ deadlight/
         ├── security/       # Security features
         └── ...
 ```
-
-## **Roadmap**
-- Post comments - active
-- Proxy integration - testing
-- email bridge/federation - testing
-- plugin system - active
-- Integrated locoalized (private) analytics collection and dashboard - active
-- **Active Development**: Full email client/server integration, production deployment guides.
 
 ## Quick Start
 
@@ -295,6 +287,14 @@ All responses include:
 - X-XSS-Protection: 1; mode=block
 - Referrer-Policy: strict-origin-when-cross-origin
 - Content-Security-Policy (configurable)
+
+## **Roadmap**
+- Post comments - active
+- Proxy integration - testing
+- email bridge/federation - testing
+- plugin system - active
+- Integrated locoalized (private) analytics collection and dashboard - active
+- **Active Development**: Full email client/server integration, production deployment guides.
 
 ## License
 MIT - Use this however you want!
