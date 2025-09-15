@@ -10,8 +10,8 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 ---
 ### Table of Contents
-1.  [Overview](#overview)
-2.  [Architecture](#architecture)
+1.  [Key Features](#key-features)
+2.  [Architecture](#architecture-&-design)
 3.  [Features](#features)
 4.  [Roadmap](#roadmap)
 5.  [Getting Started](#getting-started)
@@ -20,15 +20,6 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 8.  [Project Structure](#project-structure)
 9.  [License](#license)
 10. [Support](#support) 
-
----
-
-### Serverless deployment via Cloudflare Workers free-tier in minutes (B.Y.O.D. - Bring your own domain)
-
-1. Clone the repo
-2. Create D1 database
-3. Set up KV namespace
-4. Deploy via Wrangler
 
 ---
 
@@ -108,9 +99,12 @@ deadlight/
 ```
 
 ## **Roadmap**
-- **Production Ready (v4)**: Proxy integration, email bridge, and federation testing.
-- **Active Development**: Full email client/server integration, SOCKS5 authentication, and production deployment guides.
-- **Future Considerations**: A privacy-first analytics service, a comments system, media management via R2, and an extensible plugin system.
+- Post comments - active
+- Proxy integration - testing
+- email bridge/federation - testing
+- plugin system - active
+- Integrated locoalized (private) analytice collection and dashboard - beta
+- **Active Development**: Full email client/server integration, production deployment guides.
 
 ## Quick Start
 
