@@ -4,6 +4,8 @@
 
 A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, localized real-time analytics. [Getting Started with Deadlight](https://deadlight.boo/post/getting-started)
 
+![Mobile Triple Hero](src/assets/mobile_trip_hero.png)
+
 [Use case examples](https://thatch-dt.deadlight.boo/post/use-cases)
 
 ---
