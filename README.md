@@ -6,8 +6,6 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 [Use case examples](https://thatch-dt.deadlight.boo/post/use-cases)
 
-![Hello World](src/assets/deadlight_helloworld_wh.jpg)
-
 ---
 
 ![Main Blog - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/blog_dual_nolog.png)
