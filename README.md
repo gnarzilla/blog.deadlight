@@ -6,7 +6,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 [Use case examples](https://thatch-dt.deadlight.boo/post/use-cases)
 
-[Hello World](src/assets/deadlight_helloworld_wh.jpg)
+![Hello World](src/assets/deadlight_helloworld_wh.jpg)
 
 ---
 
