@@ -4,10 +4,10 @@ import { EnhancedOutboxService } from '../services/enhanced-outbox.js';
 import { FederationService } from '../services/federation.js';
 import { proxyDashboardTemplate } from '../templates/admin/proxyDashboard.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
+import { configService } from '../services/config.js';
 
 export async function handleProxyRoutes(request, env, user) {
     try {
-        const { configService } = await import('../services/config.js');
         const config = await configService.getConfig(env.DB);
 
         const proxyUrl = env.PROXY_URL || config.proxyUrl || 'http://localhost:8080';
@@ -86,7 +86,6 @@ export async function handleProxyRoutes(request, env, user) {
             }
         };
         
-        const { configService } = await import('../services/config.js');
         const config = await configService.getConfig(env.DB);
         
         return new Response(proxyDashboardTemplate(errorData, user, config), {
@@ -96,6 +95,186 @@ export async function handleProxyRoutes(request, env, user) {
 }
 
 export const handleProxyTests = {
+    async addFederationDomain(request, env) {
+        try {
+            const { domain } = await request.json();
+            
+            if (!domain) {
+                return Response.json({ success: false, error: 'Domain is required' });
+            }
+
+            const federationService = new FederationService(env);
+            
+            // First, discover the domain
+            const discoveryResult = await federationService.discoverDomain(domain);
+            
+            // Then add it to the database
+            await env.DB.prepare(`
+                INSERT INTO federation_domains (domain, trust_level, status, created_at)
+                VALUES (?, 'pending', 'active', datetime('now'))
+                ON CONFLICT(domain) DO UPDATE SET
+                    status = 'active',
+                    updated_at = datetime('now')
+            `).bind(domain).run();
+            
+            return Response.json({
+                success: true,
+                data: discoveryResult,
+                message: `Domain ${domain} added and discovery initiated`
+            });
+        } catch (error) {
+            console.error('Add federation domain error:', error);
+            return Response.json({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    async testFederationDomain(request, env) {
+        try {
+            const { domain } = await request.json();
+            
+            if (!domain) {
+                return Response.json({ success: false, error: 'Domain is required' });
+            }
+
+            const federationService = new FederationService(env);
+            
+            // Test connectivity to the domain
+            const testResult = await federationService.testDomain(domain);
+            
+            return Response.json({
+                success: true,
+                data: testResult,
+                message: `Connection test to ${domain} completed`
+            });
+        } catch (error) {
+            console.error('Test federation domain error:', error);
+            return Response.json({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    async removeFederationDomain(request, env) {
+        try {
+            const { domain } = await request.json();
+            
+            if (!domain) {
+                return Response.json({ success: false, error: 'Domain is required' });
+            }
+
+            // Remove from database
+            const result = await env.DB.prepare(`
+                UPDATE federation_domains 
+                SET status = 'removed', updated_at = datetime('now')
+                WHERE domain = ?
+            `).bind(domain).run();
+            
+            if (result.changes === 0) {
+                return Response.json({
+                    success: false,
+                    error: 'Domain not found'
+                });
+            }
+            
+            return Response.json({
+                success: true,
+                message: `Domain ${domain} removed from federation`
+            });
+        } catch (error) {
+            console.error('Remove federation domain error:', error);
+            return Response.json({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    async healthCheck(request, env) {
+        try {
+            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
+            const outboxService = new EnhancedOutboxService(env);
+            const federationService = new FederationService(env);
+            
+            const [proxyHealth, queueStatus, federationStatus] = await Promise.allSettled([
+                proxyService.healthCheck(),
+                outboxService.getStatus(),
+                federationService.getConnectedDomains()
+            ]);
+            
+            return Response.json({
+                success: true,
+                data: {
+                    proxy: proxyHealth.status === 'fulfilled' ? proxyHealth.value : { error: proxyHealth.reason?.message },
+                    queue: queueStatus.status === 'fulfilled' ? queueStatus.value : { error: queueStatus.reason?.message },
+                    federation: federationStatus.status === 'fulfilled' ? 
+                        { connected_domains: federationStatus.value.length, status: 'healthy' } : 
+                        { error: federationStatus.reason?.message },
+                    timestamp: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            console.error('Health check error:', error);
+            return Response.json({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    async resetCircuit(request, env) {
+        try {
+            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
+            
+            // Reset the circuit breaker
+            proxyService.circuitBreaker.reset();
+            
+            return Response.json({
+                success: true,
+                message: 'Circuit breaker reset successfully',
+                circuit_state: proxyService.getCircuitState()
+            });
+        } catch (error) {
+            console.error('Reset circuit error:', error);
+            return Response.json({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    async clearFailed(request, env) {
+        try {
+            const outboxService = new EnhancedOutboxService(env);
+            
+            // Clear failed operations from the outbox
+            const result = await env.DB.prepare(`
+                DELETE FROM outbox 
+                WHERE status = 'failed' AND operation_type IN ('email', 'federation')
+            `).run();
+            
+            return Response.json({
+                success: true,
+                cleared: result.changes,
+                message: `Cleared ${result.changes} failed operations`
+            });
+        } catch (error) {
+            console.error('Clear failed operations error:', error);
+            return Response.json({
+                success: false,
+                error: error.message
+            });
+        }
+    },
+
+    async viewQueue(request, env) {
+        // Redirect to proxy dashboard for now
+        return Response.redirect('/admin/proxy', 302);
+    },
+
     async testBlogApi(request, env) {
         try {
             const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });

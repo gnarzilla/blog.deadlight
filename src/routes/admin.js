@@ -24,7 +24,6 @@ import { renderSettings } from '../templates/admin/settings.js';
 import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
 
 export const adminRoutes = {
-  // src/routes/admin.js - Update the dashboard route
   '/admin': {
     GET: async (request, env, ctx) => {
       const user = await checkAuth(request, env);
