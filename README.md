@@ -2,7 +2,7 @@
 
 🌐 Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo) | [Other Separate Instance](https://threat-level-midnight.deadlight.boo)
 
-A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, localized real-time analytics.
+A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, localized real-time analytics. [Getting Started with Deadlight](https://deadlight.boo/post/getting-started)
 
 ---
 
@@ -20,10 +20,6 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 8.  [Support](#support) 
 
 ---
-
-![Admin Dash - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/admin_dual.png)
-
-![Proxy/Analytics - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/proxy_anal_dual.png)
 
 ## Key Features
 
@@ -44,6 +40,11 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 - **Email Protocol Bridge**: Connect Cloudflare Workers to your self-hosted email server via SMTP/IMAP.
 - **Decentralized Federation**: Test blog-to-blog communication and federation with other domains via email protocols.
 - **Privacy Proxy**: Manage proxy access directly from the dashboard.
+
+
+![Admin Dash - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/admin_dual.png)
+
+![Proxy/Analytics - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/proxy_anal_dual.png)
 
 ---
 
@@ -113,10 +114,10 @@ wrangler d1 create your-db-name
 
 # Initialize the database:
 # Local development
-wrangler d1 execute your-db-name --local --file=migrations/20250815_schema.sql
+wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
 
 # Production
-wrangler d1 execute your-db-name --remote --file=migrations/20250815_schema.sql
+wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 
 ```
 
@@ -134,7 +135,7 @@ zone_id = "your-zone-id"
 # All subdomains (including blog and user subdomains)
 [[routes]]
 pattern = "*.your-domain.tld/*"
-zone_id = "your-zone-ida"
+zone_id = "your-zone-id"
 
 [observability.logs]
 enabled = true
@@ -171,6 +172,51 @@ database_name = "your-db-name"
 database_id = "your-db-id"
 
 ```
+
+### Deploy
+
+```bash
+$ wrangler deploy --env=production
+
+ ⛅️ wrangler 4.27.0 (update available 4.37.1)
+─────────────────────────────────────────────
+[custom build] Running: npm install
+[custom build]
+[custom build] up to date, audited 8 packages in 2s
+[custom build]
+[custom build]
+[custom build] found 0 vulnerabilities
+[custom build]
+🌀 Building list of assets...
+✨ Read 33 files from the assets directory /home/thatch/blog.deadlight/deadlight.boo/src/assets
+🌀 Starting asset upload...
+🌀 Found 2 new or modified static assets to upload. Proceeding with upload...
++ /admin_dual.png
++ /BlogProxyTunnel.png
+Uploaded 1 of 2 assets
+Uploaded 2 of 2 assets
+✨ Success! Uploaded 2 files (30 already uploaded) (2.09 sec)
+
+Total Upload: 449.87 KiB / gzip: 90.54 KiB
+Worker Startup Time: 8 ms
+Your Worker has access to the following bindings:
+Binding                                                    Resource
+env.DB (your-db-name)                                      D1 Database
+env.ASSETS                                                 Assets
+env.PROXY_URL ("http://localhost:8080")                    Environment Variable
+env.SITE_URL ("https://your-domain.tld")                   Environment Variable
+env.ENABLE_QUEUE_PROCESSING ("true")                       Environment Variable
+env.USE_PROXY_AUTH (true)                                  Environment Variable
+env.DISABLE_RATE_LIMITING (true)                           Environment Variable
+
+Uploaded your-domain.tld (9.43 sec)
+Deployed your-domain.tld triggers (1.84 sec)
+  your-domain.tld/* (zone id: your-cloudflare-zoneid)
+  *.your-domain.tld/* (zone id: your-cloudflare-zoneid)
+Current Version ID: <hidden>
+```
+Your site is now accessible at your-domain.tld. Create an admin account to manage administrative settings at `your-domain.tld/admin` and proxy dashboard at `your-domain.tld/admin/proxy`.
+
 
 ### Configure your local environment in package.json
 
@@ -546,7 +592,7 @@ All responses include:
 - email bridge/federation - testing
 - plugin system - active
 - Integrated locoalized (private) analytics collection and dashboard - active
-- **Active Development**: Full email client/server integration, production deployment guides.
+- **Active Development**: Full email client/server integration, production deployment guides, automatic sitemmap.xml generation
 
 ## License
 MIT - Use this however you want!
