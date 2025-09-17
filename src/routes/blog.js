@@ -2,6 +2,7 @@ import { renderPostList } from '../templates/blog/list.js';
 import { renderSinglePost } from '../templates/blog/single.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { FederationService } from '../services/federation.js';
+import { configService } from '../services/config.js';
 
 export const blogRoutes = {
   '/': {
@@ -58,8 +59,7 @@ export const blogRoutes = {
   '/post/:slug': {
     GET: async (request, env) => {
       try {
-        const user = await checkAuth(request, env);
-        const { configService } = await import('../services/config.js');
+        const user = await checkAuth(request, env);;
         const config = await configService.getConfig(env.DB);
 
         const slug = request.params.slug;

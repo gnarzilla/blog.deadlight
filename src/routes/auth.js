@@ -236,7 +236,13 @@ export const authRoutes = {
       // Check if user is already logged in
       const existingUser = await checkAuth(request, env);
       if (existingUser) {
-        return Response.redirect('/admin', 302);
+        const redirectPath = existingUser.role === 'admin' ? '/admin' : `/user/${existingUser.username}`;
+        return new Response(null, {
+          status: 302,
+          headers: {
+            'Location': redirectPath
+          }
+        });
       }
       
       return new Response(renderRegistrationForm(config), {
