@@ -604,4 +604,6 @@ MIT - Use this however you want!
 ## Support
 
 ☕  [Support is greatly appreciated! Buy me a coffee](coff.ee/gnarzillah)
+
+[ko-fi/gnarzilla](https://ko-fi.com/gnarzilla)
 _
