@@ -54,7 +54,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 ## **Architecture**:
 Deadlight is designed as a modular, full-stack application built for maximum flexibility and performance.
-- **Modular Architecture**: Shared lib.deadlight library and reusable components enable a clean separation of concerns and a multi-app ecosystem.
+- **Modular Architecture**: Shared [lib.deadlight](https://github.com/gnarzilla/lib.deadlight) library and reusable components enable a clean separation of concerns and a multi-app ecosystem.
 - **Text-First**: A deliberate design choice to focus on clean, markdown-based content and avoid the complexities of media management.
 - **Project Structure**: A clear directory structure that organizes the main application, shared libraries, and core functionality.
 
