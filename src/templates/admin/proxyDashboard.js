@@ -175,6 +175,8 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
         </div>
 
         <script>
+            const PROXY_BASE_URL = '${proxyConfig?.proxyUrl || window.location.origin}';
+
             // Helper functions
             function formatBytes(bytes) {
                 if (bytes === 0) return '0 B';
@@ -221,7 +223,7 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                     logActivity('Adding domain ' + domain + '...', 'info');
                     
                     // Call the proxy server directly
-                    const testResponse = await fetch('http://proxy.deadlight.boo/api/federation/test/' + domain);
+                    const testResponse = await fetch(PROXY_BASE_URL + '/api/federation/test/' + domain);
                     const testResult = await testResponse.json();
                     
                     if (testResult.status === 'verified') {
@@ -239,7 +241,7 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             async function testDomain(domain) {
                 try {
                     logActivity('Testing connection to ' + domain + '...', 'info');
-                    const response = await fetch('http://proxy.deadlight.boo/api/federation/test/' + domain);
+                    const response = await fetch(PROXY_BASE_URL + '/api/federation/test/' + domain);
                     const result = await response.json();
                     
                     logActivity('Domain test ' + domain + ': ' + (result.status === 'verified' ? 'Success' : 'Failed'), 
@@ -253,7 +255,7 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             async function handleTestBlogApi() {
                 try {
                     logActivity('Testing Blog API...', 'info');
-                    const response = await fetch('http://proxy.deadlight.boo/api/blog/status');
+                    const response = await fetch(PROXY_BASE_URL + '/api/blog/status');
                     const result = await response.json();
                     logActivity('Blog API test: ' + (result.status === 'running' ? 'Success' : 'Failed'), 
                             result.status === 'running' ? 'success' : 'error');
@@ -265,7 +267,7 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             async function handleTestEmailApi() {
                 try {
                     logActivity('Testing Email API...', 'info');
-                    const response = await fetch('https://proxy.deadlight.boo/api/email/status');
+                    const response = await fetch(PROXY_BASE_URL + '/api/email/status');
                     const result = await response.json();
                     logActivity('Email API test: ' + (result.status === 'running' ? 'Success' : 'Failed'), 
                             result.status === 'running' ? 'success' : 'error');
@@ -277,7 +279,7 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             async function handleTestFederation() {
                 try {
                     logActivity('Testing Federation...', 'info');
-                    const response = await fetch('https://proxy.deadlight.boo/api/federation/status');
+                    const response = await fetch(PROXY_BASE_URL + '/api/federation/status');
                     const result = await response.json();
                     logActivity('Federation test: ' + (result.status === 'online' ? 'Success' : 'Failed'), 
                             result.status === 'online' ? 'success' : 'error');
