@@ -15,7 +15,7 @@ export const apiRoutes = {
       return Response.json({ 
         status: 'ok', 
         timestamp: new Date().toISOString(),
-        version: '5.0.0'
+        version: '4.0.0'
       });
     }
   },
@@ -45,6 +45,77 @@ export const apiRoutes = {
       }
     }
   },
+
+  // ===== NEW METRICS ENDPOINT (Corrected DB Logic) =====
+  '/api/metrics': {
+    GET: async (request, env, ctx) => {
+      try {
+        // 1. Prepare the D1 queries (without .first() or .all() at this stage)
+        const statements = [
+          env.DB.prepare('SELECT COUNT(id) as total_posts FROM posts'),
+          env.DB.prepare('SELECT COUNT(id) as published_posts FROM posts WHERE published = 1 AND is_email = 0'),
+          env.DB.prepare('SELECT COUNT(id) as total_users FROM users'),
+          env.DB.prepare('SELECT COUNT(id) as inbox_emails FROM posts WHERE is_email = 1'),
+          env.DB.prepare('SELECT COUNT(id) as pending_replies FROM posts WHERE is_reply_draft = 1 AND email_metadata LIKE \'%"sent":false%\'')
+        ];
+        
+        // 2. Execute the batch
+        const results = await env.DB.batch(statements);
+
+        // 3. Extract the counts from the results of the batch
+        // Each result is an object containing a `results` array with one row (the count)
+        const counts = {
+          total_posts: results[0].results[0].total_posts,
+          published_posts: results[1].results[0].published_posts,
+          total_users: results[2].results[0].total_users,
+          inbox_emails: results[3].results[0].inbox_emails,
+          pending_replies: results[4].results[0].pending_replies
+        };
+
+        // 4. Check Proxy/External Service Status (Keep separate, as it's an HTTP fetch)
+        const proxyCheck = await fetch(`${env.PROXY_URL || 'http://localhost:8080'}/api/health`).then(r => r.ok).catch(() => false);
+
+        // 5. Gather key Settings
+        const settingsModel = new SettingsModel(env.DB);
+        const federationStatus = await settingsModel.get('federation_enabled').catch(() => 'false');
+        const emailStatus = await settingsModel.get('email_enabled').catch(() => 'false');
+
+
+        return Response.json({
+          status: 'ok',
+          metrics: {
+            // Content Metrics
+            total_posts: counts.total_posts,
+            published_posts: counts.published_posts,
+            total_users: counts.total_users,
+            
+            // Email/Queue Metrics
+            inbox_emails: counts.inbox_emails,
+            pending_replies: counts.pending_replies,
+            
+            // Service Health
+            proxy_api_status: proxyCheck ? 'healthy' : 'unhealthy',
+            
+            // Configuration Status
+            federation_enabled: federationStatus === 'true',
+            email_enabled: emailStatus === 'true',
+            
+            // Operational
+            worker_uptime_seconds: Math.floor(Date.now() / 1000) - Math.floor(env.WORKER_START_TIME / 1000),
+          },
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        logger.error('Failed to generate metrics', { error: error.message });
+        return Response.json({ 
+          status: 'error', 
+          message: 'Error fetching application metrics (Database failure)',
+          error: error.message 
+        }, { status: 500 });
+      }
+    }
+  },
+
 
   // ===== EMAIL ENDPOINTS (Protected) =====
   '/api/email/receive': {

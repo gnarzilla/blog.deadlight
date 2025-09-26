@@ -48,6 +48,7 @@ router.group([], (r) => {
   r.register('/api/status', apiRoutes['/api/status']);
   r.register('/api/blog/status', apiRoutes['/api/blog/status']);
   r.register('/api/blog/posts', apiRoutes['/api/blog/posts']);
+  r.register('/api/metrics', apiRoutes['/api/metrics']);
 });
 
 // Authenticated user routes
