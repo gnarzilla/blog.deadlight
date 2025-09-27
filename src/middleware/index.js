@@ -2,7 +2,7 @@
 export { errorMiddleware } from './error.js';
 export { loggingMiddleware } from './logging.js';
 export { analyticsMiddleware } from './analytics.js';
-export { authMiddleware, optionalAuthMiddleware, apiAuthMiddleware } from './auth.js';
+export { authMiddleware, apiAuthMiddleware } from './auth.js';
 
 // Admin middleware
 export const requireAdminMiddleware = async (request, env, ctx, next) => {

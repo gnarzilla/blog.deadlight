@@ -1,9 +1,13 @@
-// src/templates/admin/proxyDashboard.js - Updated version with helper functions
+// src/templates/admin/proxyDashboard.js - Improved version
 import { renderTemplate } from '../base.js';
 
 export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0) {
     const { status, queue, federation, config: proxyConfig, error } = proxyData;
     const proxyConnected = status?.proxy_connected || false;
+    
+    // Safely extract metrics with defaults
+    const metrics = proxyData.metrics || {};
+    const protocols = metrics.protocols || {};
 
     const content = `
         <div class="proxy-dashboard">
@@ -12,12 +16,18 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             <!-- Connection Status -->
             <div class="section">
                 <h2>Connection Status</h2>
-                <p class="status-line">
-                    Status: <strong>${proxyConnected ? 'Connected' : 'Disconnected'}</strong>
-                    ${proxyConfig?.proxyUrl ? ` to ${proxyConfig.proxyUrl}` : ''}
-                </p>
-                ${error ? `<p class="error">Error: ${error}</p>` : ''}
-                <button onclick="location.reload()" class="button">Refresh Status</button>
+                <div class="status-indicator ${proxyConnected ? 'connected' : 'disconnected'}">
+                    <span class="status-dot"></span>
+                    <span class="status-text">
+                        Status: <strong>${proxyConnected ? 'Connected' : 'Disconnected'}</strong>
+                        ${proxyConfig?.proxyUrl ? ` to ${proxyConfig.proxyUrl}` : ''}
+                    </span>
+                </div>
+                ${error ? `<div class="error-message"><strong>Error:</strong> ${error}</div>` : ''}
+                <div class="button-group">
+                    <button onclick="location.reload()" class="button">Refresh Status</button>
+                    <button onclick="refreshMetrics()" class="button secondary">Refresh Metrics</button>
+                </div>
             </div>
 
             <!-- Real-time Proxy Statistics -->
@@ -26,92 +36,130 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <h3>Active Connections</h3>
-                        <div class="metric-value">${proxyData.metrics?.active_connections || 0}</div>
+                        <div class="metric-value" id="active-connections">${metrics.active_connections || 0}</div>
                     </div>
                     <div class="metric-card">
                         <h3>Total Connections</h3>
-                        <div class="metric-value">${proxyData.metrics?.total_connections || 0}</div>
+                        <div class="metric-value" id="total-connections">${metrics.total_connections || 0}</div>
                     </div>
                     <div class="metric-card">
                         <h3>Bandwidth Used</h3>
                         <div class="metric-value" id="bandwidth-metric">
-                            ${proxyData.metrics?.bytes_transferred ? formatBytes(proxyData.metrics.bytes_transferred) : '0 B'}
+                            ${metrics.bytes_transferred ? formatBytes(metrics.bytes_transferred) : '0 B'}
                         </div>
                     </div>
                     <div class="metric-card">
                         <h3>Uptime</h3>
                         <div class="metric-value" id="uptime-metric">
-                            ${proxyData.metrics?.uptime ? formatUptime(proxyData.metrics.uptime) : '0s'}
+                            ${metrics.uptime ? formatUptime(metrics.uptime) : '0s'}
                         </div>
                     </div>
                 </div>
                 
                 <!-- Protocol breakdown -->
                 <h3>Protocol Usage</h3>
-                <table class="data-table">
-                    <tr>
-                        <th>Protocol</th>
-                        <th>Active</th>
-                        <th>Total</th>
-                        <th>Bytes</th>
-                    </tr>
-                    ${Object.entries(proxyData.metrics?.protocols || {}).map(([protocol, stats]) => `
-                        <tr>
-                            <td>${protocol}</td>
-                            <td>${stats.active || 0}</td>
-                            <td>${stats.total || 0}</td>
-                            <td>${formatBytes(stats.bytes || 0)}</td>
-                        </tr>
-                    `).join('')}
-                </table>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Protocol</th>
+                                <th>Active</th>
+                                <th>Total</th>
+                                <th>Bytes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="protocol-table">
+                            ${Object.keys(protocols).length > 0 ? 
+                                Object.entries(protocols).map(([protocol, stats]) => `
+                                    <tr>
+                                        <td><strong>${protocol.toUpperCase()}</strong></td>
+                                        <td>${stats.active || 0}</td>
+                                        <td>${stats.total || 0}</td>
+                                        <td>${formatBytes(stats.bytes || 0)}</td>
+                                    </tr>
+                                `).join('') : 
+                                '<tr><td colspan="4" class="no-data">No protocol data available</td></tr>'
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Service Status -->
             <div class="section">
                 <h2>Services</h2>
-                <table class="data-table">
-                    <tr>
-                        <th>Service</th>
-                        <th>Status</th>
-                        <th>Details</th>
-                        <th>Actions</th>
-                    </tr>
-                    <tr>
-                        <td>Blog API</td>
-                        <td>${status?.blog_api ? 'Online' : 'Offline'}</td>
-                        <td>Version 5.0.0</td>
-                        <td><button onclick="handleTestBlogApi()" class="button small">Test</button></td>
-                    </tr>
-                    <tr>
-                        <td>Email Service</td>
-                        <td>${status?.email_api ? 'Online' : 'Offline'}</td>
-                        <td>Queue: ${queue?.status?.queued_operations?.email || 0}</td>
-                        <td><button onclick="handleTestEmailApi()" class="button small">Test</button></td>
-                    </tr>
-                    <tr>
-                        <td>Federation</td>
-                        <td>${federation?.status === 'online' ? 'Online' : 'Offline'}</td>
-                        <td>Connected: ${federation?.connected_domains?.length || 0} domains</td>
-                        <td><button onclick="handleTestFederation()" class="button small">Test</button></td>
-                    </tr>
-                </table>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>Status</th>
+                                <th>Details</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Blog API</strong></td>
+                                <td>
+                                    <span class="status-badge ${status?.blog_api ? 'online' : 'offline'}">
+                                        ${status?.blog_api ? 'Online' : 'Offline'}
+                                    </span>
+                                </td>
+                                <td>Version ${metrics.blog_version || '5.0.0'}</td>
+                                <td><button onclick="handleTestBlogApi()" class="button small">Test</button></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email Service</strong></td>
+                                <td>
+                                    <span class="status-badge ${status?.email_api ? 'online' : 'offline'}">
+                                        ${status?.email_api ? 'Online' : 'Offline'}
+                                    </span>
+                                </td>
+                                <td>Queue: ${queue?.status?.queued_operations?.email || 0}</td>
+                                <td><button onclick="handleTestEmailApi()" class="button small">Test</button></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Federation</strong></td>
+                                <td>
+                                    <span class="status-badge ${federation?.status === 'online' ? 'online' : 'offline'}">
+                                        ${federation?.status === 'online' ? 'Online' : 'Offline'}
+                                    </span>
+                                </td>
+                                <td>Connected: ${federation?.connected_domains?.length || 0} domains</td>
+                                <td><button onclick="handleTestFederation()" class="button small">Test</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Queue Status -->
             <div class="section">
                 <h2>Queue Status</h2>
-                <p>Total queued operations: <strong>${queue?.status?.queued_operations?.total || 0}</strong></p>
-                <p>Email queue: ${queue?.status?.queued_operations?.email || 0}</p>
-                <p>Federation queue: ${queue?.status?.queued_operations?.federation || 0}</p>
+                <div class="queue-stats">
+                    <div class="queue-stat">
+                        <span class="stat-label">Total Operations:</span>
+                        <span class="stat-value" id="queue-total">${queue?.status?.queued_operations?.total || 0}</span>
+                    </div>
+                    <div class="queue-stat">
+                        <span class="stat-label">Email Queue:</span>
+                        <span class="stat-value">${queue?.status?.queued_operations?.email || 0}</span>
+                    </div>
+                    <div class="queue-stat">
+                        <span class="stat-label">Federation Queue:</span>
+                        <span class="stat-value">${queue?.status?.queued_operations?.federation || 0}</span>
+                    </div>
+                </div>
                 ${queue?.status?.last_processed ? 
-                    `<p>Last processed: ${new Date(queue.status.last_processed).toLocaleString()}</p>` : 
-                    '<p>No recent processing</p>'
+                    `<p><strong>Last processed:</strong> ${new Date(queue.status.last_processed).toLocaleString()}</p>` : 
+                    '<p class="no-data">No recent processing</p>'
                 }
                 <div class="button-group">
                     <button onclick="handleProcessQueue()" class="button" ${!proxyConnected ? 'disabled' : ''}>
                         Process Queue Now
                     </button>
-                    <button onclick="viewQueueDetails()" class="button">View Details</button>
+                    <button onclick="viewQueueDetails()" class="button secondary">View Details</button>
                 </div>
             </div>
 
@@ -120,26 +168,40 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 <h2>Federation Network</h2>
                 <h3>Connected Domains</h3>
                 ${federation?.connected_domains?.length ? `
-                    <table class="data-table">
-                        <tr>
-                            <th>Domain</th>
-                            <th>Trust Level</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                        ${federation.connected_domains.map(domain => `
-                            <tr>
-                                <td>${domain.domain}</td>
-                                <td>${domain.trust_level || 'Unknown'}</td>
-                                <td>${domain.status || 'Active'}</td>
-                                <td>
-                                    <button onclick="testDomain('${domain.domain}')" class="button small">Test</button>
-                                    <button onclick="removeDomain('${domain.domain}')" class="button small delete-button">Remove</button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                ` : '<p>No connected domains</p>'}
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Domain</th>
+                                    <th>Trust Level</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${federation.connected_domains.map(domain => `
+                                    <tr>
+                                        <td><strong>${domain.domain}</strong></td>
+                                        <td>
+                                            <span class="trust-level ${domain.trust_level?.toLowerCase() || 'unknown'}">
+                                                ${domain.trust_level || 'Unknown'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge ${domain.status === 'Active' ? 'online' : 'offline'}">
+                                                ${domain.status || 'Active'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button onclick="testDomain('${domain.domain}')" class="button small">Test</button>
+                                            <button onclick="removeDomain('${domain.domain}')" class="button small delete-button">Remove</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<p class="no-data">No connected domains</p>'}
                 
                 <h3>Add New Domain</h3>
                 <form onsubmit="addFederationDomain(event)" class="inline-form">
@@ -148,15 +210,26 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 </form>
                 
                 <h3>Federation Stats</h3>
-                <p>Posts sent: ${federation?.stats?.posts_sent || 0}</p>
-                <p>Posts received: ${federation?.stats?.posts_received || 0}</p>
-                <p>Comments synced: ${federation?.stats?.comments_synced || 0}</p>
+                <div class="federation-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">${federation?.stats?.posts_sent || 0}</span>
+                        <span class="stat-label">Posts Sent</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${federation?.stats?.posts_received || 0}</span>
+                        <span class="stat-label">Posts Received</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${federation?.stats?.comments_synced || 0}</span>
+                        <span class="stat-label">Comments Synced</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Testing Actions -->
             <div class="section">
                 <h2>Testing & Maintenance</h2>
-                <div class="button-group">
+                <div class="button-grid">
                     <button onclick="handleSendTestEmail()" class="button">Send Test Email</button>
                     <button onclick="runHealthCheck()" class="button">Health Check</button>
                     <button onclick="resetCircuitBreaker()" class="button">Reset Circuit Breaker</button>
@@ -168,18 +241,24 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             <div class="section">
                 <h2>Recent Activity</h2>
                 <div id="activity-log" class="activity-log">
-                    <p>No recent activity</p>
+                    <p class="no-data">No recent activity</p>
                 </div>
-                <button onclick="clearActivityLog()" class="button small">Clear Log</button>
+                <button onclick="clearActivityLog()" class="button small secondary">Clear Log</button>
             </div>
         </div>
 
         <script>
-            const PROXY_BASE_URL = '${proxyConfig?.proxyUrl || window.location.origin}';
+            // Configuration
+            const CONFIG = {
+                PROXY_BASE_URL: '${proxyConfig?.proxyUrl || ''}',
+                API_BASE_URL: '${config?.baseUrl || ''}',
+                REFRESH_INTERVAL: 30000, // 30 seconds
+                MAX_LOG_ENTRIES: 20
+            };
 
             // Helper functions
             function formatBytes(bytes) {
-                if (bytes === 0) return '0 B';
+                if (!bytes || bytes === 0) return '0 B';
                 const k = 1024;
                 const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -187,7 +266,7 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             }
 
             function formatUptime(seconds) {
-                if (seconds < 60) return Math.floor(seconds) + 's';
+                if (!seconds || seconds < 60) return Math.floor(seconds || 0) + 's';
                 if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + Math.floor(seconds % 60) + 's';
                 if (seconds < 86400) {
                     const hours = Math.floor(seconds / 3600);
@@ -199,42 +278,139 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 return days + 'd ' + hours + 'h';
             }
 
-            // Simple activity logging
+            // Activity logging
             function logActivity(message, type = 'info') {
                 const log = document.getElementById('activity-log');
+                if (log.querySelector('.no-data')) {
+                    log.innerHTML = '';
+                }
+                
                 const time = new Date().toLocaleTimeString();
-                const entry = document.createElement('p');
+                const entry = document.createElement('div');
                 entry.className = 'log-entry log-' + type;
-                entry.textContent = '[' + time + '] ' + message;
+                entry.innerHTML = '<span class="log-time">[' + time + ']</span> ' + message;
                 log.insertBefore(entry, log.firstChild);
                 
-                // Keep only last 20 entries
-                while (log.children.length > 20) {
+                // Keep only last MAX_LOG_ENTRIES entries
+                while (log.children.length > CONFIG.MAX_LOG_ENTRIES) {
                     log.removeChild(log.lastChild);
                 }
             }
 
-            // Handler functions (same as before)
+            // API call helper
+            async function apiCall(endpoint, options = {}) {
+                const baseUrl = endpoint.startsWith('/api/') ? CONFIG.API_BASE_URL : CONFIG.PROXY_BASE_URL;
+                const url = baseUrl + endpoint;
+                
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...options.headers
+                        },
+                        credentials: 'include', // Important: include cookies for auth
+                        ...options
+                    });
+                    
+                    if (!response.ok) {
+                        let errorMessage = 'HTTP ' + response.status + ': ' + response.statusText;
+                        
+                        // Try to get more detailed error from response
+                        try {
+                            const errorData = await response.json();
+                            if (errorData.error) {
+                                errorMessage = errorData.error;
+                            }
+                        } catch (e) {
+                            // Response wasn't JSON, use status text
+                        }
+                        
+                        // Handle specific status codes
+                        if (response.status === 401) {
+                            errorMessage = 'Authentication required - please log in again';
+                            // Optionally redirect to login
+                            // window.location.href = '/login';
+                        } else if (response.status === 403) {
+                            errorMessage = 'Access denied - insufficient permissions';
+                        }
+                        
+                        throw new Error(errorMessage);
+                    }
+                    
+                    return await response.json();
+                } catch (error) {
+                    console.error('API call failed:', endpoint, error);
+                    throw error;
+                }
+            }
+
+            // Metrics refresh function
+            async function refreshMetrics() {
+                try {
+                    logActivity('Refreshing metrics...', 'info');
+                    
+                    const metrics = await apiCall('/api/metrics');
+                    
+                    // Update metric displays
+                    const updates = [
+                        { id: 'active-connections', value: metrics.active_connections || 0 },
+                        { id: 'total-connections', value: metrics.total_connections || 0 },
+                        { id: 'bandwidth-metric', value: formatBytes(metrics.bytes_transferred || 0) },
+                        { id: 'uptime-metric', value: formatUptime(metrics.uptime || 0) },
+                        { id: 'queue-total', value: metrics.queue_total || 0 }
+                    ];
+                    
+                    updates.forEach(update => {
+                        const element = document.getElementById(update.id);
+                        if (element) {
+                            element.textContent = update.value;
+                        }
+                    });
+                    
+                    // Update protocol table if protocols data exists
+                    if (metrics.protocols) {
+                        updateProtocolTable(metrics.protocols);
+                    }
+                    
+                    logActivity('Metrics refreshed successfully', 'success');
+                } catch (error) {
+                    logActivity('Failed to refresh metrics: ' + error.message, 'error');
+                }
+            }
+            
+            function updateProtocolTable(protocols) {
+                const tbody = document.getElementById('protocol-table');
+                if (!tbody) return;
+                
+                const rows = Object.entries(protocols).map(([protocol, stats]) => {
+                    return '<tr>' +
+                        '<td><strong>' + protocol.toUpperCase() + '</strong></td>' +
+                        '<td>' + (stats.active || 0) + '</td>' +
+                        '<td>' + (stats.total || 0) + '</td>' +
+                        '<td>' + formatBytes(stats.bytes || 0) + '</td>' +
+                    '</tr>';
+                }).join('');
+                
+                tbody.innerHTML = rows || '<tr><td colspan="4" class="no-data">No protocol data available</td></tr>';
+            }
+
+            // Handler functions
             async function addFederationDomain(event) {
                 event.preventDefault();
-                const domain = document.getElementById('new-domain').value;
+                const domain = document.getElementById('new-domain').value.trim();
+                
+                if (!domain) return;
                 
                 try {
                     logActivity('Adding domain ' + domain + '...', 'info');
                     
-                    // Call the Worker's federation API, not the proxy
-                    const response = await fetch('/api/federation/connect', {
+                    const result = await apiCall('/api/federation/connect', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
                         body: JSON.stringify({
                             domain: domain,
                             auto_discover: true
                         })
                     });
-                    
-                    const result = await response.json();
                     
                     if (result.success) {
                         logActivity('Domain ' + domain + ' added successfully', 'success');
@@ -251,8 +427,22 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             async function testDomain(domain) {
                 try {
                     logActivity('Testing connection to ' + domain + '...', 'info');
-                    const response = await fetch(PROXY_BASE_URL + '/api/federation/test/' + domain);
-                    const result = await response.json();
+                    
+                    // Try HTTPS first, then HTTP if that fails
+                    let testUrl = '/api/federation/test/' + encodeURIComponent(domain);
+                    let result;
+                    
+                    try {
+                        result = await apiCall(testUrl);
+                    } catch (httpsError) {
+                        // If HTTPS fails, log and try HTTP
+                        console.log('HTTPS test failed, trying HTTP:', httpsError.message);
+                        logActivity('HTTPS test failed, trying HTTP...', 'warning');
+                        
+                        // You might need a different endpoint for HTTP testing
+                        testUrl = '/api/federation/test/' + encodeURIComponent(domain) + '?protocol=http';
+                        result = await apiCall(testUrl);
+                    }
                     
                     logActivity('Domain test ' + domain + ': ' + (result.status === 'verified' ? 'Success' : 'Failed'), 
                             result.status === 'verified' ? 'success' : 'error');
@@ -261,12 +451,28 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 }
             }
 
-            // Update all other API calls too:
+            async function removeDomain(domain) {
+                if (confirm('Remove federation with ' + domain + '?')) {
+                    try {
+                        logActivity('Removing domain ' + domain + '...', 'info');
+                        // Implement when you have the endpoint
+                        const result = await apiCall('/api/federation/remove/' + encodeURIComponent(domain), {
+                            method: 'DELETE'
+                        });
+                        
+                        logActivity('Domain ' + domain + ' removed successfully', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } catch (error) {
+                        logActivity('Remove domain error: ' + error.message, 'error');
+                    }
+                }
+            }
+
+            // Service test functions
             async function handleTestBlogApi() {
                 try {
                     logActivity('Testing Blog API...', 'info');
-                    const response = await fetch(PROXY_BASE_URL + '/api/blog/status');
-                    const result = await response.json();
+                    const result = await apiCall('/api/blog/status');
                     logActivity('Blog API test: ' + (result.status === 'running' ? 'Success' : 'Failed'), 
                             result.status === 'running' ? 'success' : 'error');
                 } catch (error) {
@@ -277,8 +483,7 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             async function handleTestEmailApi() {
                 try {
                     logActivity('Testing Email API...', 'info');
-                    const response = await fetch(PROXY_BASE_URL + '/api/email/status');
-                    const result = await response.json();
+                    const result = await apiCall('/api/email/status');
                     logActivity('Email API test: ' + (result.status === 'running' ? 'Success' : 'Failed'), 
                             result.status === 'running' ? 'success' : 'error');
                 } catch (error) {
@@ -289,8 +494,7 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             async function handleTestFederation() {
                 try {
                     logActivity('Testing Federation...', 'info');
-                    const response = await fetch(PROXY_BASE_URL + '/api/federation/status');
-                    const result = await response.json();
+                    const result = await apiCall('/api/federation/status');
                     logActivity('Federation test: ' + (result.status === 'online' ? 'Success' : 'Failed'), 
                             result.status === 'online' ? 'success' : 'error');
                 } catch (error) {
@@ -298,27 +502,13 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 }
             }
 
-            async function removeDomain(domain) {
-                if (confirm('Remove federation with ' + domain + '?')) {
-                    try {
-                        logActivity('Removing domain ' + domain + '...', 'info');
-                        // For now, just show success since you don't have a remove endpoint yet
-                        // You could implement /api/federation/remove/{domain} later
-                        logActivity('Domain ' + domain + ' removed from local list', 'success');
-                        setTimeout(() => location.reload(), 1000);
-                    } catch (error) {
-                        logActivity('Remove domain error: ' + error.message, 'error');
-                    }
-                }
-            }
-
-            // Update other functions to use actual API endpoints:
+            // Queue and maintenance functions
             async function handleProcessQueue() {
                 if (confirm('Process all queued operations now?')) {
                     try {
                         logActivity('Processing queue...', 'info');
-                        // Since you don't have this endpoint, just simulate success
-                        logActivity('Queue processed: 0 items (simulated)', 'success');
+                        const result = await apiCall('/api/queue/process', { method: 'POST' });
+                        logActivity('Queue processed: ' + (result.processed || 0) + ' items', 'success');
                         setTimeout(() => location.reload(), 1000);
                     } catch (error) {
                         logActivity('Queue processing error: ' + error.message, 'error');
@@ -328,22 +518,20 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
 
             async function handleSendTestEmail() {
                 const email = prompt('Enter email address for test:');
-                if (email) {
+                if (email && email.includes('@')) {
                     try {
                         logActivity('Sending test email to ' + email + '...', 'info');
-                        // Use your actual email API endpoint
-                        const response = await fetch('/api/email/send', {
+                        const result = await apiCall('/api/email/send', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
                                 to: email, 
                                 subject: 'Test Email from Deadlight Proxy',
                                 body: 'This is a test email sent from the Deadlight proxy dashboard.'
                             })
                         });
-                        const result = await response.json();
-                        logActivity('Test email: ' + (result.status === 'success' ? 'Sent' : 'Failed'), 
-                                result.status === 'success' ? 'success' : 'error');
+                        
+                        logActivity('Test email: ' + (result.success ? 'Sent' : 'Failed'), 
+                                result.success ? 'success' : 'error');
                     } catch (error) {
                         logActivity('Test email error: ' + error.message, 'error');
                     }
@@ -354,7 +542,6 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 try {
                     logActivity('Running health check...', 'info');
                     
-                    // Test all your API endpoints
                     const tests = [
                         { name: 'Blog API', endpoint: '/api/blog/status' },
                         { name: 'Email API', endpoint: '/api/email/status' },
@@ -366,9 +553,9 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                         try {
                             const response = await fetch(test.endpoint);
                             const result = await response.json();
-                            logActivity('Health check ' + test.name + ': OK', 'success');  // Changed from template literal
+                            logActivity('Health check ' + test.name + ': OK', 'success');
                         } catch (error) {
-                            logActivity('Health check ' + test.name + ': Failed', 'error');  // Changed from template literal
+                            logActivity('Health check ' + test.name + ': Failed', 'error');
                             allPassed = false;
                         }
                     }
@@ -380,19 +567,19 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 }
             }
 
+            // Utility functions
             function viewQueueDetails() {
                 window.location.href = '/admin/proxy/queue';
             }
 
             function clearActivityLog() {
-                document.getElementById('activity-log').innerHTML = '<p>No recent activity</p>';
+                document.getElementById('activity-log').innerHTML = '<p class="no-data">No recent activity</p>';
             }
 
             async function resetCircuitBreaker() {
                 if (confirm('Reset circuit breaker?')) {
                     try {
-                        const response = await fetch('/admin/proxy/reset-circuit', { method: 'POST' });
-                        const result = await response.json();
+                        const result = await apiCall('/admin/proxy/reset-circuit', { method: 'POST' });
                         logActivity('Circuit breaker reset', 'success');
                         setTimeout(() => location.reload(), 1000);
                     } catch (error) {
@@ -400,12 +587,12 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                     }
                 }
             }
+
             async function clearFailedOperations() {
                 if (confirm('Clear all failed operations from queue?')) {
                     try {
-                        const response = await fetch('/admin/proxy/clear-failed', { method: 'POST' });
-                        const result = await response.json();
-                        logActivity('Cleared ' + result.cleared + ' failed operations', 'success');
+                        const result = await apiCall('/admin/proxy/clear-failed', { method: 'POST' });
+                        logActivity('Cleared ' + (result.cleared || 0) + ' failed operations', 'success');
                         setTimeout(() => location.reload(), 1000);
                     } catch (error) {
                         logActivity('Clear failed error: ' + error.message, 'error');
@@ -413,38 +600,115 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 }
             }
 
-            // Add this at the end of your script section
-            async function refreshDashboardData() {
-                try {
-                    // Fetch metrics
-                    const metricsResponse = await fetch('/api/metrics');
-                    const metrics = await metricsResponse.json();
-                    
-                    // Update bandwidth display
-                    const bandwidthElement = document.getElementById('bandwidth-metric');
-                    if (bandwidthElement && metrics.bytes_transferred) {
-                        bandwidthElement.textContent = formatBytes(metrics.bytes_transferred);
-                    }
-                    
-                    // Update uptime
-                    const uptimeElement = document.getElementById('uptime-metric');
-                    if (uptimeElement && metrics.uptime) {
-                        uptimeElement.textContent = formatUptime(metrics.uptime);
-                    }
-                    
-                } catch (error) {
-                    console.warn('Failed to refresh dashboard data:', error);
+            // Auto-refresh functionality
+            let refreshInterval;
+
+            function startAutoRefresh() {
+                refreshInterval = setInterval(refreshMetrics, CONFIG.REFRESH_INTERVAL);
+            }
+
+            function stopAutoRefresh() {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
                 }
             }
 
-            // Refresh data every 30 seconds
-            setInterval(refreshDashboardData, 30000);
-
-            // Initial load
-            refreshDashboardData();
+            // Initialize dashboard
+            document.addEventListener('DOMContentLoaded', function() {
+                // Initial metrics load
+                refreshMetrics();
+                
+                // Start auto-refresh
+                startAutoRefresh();
+                
+                // Stop auto-refresh when page is hidden
+                document.addEventListener('visibilitychange', function() {
+                    if (document.hidden) {
+                        stopAutoRefresh();
+                    } else {
+                        startAutoRefresh();
+                    }
+                });
+            });
         </script>
 
         <style>
+            .proxy-dashboard {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .section {
+                background: #fff;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 20px;
+                margin: 20px 0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .section h2 {
+                margin: 0 0 20px 0;
+                color: #333;
+                border-bottom: 2px solid #007cba;
+                padding-bottom: 10px;
+            }
+
+            .section h3 {
+                margin: 20px 0 10px 0;
+                color: #555;
+            }
+
+            /* Status indicators */
+            .status-indicator {
+                display: flex;
+                align-items: center;
+                margin: 15px 0;
+                padding: 15px;
+                border-radius: 8px;
+            }
+
+            .status-indicator.connected {
+                background: #e8f5e8;
+                border-left: 4px solid #4caf50;
+            }
+
+            .status-indicator.disconnected {
+                background: #fee;
+                border-left: 4px solid #f44336;
+            }
+
+            .status-dot {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                margin-right: 10px;
+            }
+
+            .connected .status-dot {
+                background: #4caf50;
+                animation: pulse-green 2s infinite;
+            }
+
+            .disconnected .status-dot {
+                background: #f44336;
+                animation: pulse-red 2s infinite;
+            }
+
+            @keyframes pulse-green {
+                0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+                70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+            }
+
+            @keyframes pulse-red {
+                0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+                70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+            }
+
+            /* Metrics grid */
             .metrics-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -453,52 +717,393 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
             }
             
             .metric-card {
-                background: #f5f5f5;
-                border-radius: 8px;
-                padding: 20px;
+                background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+                border: 1px solid #ddd;
+                border-radius: 12px;
+                padding: 25px 20px;
                 text-align: center;
+                transition: transform 0.2s ease;
+            }
+
+            .metric-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
             }
             
             .metric-card h3 {
-                margin: 0 0 10px 0;
-                font-size: 14px;
+                margin: 0 0 15px 0;
+                font-size: 13px;
                 color: #666;
                 text-transform: uppercase;
                 letter-spacing: 1px;
+                font-weight: 600;
             }
             
             .metric-value {
+                font-size: 28px;
+                font-weight: bold;
+                color: #333;
+                font-family: 'Courier New', monospace;
+            }
+
+            /* Status badges */
+            .status-badge {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+
+            .status-badge.online {
+                background: #4caf50;
+                color: white;
+            }
+
+            .status-badge.offline {
+                background: #f44336;
+                color: white;
+            }
+
+            /* Trust levels */
+            .trust-level {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+
+            .trust-level.verified {
+                background: #4caf50;
+                color: white;
+            }
+
+            .trust-level.unknown {
+                background: #ff9800;
+                color: white;
+            }
+
+            /* Tables */
+            .table-container {
+                overflow-x: auto;
+                margin: 15px 0;
+            }
+
+            .data-table {
+                width: 100%;
+                border-collapse: collapse;
+                background: white;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .data-table thead {
+                background: #f8f9fa;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }
+
+            .data-table th {
+                font-weight: 600;
+                color: #555;
+                text-transform: uppercase;
+                font-size: 12px;
+                letter-spacing: 0.5px;
+            }
+
+            .data-table tr:hover {
+                background: #f8f9fa;
+            }
+
+            .data-table .no-data {
+                text-align: center;
+                color: #999;
+                font-style: italic;
+                padding: 20px;
+            }
+
+            /* Queue stats */
+            .queue-stats {
+                display: flex;
+                gap: 30px;
+                margin: 15px 0;
+                flex-wrap: wrap;
+            }
+
+            .queue-stat {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 15px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                min-width: 120px;
+            }
+
+            .stat-label {
+                font-size: 12px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+            }
+
+            .stat-value {
                 font-size: 24px;
                 font-weight: bold;
                 color: #333;
+                font-family: 'Courier New', monospace;
             }
-            
-            .log-entry {
-                padding: 5px 10px;
-                margin: 2px 0;
-                border-radius: 3px;
-                font-family: monospace;
+
+            /* Federation stats */
+            .federation-stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 20px;
+                margin: 20px 0;
+            }
+
+            .stat-item {
+                text-align: center;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border: 1px solid #e9ecef;
+            }
+
+            .stat-number {
+                display: block;
+                font-size: 32px;
+                font-weight: bold;
+                color: #007cba;
+                font-family: 'Courier New', monospace;
+                margin-bottom: 8px;
+            }
+
+            .stat-item .stat-label {
+                font-size: 13px;
+                color: #666;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            /* Buttons */
+            .button {
+                background: #007cba;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+                text-decoration: none;
+                display: inline-block;
+            }
+
+            .button:hover {
+                background: #005a8b;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+            .button:active {
+                transform: translateY(0);
+            }
+
+            .button.secondary {
+                background: #6c757d;
+            }
+
+            .button.secondary:hover {
+                background: #545b62;
+            }
+
+            .button.small {
+                padding: 6px 12px;
                 font-size: 12px;
+            }
+
+            .button.delete-button {
+                background: #dc3545;
+            }
+
+            .button.delete-button:hover {
+                background: #c82333;
+            }
+
+            .button:disabled {
+                background: #ccc;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .button:disabled:hover {
+                background: #ccc;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .button-group {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                margin: 15px 0;
+            }
+
+            .button-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin: 15px 0;
+            }
+
+            /* Forms */
+            .inline-form {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                margin: 15px 0;
+                flex-wrap: wrap;
+            }
+
+            .inline-form input[type="text"] {
+                padding: 10px 15px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+                min-width: 200px;
+                flex: 1;
+            }
+
+            .inline-form input[type="text"]:focus {
+                outline: none;
+                border-color: #007cba;
+                box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
+            }
+
+            /* Activity log */
+            .activity-log {
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 15px;
+                max-height: 400px;
+                overflow-y: auto;
+                font-family: 'Courier New', monospace;
+                font-size: 13px;
+            }
+
+            .log-entry {
+                padding: 8px 12px;
+                margin: 3px 0;
+                border-radius: 4px;
+                border-left: 4px solid transparent;
+                display: flex;
+                align-items: center;
+            }
+
+            .log-time {
+                color: #666;
+                margin-right: 10px;
+                font-weight: bold;
             }
             
             .log-info {
                 background: #e3f2fd;
+                border-left-color: #1976d2;
                 color: #1565c0;
             }
             
             .log-success {
-                background: #e8f5e9;
+                background: #e8f5e8;
+                border-left-color: #4caf50;
                 color: #2e7d32;
             }
             
             .log-error {
                 background: #ffebee;
+                border-left-color: #f44336;
                 color: #c62828;
             }
             
             .log-warning {
                 background: #fff3e0;
+                border-left-color: #ff9800;
                 color: #ef6c00;
+            }
+
+            .no-data {
+                color: #999;
+                font-style: italic;
+                text-align: center;
+                padding: 20px;
+            }
+
+            .error-message {
+                background: #ffebee;
+                color: #c62828;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #f44336;
+                margin: 15px 0;
+            }
+
+            /* Responsive design */
+            @media (max-width: 768px) {
+                .metrics-grid {
+                    grid-template-columns: 1fr 1fr;
+                }
+
+                .queue-stats {
+                    flex-direction: column;
+                    gap: 15px;
+                }
+
+                .federation-stats {
+                    grid-template-columns: 1fr;
+                }
+
+                .button-group {
+                    flex-direction: column;
+                }
+
+                .button-group .button {
+                    width: 100%;
+                    text-align: center;
+                }
+
+                .inline-form {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .inline-form input[type="text"] {
+                    min-width: auto;
+                    width: 100%;
+                }
+            }
+
+            @media (max-width: 480px) {
+                .metrics-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .proxy-dashboard {
+                    padding: 10px;
+                }
+
+                .section {
+                    padding: 15px;
+                }
             }
         </style>
     `;

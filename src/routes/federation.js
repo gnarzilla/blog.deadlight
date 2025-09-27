@@ -51,66 +51,75 @@ export const federationRoutes = {
     }
   },
 
-  // Federation connection management (admin only)
+  // Connect to federation domain (admin only)
   '/api/federation/connect': {
-    GET: async (request, env) => {
-      const federationService = new FederationService(env);
-      const connections = await federationService.getConnectedDomains();
-      
-      return new Response(JSON.stringify({
-        connections: connections.map(conn => ({
-          domain: conn.domain,
-          trust_level: conn.trust_level,
-          last_seen: conn.last_seen,
-          capabilities: conn.capabilities ? JSON.parse(conn.capabilities) : []
-        }))
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    },
-    
     POST: async (request, env) => {
-      const { domain, auto_discover = true } = await request.json();
-      const federationService = new FederationService(env);
-      
-      if (auto_discover) {
-        try {
-          const discoveryUrl = `https://${domain}/.well-known/deadlight`;
-          const response = await fetch(discoveryUrl);
-          
-          if (response.ok) {
-            const instanceInfo = await response.json();
-            await federationService.establishTrust(
-              domain, 
-              instanceInfo.federation.public_key, 
-              'unverified'
-            );
-            
-            await federationService.discoverDomain(domain);
-            
-            return new Response(JSON.stringify({
-              success: true,
-              domain,
-              instance_info: instanceInfo,
-              status: 'discovery_sent'
-            }), {
-              headers: { 'Content-Type': 'application/json' }
-            });
-          }
-        } catch (error) {
-          // Fall back to manual connection
+      try {
+        const body = await request.json();
+        const { domain, auto_discover = true } = body;
+        
+        if (!domain) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Domain parameter required'
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
         }
+
+        console.log(`Attempting to connect to federation domain: ${domain}`);
+        
+        // Validate domain format
+        if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(domain)) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Invalid domain format'
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        const federationService = new FederationService(env);
+        
+        // Test connection first
+        const testResult = await federationService.testConnection(domain);
+        if (!testResult.success) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Failed to connect to domain: ' + testResult.error
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Add to connected domains
+        const result = await federationService.addDomain(domain, {
+          auto_discover,
+          verified: true,
+          connected_at: new Date().toISOString()
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          domain: domain,
+          result: result
+        }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+      } catch (error) {
+        console.error('Federation connect error:', error);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Internal server error: ' + error.message
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
-      
-      await federationService.discoverDomain(domain);
-      
-      return new Response(JSON.stringify({
-        success: true,
-        domain,
-        status: 'discovery_sent_manual'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
     }
   },
 
@@ -158,13 +167,150 @@ export const federationRoutes = {
   },
 
   // Test federation endpoint (admin only)
-  '/api/federation/test': {
-    POST: async (request, env) => {
-      const federationService = new FederationService(env);
-      const result = await federationService.testFederation();
-      return new Response(JSON.stringify(result), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+  '/api/federation/test/:domain': {
+    GET: async (request, env) => {
+      try {
+        // Extract domain from URL path
+        const url = new URL(request.url);
+        const pathParts = url.pathname.split('/');
+        const domain = pathParts[pathParts.length - 1];
+        
+        if (!domain || domain === 'test') {
+          return new Response(JSON.stringify({
+            status: 'failed',
+            error: 'Domain parameter required'
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Get protocol preference from query params
+        const useHttp = url.searchParams.get('protocol') === 'http';
+        const protocol = useHttp ? 'http' : 'https';
+        
+        // Determine port based on domain and protocol
+        let port = '';
+        if (domain.includes('emilyssidepc') || domain.includes('mulley-mooneye')) {
+          port = useHttp ? ':8080' : ':8080'; // Your local server setup
+        }
+        
+        // Test different federation endpoints
+        const testEndpoints = [
+          `${protocol}://${domain}${port}/api/federation/status`,
+          `${protocol}://${domain}${port}/.well-known/nodeinfo`,
+          `${protocol}://${domain}${port}/api/health`
+        ];
+
+        console.log(`Testing federation connection to domain: ${domain}`);
+        
+        let lastError;
+        for (const testUrl of testEndpoints) {
+          try {
+            console.log(`Attempting connection to: ${testUrl}`);
+            
+            const response = await fetch(testUrl, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Deadlight-Federation-Test/1.0'
+              },
+              signal: AbortSignal.timeout(10000) // 10 second timeout
+            });
+            
+            console.log(`Response status: ${response.status}`);
+            
+            if (response.ok) {
+              let responseData;
+              try {
+                responseData = await response.json();
+              } catch (parseError) {
+                responseData = { message: 'Server responded but not with JSON' };
+              }
+              
+              return new Response(JSON.stringify({
+                status: 'verified',
+                domain: domain,
+                protocol: protocol,
+                endpoint: testUrl,
+                response: responseData,
+                timestamp: new Date().toISOString()
+              }), {
+                headers: { 'Content-Type': 'application/json' }
+              });
+            } else {
+              lastError = `HTTP ${response.status}: ${response.statusText}`;
+              console.log(`Endpoint ${testUrl} failed: ${lastError}`);
+            }
+            
+          } catch (fetchError) {
+            lastError = fetchError.message;
+            console.log(`Endpoint ${testUrl} error: ${lastError}`);
+            
+            // If HTTPS failed due to SSL issues, try HTTP
+            if (fetchError.message.includes('SSL') && protocol === 'https') {
+              const httpUrl = testUrl.replace('https://', 'http://');
+              console.log(`SSL error detected, trying HTTP: ${httpUrl}`);
+              
+              try {
+                const httpResponse = await fetch(httpUrl, {
+                  method: 'GET',
+                  headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'Deadlight-Federation-Test/1.0'
+                  },
+                  signal: AbortSignal.timeout(10000)
+                });
+                
+                if (httpResponse.ok) {
+                  let responseData;
+                  try {
+                    responseData = await httpResponse.json();
+                  } catch (parseError) {
+                    responseData = { message: 'Server responded but not with JSON' };
+                  }
+                  
+                  return new Response(JSON.stringify({
+                    status: 'verified',
+                    domain: domain,
+                    protocol: 'http',
+                    endpoint: httpUrl,
+                    response: responseData,
+                    note: 'HTTPS failed, HTTP succeeded',
+                    timestamp: new Date().toISOString()
+                  }), {
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                }
+              } catch (httpError) {
+                console.log(`HTTP fallback also failed: ${httpError.message}`);
+              }
+            }
+          }
+        }
+
+        // All endpoints failed
+        return new Response(JSON.stringify({
+          status: 'failed',
+          domain: domain,
+          error: lastError || 'All federation endpoints unreachable',
+          attempted_endpoints: testEndpoints,
+          timestamp: new Date().toISOString()
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+      } catch (error) {
+        console.error('Federation test handler error:', error);
+        return new Response(JSON.stringify({
+          status: 'failed',
+          error: 'Internal server error: ' + error.message
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
   }
-};
+}
