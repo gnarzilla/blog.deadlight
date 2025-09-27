@@ -1,7 +1,8 @@
-// src/services/proxy.js - Enhanced version that integrates with existing federation/outbox services
+// src/services/proxy.js 
 export class ProxyService {
     constructor(config) {
-        this.baseUrl = config.PROXY_URL || 'http://localhost:8080';
+        // Change the default from FQDN or hostname to the reliable loopback IP
+        this.baseUrl = config.PROXY_URL || 'http://127.0.0.1:8080'; 
         this.timeout = 8000; // Increased for federation operations
         
         // Circuit breaker state

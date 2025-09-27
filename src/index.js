@@ -1,4 +1,4 @@
-// src/index.js - Updated with route-specific middleware
+// src/index.js
 import { Router } from './routes/index.js';
 import { styleRoutes } from './routes/styles.js';
 import { staticRoutes } from './routes/static.js';
@@ -8,6 +8,7 @@ import { blogRoutes } from './routes/blog.js';
 import { inboxRoutes } from './routes/inbox.js';
 import { apiRoutes } from './routes/api.js';
 import { userRoutes } from './routes/user.js';
+import { federationRoutes } from './routes/federation.js';
 import { errorMiddleware, loggingMiddleware } from './middleware/index.js';
 import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './middleware/index.js';
 import { rateLimitMiddleware, securityHeadersMiddleware } from '../../lib.deadlight/core/src/security/middleware.js';
@@ -49,6 +50,36 @@ router.group([], (r) => {
   r.register('/api/blog/status', apiRoutes['/api/blog/status']);
   r.register('/api/blog/posts', apiRoutes['/api/blog/posts']);
   r.register('/api/metrics', apiRoutes['/api/metrics']);
+
+  // Public federation endpoints
+  r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
+  r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
+  
+  // Federation discovery & public endpoints
+  r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
+  r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
+  
+  // Keep your existing outbox route as-is for compatibility
+  r.register('/federation/outbox', adminRoutes['/federation/outbox']);
+});
+
+// Admin routes - require auth + admin
+router.group([authMiddleware, requireAdminMiddleware], (r) => {
+  Object.entries(adminRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
+  });
+
+  // federation dashboard
+  r.register('/admin/federation', adminRoutes['/admin/federation']);
+  
+  // federation management endpoints
+  r.register('/api/federation/connect', federationRoutes['/api/federation/connect']);
+  r.register('/api/federation/queue', federationRoutes['/api/federation/queue']);
+  r.register('/api/federation/test', federationRoutes['/api/federation/test']);
+  
+  // sync and federate-post routes
+  r.register('/admin/federation/sync', adminRoutes['/admin/federation/sync']);
+  r.register('/admin/federate-post/:id', adminRoutes['/admin/federate-post/(?<id>[^/]+)']);
 });
 
 // Authenticated user routes
@@ -64,12 +95,6 @@ router.group([authMiddleware], (r) => {
   });
 });
 
-// Admin routes - require auth + admin
-router.group([authMiddleware, requireAdminMiddleware], (r) => {
-  Object.entries(adminRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
-});
 
 // Protected API routes - use API auth
 router.group([apiAuthMiddleware], (r) => {
@@ -78,7 +103,8 @@ router.group([apiAuthMiddleware], (r) => {
   r.register('/api/email/fetch', apiRoutes['/api/email/fetch']);
   r.register('/api/email/pending-replies', apiRoutes['/api/email/pending-replies']);
   
-  // Any other protected API endpoints would go here
+  // Federation inbox (requires API auth for security)
+  r.register('/api/federation/inbox', federationRoutes['/api/federation/inbox']);
 });
 
 // Log registered routes for debugging
