@@ -222,16 +222,26 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                 try {
                     logActivity('Adding domain ' + domain + '...', 'info');
                     
-                    // Call the proxy server directly
-                    const testResponse = await fetch(PROXY_BASE_URL + '/api/federation/test/' + domain);
-                    const testResult = await testResponse.json();
+                    // Call the Worker's federation API, not the proxy
+                    const response = await fetch('/api/federation/connect', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            domain: domain,
+                            auto_discover: true
+                        })
+                    });
                     
-                    if (testResult.status === 'verified') {
-                        logActivity('Domain ' + domain + ' verified and added successfully', 'success');
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        logActivity('Domain ' + domain + ' added successfully', 'success');
                         document.getElementById('new-domain').value = '';
                         setTimeout(() => location.reload(), 1000);
                     } else {
-                        logActivity('Domain ' + domain + ' could not be verified', 'warning');
+                        logActivity('Failed to add domain ' + domain + ': ' + (result.error || 'Unknown error'), 'error');
                     }
                 } catch (error) {
                     logActivity('Add domain error: ' + error.message, 'error');

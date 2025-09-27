@@ -17,29 +17,29 @@ import { analyticsMiddleware } from './middleware/analytics.js';
 
 const router = new Router();
 
-// Global middleware - analytics should be here
+// Global middleware
 router.use(errorMiddleware);
 router.use(loggingMiddleware);
 router.use(analyticsMiddleware);
 
 // Public routes (no auth required)
 router.group([], (r) => {
-  // Blog routes - public
+  // Blog routes
   Object.entries(blogRoutes).forEach(([path, handlers]) => {
     r.register(path, handlers);
   });
   
-  // Style routes - public
+  // Style routes
   Object.entries(styleRoutes).forEach(([path, handlers]) => {
     r.register(path, handlers);
   });
   
-  // Static routes - public
+  // Static routes
   Object.entries(staticRoutes).forEach(([path, handlers]) => {
     r.register(path, handlers);
   });
   
-  // Auth routes - public (login/logout)
+  // Auth routes (login/logout)
   Object.entries(authRoutes).forEach(([path, handlers]) => {
     r.register(path, handlers);
   });
@@ -54,56 +54,42 @@ router.group([], (r) => {
   // Public federation endpoints
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
   r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
-  
-  // Federation discovery & public endpoints
-  r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
-  r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
-  
-  // Keep your existing outbox route as-is for compatibility
-  r.register('/federation/outbox', adminRoutes['/federation/outbox']);
-});
-
-// Admin routes - require auth + admin
-router.group([authMiddleware, requireAdminMiddleware], (r) => {
-  Object.entries(adminRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
-
-  // federation dashboard
-  r.register('/admin/federation', adminRoutes['/admin/federation']);
-  
-  // federation management endpoints
-  r.register('/api/federation/connect', federationRoutes['/api/federation/connect']);
-  r.register('/api/federation/queue', federationRoutes['/api/federation/queue']);
-  r.register('/api/federation/test', federationRoutes['/api/federation/test']);
-  
-  // sync and federate-post routes
-  r.register('/admin/federation/sync', adminRoutes['/admin/federation/sync']);
-  r.register('/admin/federate-post/:id', adminRoutes['/admin/federate-post/(?<id>[^/]+)']);
 });
 
 // Authenticated user routes
 router.group([authMiddleware], (r) => {
-  // User routes - require auth
+  // User routes
   Object.entries(userRoutes).forEach(([path, handlers]) => {
     r.register(path, handlers);
   });
   
-  // Inbox routes - require auth
+  // Inbox routes
   Object.entries(inboxRoutes).forEach(([path, handlers]) => {
     r.register(path, handlers);
   });
 });
 
+// Admin routes (requires auth + admin role)
+router.group([authMiddleware, requireAdminMiddleware], (r) => {
+  // Register ALL admin routes from adminRoutes object
+  Object.entries(adminRoutes).forEach(([path, handlers]) => {
+    r.register(path, handlers);
+  });
 
-// Protected API routes - use API auth
+  // Add NEW federation management endpoints (not duplicates of admin routes)
+  r.register('/api/federation/connect', federationRoutes['/api/federation/connect']);
+  r.register('/api/federation/queue', federationRoutes['/api/federation/queue']);
+  r.register('/api/federation/test', federationRoutes['/api/federation/test']);
+});
+
+// Protected API routes (requires API key auth)
 router.group([apiAuthMiddleware], (r) => {
-  // Email endpoints
+  // Email API endpoints
   r.register('/api/email/receive', apiRoutes['/api/email/receive']);
   r.register('/api/email/fetch', apiRoutes['/api/email/fetch']);
   r.register('/api/email/pending-replies', apiRoutes['/api/email/pending-replies']);
   
-  // Federation inbox (requires API auth for security)
+  // Federation inbox
   r.register('/api/federation/inbox', federationRoutes['/api/federation/inbox']);
 });
 

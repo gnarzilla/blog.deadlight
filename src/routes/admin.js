@@ -871,8 +871,8 @@ export const adminRoutes = {
     }
   },
 
-  // '/admin/federate-post/(?<id>[^/]+)': {
-  '/admin/federate-post/:id': {
+  '/admin/federate-post/(?<id>[^/]+)': {
+  //'/admin/federate-post/:id': {
     POST: async (request, env) => {
       // Keep just the POST implementation
       const user = await checkAuth(request, env);
