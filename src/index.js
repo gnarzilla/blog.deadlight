@@ -14,6 +14,7 @@ import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './mid
 import { rateLimitMiddleware, securityHeadersMiddleware } from '../../lib.deadlight/core/src/security/middleware.js';
 import { OutboxService } from './services/outbox.js';
 import { analyticsMiddleware } from './middleware/analytics.js';
+import { handleProxyTests } from './routes/proxy.js';
 
 const router = new Router();
 
@@ -54,6 +55,29 @@ router.group([], (r) => {
   // Public federation endpoints
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
   r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
+  // Use proxy.js handlers instead of federation.js
+  r.register('/api/federation/connect', { 
+    POST: async (req, env) => {
+      try {
+        return await handleProxyTests.addFederationDomain(req, env);
+      } catch (error) {
+        console.error('Federation connect error:', error);
+        return new Response(JSON.stringify({
+          success: false,
+          error: error.message,
+          stack: error.stack  // Helpful for debugging
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+  });
+  r.register('/api/federation/test/*', federationRoutes['/api/federation/test/*']);
+  r.register('/api/federation/remove', { 
+    POST: (req, env) => handleProxyTests.removeFederationDomain(req, env) 
+  });
+
 });
 
 // Authenticated user routes
@@ -75,11 +99,6 @@ router.group([authMiddleware, requireAdminMiddleware], (r) => {
   Object.entries(adminRoutes).forEach(([path, handlers]) => {
     r.register(path, handlers);
   });
-
-  // Add NEW federation management endpoints (not duplicates of admin routes)
-  r.register('/api/federation/connect', federationRoutes['/api/federation/connect']);
-  r.register('/api/federation/queue', federationRoutes['/api/federation/queue']);
-  r.register('/api/federation/test', federationRoutes['/api/federation/test']);
 });
 
 // Protected API routes (requires API key auth)

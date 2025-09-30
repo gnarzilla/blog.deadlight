@@ -328,8 +328,11 @@ export function proxyDashboardTemplate(proxyData, user, config, queuedCount = 0)
                         // Handle specific status codes
                         if (response.status === 401) {
                             errorMessage = 'Authentication required - please log in again';
-                            // Optionally redirect to login
-                            // window.location.href = '/login';
+                            logActivity('Authentication failed - redirecting to login', 'error');
+                            // Redirect to login after short delay
+                            setTimeout(() => {
+                                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+                            }, 2000);
                         } else if (response.status === 403) {
                             errorMessage = 'Access denied - insufficient permissions';
                         }

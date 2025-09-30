@@ -108,14 +108,13 @@ export const handleProxyTests = {
             // First, discover the domain
             const discoveryResult = await federationService.discoverDomain(domain);
             
-            // Then add it to the database
+            // Use correct table name: federation_trust
             await env.DB.prepare(`
-                INSERT INTO federation_domains (domain, trust_level, status, created_at)
-                VALUES (?, 'pending', 'active', datetime('now'))
+                INSERT INTO federation_trust (domain, public_key, trust_level, added_at, last_seen)
+                VALUES (?, ?, 'verified', datetime('now'), datetime('now'))
                 ON CONFLICT(domain) DO UPDATE SET
-                    status = 'active',
-                    updated_at = datetime('now')
-            `).bind(domain).run();
+                    last_seen = datetime('now')
+            `).bind(domain, discoveryResult.public_key || '').run();
             
             return Response.json({
                 success: true,
@@ -166,10 +165,10 @@ export const handleProxyTests = {
                 return Response.json({ success: false, error: 'Domain is required' });
             }
 
-            // Remove from database
+            // Use correct table name: federation_trust
             const result = await env.DB.prepare(`
-                UPDATE federation_domains 
-                SET status = 'removed', updated_at = datetime('now')
+                UPDATE federation_trust 
+                SET trust_level = 'blocked', last_seen = datetime('now')
                 WHERE domain = ?
             `).bind(domain).run();
             

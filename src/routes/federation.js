@@ -167,7 +167,7 @@ export const federationRoutes = {
   },
 
   // Test federation endpoint (admin only)
-  '/api/federation/test/:domain': {
+  '/api/federation/test/*': {
     GET: async (request, env) => {
       try {
         // Extract domain from URL path
