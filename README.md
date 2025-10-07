@@ -1,6 +1,7 @@
 # Deadlight Edge Blog - Secure, Modular Blog Platform with Integrated Proxy Management
 
-🌐 Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo) | [Other Separate Instance](https://threat-level-midnight.deadlight.boo)
+
+[![LIVE DEMO](https://deadlight.boo/favicon.ico)](https://deadlight.boo) Live Demo: [deadlight.boo](https://deadlight.boo) | [Separate Instance Deployment](https://thatch-dt.deadlight.boo) | [Other Separate Instance](https://threat-level-midnight.deadlight.boo)
 
 A modular, security-hardened blog platform built on Cloudflare Workers with integrated multi-protocol proxy server management. Features real-time proxy control, email federation capabilities, localized real-time analytics. [Getting Started with Deadlight](https://deadlight.boo/post/47)
 
