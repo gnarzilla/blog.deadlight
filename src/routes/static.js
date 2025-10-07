@@ -21,8 +21,8 @@ export const staticRoutes = {
           });
         }
         
-        // Simple SVG fallback instead of error
-        const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#1a1a1a"/><path d="M16 4l-2 2v4l-4 4v10l4 4h4l4-4V14l-4-4V6l-2-2z" fill="#fff"/></svg>`;
+        // Text-based SVG fallback
+        const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#1a1a1a"/><text x="16" y="22" text-anchor="middle" fill="#fff" font-family="monospace" font-size="16" font-weight="bold">DL</text></svg>`;
         
         return new Response(svgFavicon, {
           headers: {
@@ -32,8 +32,8 @@ export const staticRoutes = {
         });
         
       } catch (error) {
-        // Return minimal SVG on error
-        const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#1a1a1a"/></svg>`;
+        // Return text SVG on error
+        const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#1a1a1a"/><text x="16" y="22" text-anchor="middle" fill="#fff" font-family="monospace" font-size="16" font-weight="bold">DL</text></svg>`;
         return new Response(svgFavicon, {
           headers: {
             'Content-Type': 'image/svg+xml',
