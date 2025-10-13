@@ -141,7 +141,7 @@ Edit `src/config.js` to customize:
 
 Settings can be changed dynamically after deployment at `your-blog.tld/admin/settings`
 
-Configure your local environment in [package.json](docs/package.json.)
+Configure your local environment in [package.json](docs/SAMPLE_package.json.md)
 
 ```
 
