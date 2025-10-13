@@ -1,4 +1,4 @@
-# Contributing to deadlight-guardian
+# Contributing to blog.deadlight
 
 ## Development Process
 
