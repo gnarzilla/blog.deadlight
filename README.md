@@ -209,7 +209,7 @@ Duplicate check result: 0 existing user(s) found.
 
  ⛅️ wrangler 4.27.0 (update available 4.28.1)
 ─────────────────────────────────────────────
-🌀 Executing on local database your-db-name (05792bea-8178-4509-8927-bc79bfeb8340) from .wrangler/state/v3/d1:
+🌀 Executing on local database your-db-name (HIDDEN) from .wrangler/state/v3/d1:
 🌀 To execute on your remote database, add a --remote flag to your wrangler command.
 🚣 2 commands executed successfully.
 Admin user created.
