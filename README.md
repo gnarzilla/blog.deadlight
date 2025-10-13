@@ -21,7 +21,7 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 4.  [Configuration](#congifuration)
 5.  [API Documentation](#api-documentation)
 6.  [Roadmap](#roadmap)
-7.  [License](#license)
+7.  [License](docs/license)
 8.  [Support](#support) 
 
 ---
@@ -126,7 +126,7 @@ wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 
 ```
 
-### Configure your domain and bindings in wrangler.toml:
+### Configure your domain and bindings in [wrangler.toml](wrangler.toml):
 ```toml
 name = "your-domain.tld"
 main = "src/index.js"

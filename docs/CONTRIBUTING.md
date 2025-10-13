@@ -1,4 +1,4 @@
-# Contributing to deadlight-guardian
+# Contributing to blog.deadlight
 
 ## Development Process
 
@@ -28,21 +28,26 @@ Report a bug by [opening a new issue]().
 - Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
 
 ## Development Setup
+```bash
+git clone https://github.com/gnarzilla/blog.deadlight
+cd blog.deadlight
+npm install
 
-1. Clone the repository
-2. Create a virtual environment: `python -m venv venv`
-3. Activate the environment: `source venv/bin/activate`
-4. Install dependencies: `pip install -e ".[dev]"`
-5. Install pre-commit hooks: `guardian hooks install`
+# Create your D1 database:
+wrangler d1 create your-db-name
+
+# Initialize the database:
+# Local development
+wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
+
+# Production
+wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
+```
 
 ## Testing
 
 ```bash
-# Run all tests
-pytest
 
-# Run with coverage
-pytest --cov=guardian
 ```
 
 ## Pull Request Process
