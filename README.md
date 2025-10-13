@@ -143,7 +143,6 @@ Settings can be changed dynamically after deployment at `your-blog.tld/admin/set
 
 Configure your local environment in [package.json](docs/SAMPLE_package.json.md)
 
-```
 
 ## Set production secrets:
 
