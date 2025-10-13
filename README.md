@@ -215,10 +215,10 @@ Duplicate check result: 0 existing user(s) found.
 Admin user created.
 
 # Or manually via SQL
-wrangler d1 execute blog_content_new --remote --command "INSERT INTO users (username, password_hash, role) VALUES ('admin', 'your-hash-here', 'admin')"
+wrangler d1 execute your-db-name --remote --command "INSERT INTO users (username, password_hash, role) VALUES ('admin', 'your-hash-here', 'admin')"
 
 # Add to production database
-wrangler d1 execute blog_content --remote --command "INSERT INTO users (username, password, salt) VALUES ('admin', 'hash-here', 'salt-here')"
+wrangler d1 execute your-db-name --remote --command "INSERT INTO users (username, password, salt) VALUES ('admin', 'hash-here', 'salt-here')"
 ```
 
 ### Customize styling
