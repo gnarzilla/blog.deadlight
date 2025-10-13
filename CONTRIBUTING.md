@@ -32,7 +32,7 @@ Report a bug by [opening a new issue]().
 git clone https://github.com/gnarzilla/blog.deadlight
 cd blog.deadlight
 npm install
-```
+
 # Create your D1 database:
 wrangler d1 create your-db-name
 
@@ -42,7 +42,7 @@ wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
 
 # Production
 wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
-
+```
 
 ## Testing
 
