@@ -28,11 +28,11 @@ Report a bug by [opening a new issue]().
 - Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
 
 ## Development Setup
-
+```bash
 git clone https://github.com/gnarzilla/blog.deadlight
 cd blog.deadlight
 npm install
-
+```
 # Create your D1 database:
 wrangler d1 create your-db-name
 
