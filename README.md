@@ -197,11 +197,6 @@ Current Version ID: <hidden>
 ```
 Your site is now accessible at your-domain.tld. Create an admin account to manage administrative settings at `your-domain.tld/admin` and proxy dashboard at `your-domain.tld/admin/proxy`.
 
-### Deploy:
-```bash
-wrangler deploy
-```
-
 ### Create your admin user:
 ```bash
 # Generate secure credentials
