@@ -251,7 +251,7 @@ All responses include:
 - Proxy integration - testing
 - email bridge/federation - testing
 - plugin system - active
-- Integrated locoalized (private) analytics collection and dashboard - active
+- Integrated localized (private) analytics collection and dashboard - active
 - **Active Development**: Full email client/server integration, production deployment guides, automatic sitemmap.xml generation
 
 ## Support
