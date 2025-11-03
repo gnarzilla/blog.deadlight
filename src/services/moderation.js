@@ -1,26 +1,19 @@
-export async function loadModerationKeywords(DB) {
-  const raw = await DB.prepare(`
-    SELECT value FROM settings WHERE key = 'moderation_keywords'
-  `).first();
-
-  if (!raw?.value) return [];
-
-  return raw.value
-    .split(',')
-    .map(k => k.trim().toLowerCase())
-    .filter(k => k.length > 0);
-}
-
-export function checkModeration(content, keywords) {
-  const lower = content.toLowerCase();
-  const matched = keywords.filter(word => lower.includes(word));
-
-  if (matched.length === 0) {
-    return { status: 'approved', notes: null };
+// src/services/moderation.js
+export class ModerationService {
+  constructor(configService) {
+    this.config = configService;
   }
 
-  return {
-    status: 'pending',
-    notes: `Flagged for keywords: ${matched.join(', ')}`
-  };
+  async check(content) {
+    const kw = await this.config.getModerationKeywords();
+    const lower = content.toLowerCase();
+    const matched = kw.filter(w => lower.includes(w));
+    return matched.length
+      ? { status: 'pending', notes: `Flagged: ${matched.join(', ')}` }
+      : { status: 'approved', notes: null };
+  }
+
+  async setKeywords(list) {
+    await this.config.updateSetting('moderation_keywords', list.join(','));
+  }
 }

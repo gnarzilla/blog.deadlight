@@ -3,7 +3,7 @@
 import { renderTemplate } from '../templates/base.js';
 import { MarkdownProcessor } from '../../../lib.deadlight/core/src/markdown/processor.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
-import { configService } from '../services/config.js'; // Add this import
+import { ConfigService } from '../services/config.js'; // Add this import
 
 export const inboxRoutes = {
   '/inbox': {
@@ -14,7 +14,7 @@ export const inboxRoutes = {
       }
       
       // Get dynamic config
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       
       const page = parseInt(request.query?.page || '1');
       const limit = config.postsPerPage || 10; // Use dynamic posts per page
@@ -99,7 +99,7 @@ export const inboxRoutes = {
       }
       
       // Get dynamic config
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       
       const emailId = request.params.id;
       const query = 'SELECT * FROM posts WHERE id = ? AND is_email = 1';
@@ -171,7 +171,7 @@ export const inboxRoutes = {
         }
         
         // Get dynamic config
-        const config = await configService.getConfig(env.DB);
+        const config = await env.services.config.getConfig();
         
         const emailId = request.params.id;
         const query = 'SELECT * FROM posts WHERE id = ? AND is_email = 1';
@@ -227,7 +227,7 @@ export const inboxRoutes = {
         }
         
         // Get dynamic config
-        const config = await configService.getConfig(env.DB);
+        const config = await env.services.config.getConfig();
         
         const emailId = request.params.id;
         const query = 'SELECT * FROM posts WHERE id = ? AND is_email = 1';

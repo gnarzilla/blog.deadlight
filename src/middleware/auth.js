@@ -1,9 +1,7 @@
 // src/middleware/auth.js - Fixed import and added apiAuthMiddleware
 import { parseCookies } from '../utils/utils.js';
 import { verifyJWT } from '../../../lib.deadlight/core/src/auth/jwt.js';
-import { authService } from '../services/auth-proxy.js';
 
-// Your existing checkAuth function stays the same
 export async function checkAuth(request, env) {
   // Check API authentication first (for API routes)
   if (request.url.includes('/api/')) {
@@ -17,7 +15,8 @@ export async function checkAuth(request, env) {
 
   if (env.USE_PROXY_AUTH) {
     try {
-      const verification = await authService.verify(token);
+      // CORRECT: Use env.services.proxy
+      const verification = await env.services.proxy.verify(token);
       if (verification.valid) {
         return {
           id: verification.userId,
@@ -31,6 +30,7 @@ export async function checkAuth(request, env) {
     }
   }
 
+  // Fallback to local JWT
   try {
     const user = await verifyJWT(token, env.JWT_SECRET);
     return user;
@@ -120,10 +120,9 @@ export async function apiAuthMiddleware(request, env, ctx, next) {
 export const requireAuth = (handler) => async (request, env, ctx) => {
   const user = await checkAuth(request, env);
   if (!user) {
-    if (request.url.includes('/api/')) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    return Response.redirect(new URL('/login', request.url).toString(), 302);
+    return request.url.includes('/api/')
+      ? Response.json({ error: 'Unauthorized' }, { status: 401 })
+      : Response.redirect(new URL('/login', request.url).toString(), 302);
   }
   request.user = user;
   return handler(request, env, ctx);

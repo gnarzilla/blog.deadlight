@@ -1,97 +1,151 @@
 // src/routes/proxy.js 
 import { ProxyService } from '../services/proxy.js';
-import { EnhancedOutboxService } from '../services/enhanced-outbox.js';
+import { QueueService } from '../services/queue.js';
 import { FederationService } from '../services/federation.js';
-import { proxyDashboardTemplate } from '../templates/admin/proxyDashboard.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
-import { configService } from '../services/config.js';
+import { renderTemplate } from '../templates/base.js'; // ADD THIS
+import { proxyDashboardTemplate } from '../templates/admin/proxyDashboard.js';
 
 export async function handleProxyRoutes(request, env, user) {
-    try {
-        const config = await configService.getConfig(env.DB);
+  if (request.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+  
+   try {
+     const [status, queueStatus, domains, realtimeFed] = await Promise.all([
+       env.services.proxy.healthCheck(),
+       env.services.queue.getStatus(),
+       env.services.federation.getConnectedDomains(),
+       getFederationRealtimeStatus(env),
+     ]);
 
-        const proxyUrl = env.PROXY_URL || config.proxyUrl || 'http://localhost:8080';
-        const proxyService = new ProxyService({ PROXY_URL: proxyUrl });
-        const outboxService = new EnhancedOutboxService(env);
-        const federationService = new FederationService(env);
+    // --------------------------------------------------------------
+    //  Get the public URL of THIS blog (used for inbound federation URLs)
+    // --------------------------------------------------------------
+    const cfg = await env.services.config.getConfig();
+    const siteUrl = cfg.siteUrl || env.SITE_URL || new URL(request.url).origin;
 
-        const [proxyStatus, queueStatus, federationStatus] = await Promise.allSettled([
-            proxyService.healthCheck(),
-            outboxService.getStatus(),
-            federationService.getConnectedDomains()
-        ]);
+     let lastProcessing = null;
+     if (status.proxy_connected && queueStatus.queued?.total > 0) {
+       lastProcessing = await env.services.queue.processAll();
+     }
 
-        const shouldProcessQueue = proxyStatus.status === 'fulfilled' && 
-                                 proxyStatus.value.proxy_connected &&
-                                 queueStatus.status === 'fulfilled' &&
-                                 queueStatus.value.queued_operations?.total > 0;
+     const circuitState = env.services.proxy.getCircuitState();
+     const recommendations = getCircuitRecommendations(circuitState);
 
-        let queueProcessingResult = null;
-        if (shouldProcessQueue) {
-            try {
-                queueProcessingResult = await outboxService.processQueue();
-                console.log('Enhanced queue processing completed:', queueProcessingResult);
-            } catch (error) {
-                console.error('Enhanced queue processing failed:', error);
-            }
-        }
+     const data = {
+      siteUrl,                     // ← NEW – used in proxyDashboardTemplate
+       status: { ...status, recommendations, circuit_state: circuitState },
+       queue: { status: queueStatus, lastProcessing },
+       federation: { connected_domains: domains, ...realtimeFed },
+       config: {
+         proxyUrl: env.PROXY_URL,
+         enabled: true,
+       },
+     };
 
-        const proxyData = {
-            status: proxyStatus.status === 'fulfilled' ? proxyStatus.value : { 
-                proxy_connected: false, 
-                error: proxyStatus.reason?.message || 'Connection failed',
-                circuit_state: 'UNKNOWN'
-            },
-            queue: {
-                status: queueStatus.status === 'fulfilled' ? queueStatus.value : { 
-                    queued_operations: { total: 0 },
-                    status: 'error'
-                },
-                lastProcessing: queueProcessingResult
-            },
-            federation: {
-                connected_domains: federationStatus.status === 'fulfilled' ? federationStatus.value : [],
-                status: federationStatus.status === 'fulfilled' ? 'online' : 'error'
-            },
-            config: {
-                proxyUrl,
-                enabled: true,
-                circuitState: proxyService.getCircuitState()
-            }
-        };
+    const config = cfg;   // reuse the already-fetched config
+     const body = proxyDashboardTemplate(data, user, config);
 
-        return new Response(proxyDashboardTemplate(proxyData, user, config), {
-            headers: { 'Content-Type': 'text/html' }
-        });
+     return new Response(
+       renderTemplate('Proxy Dashboard', body, user, config),
+       { headers: { 'Content-Type': 'text/html' } }
+     );
+  } catch (error) {
+    console.error('Proxy dashboard error:', error);
+    const errorData = {
+      status: { proxy_connected: false, error: error.message, circuit_state: env.services.proxy.getCircuitState(), recommendations: [] },
+      queue: { status: { queued: { total: 0 }, status: 'error' } },
+      federation: { connected_domains: [], recent_activity: [] },
+      config: { proxyUrl: env.PROXY_URL, enabled: false },
+    };
 
-    } catch (error) {
-        console.error('Proxy dashboard error:', error);
-        
-        const errorData = { 
-            status: { 
-                proxy_connected: false,
-                error: error.message,
-                circuit_state: 'ERROR'
-            },
-            queue: { 
-                status: { queued_operations: { total: 0 }, status: 'error' }
-            },
-            federation: {
-                connected_domains: [],
-                status: 'error'
-            },
-            config: { 
-                proxyUrl: env.PROXY_URL || 'http://localhost:8080', 
-                enabled: false 
-            }
-        };
-        
-        const config = await configService.getConfig(env.DB);
-        
-        return new Response(proxyDashboardTemplate(errorData, user, config), {
-            headers: { 'Content-Type': 'text/html' }
-        });
-    }
+    const config = await env.services.config.getConfig();
+    const body = proxyDashboardTemplate(errorData, user, config);
+
+    return new Response(
+      renderTemplate('Proxy Dashboard', body, user, config),
+      { headers: { 'Content-Type': 'text/html' } }
+    );
+  }
+}
+
+// --- Helper Functions ---
+function getCircuitRecommendations(circuitState) {
+  const recommendations = [];
+  if (circuitState.state === 'OPEN') {
+    recommendations.push('Circuit breaker is OPEN - proxy appears to be down');
+    recommendations.push('Check proxy server status and network connectivity');
+    recommendations.push('Operations are being queued until proxy recovers');
+  } else if (circuitState.state === 'HALF_OPEN') {
+    recommendations.push('Circuit breaker is testing connectivity');
+    recommendations.push('Next request will determine if circuit closes');
+  } else if (circuitState.failures > 0) {
+    recommendations.push(`${circuitState.failures} recent failures detected`);
+    recommendations.push('Monitor proxy health closely');
+  } else {
+    recommendations.push('All systems operating normally');
+  }
+  return recommendations;
+}
+
+async function getFederationRealtimeStatus(env) {
+  const federationService = env.services.federation;
+
+  const [domains, pendingPosts, recentActivity] = await Promise.allSettled([
+    federationService.getConnectedDomains(),
+    getPendingFederationPosts(env.DB),
+    getRecentFederationActivity(env.DB),
+  ]);
+
+  return {
+    connected_domains: domains.status === 'fulfilled' ? domains.value.length : 0,
+    pending_posts: pendingPosts.status === 'fulfilled' ? pendingPosts.value : 0,
+    recent_activity: recentActivity.status === 'fulfilled' ? recentActivity.value : [],
+    last_outgoing: await getLastFederationSent(env.DB),
+    last_incoming: await getLastFederationReceived(env.DB),
+  };
+}
+
+// Keep DB helpers: getPendingFederationPosts, getRecentFederationActivity, etc.
+async function getPendingFederationPosts(db) {
+  const result = await db.prepare(`SELECT COUNT(*) as count FROM posts WHERE federation_pending = 1`).first();
+  return result?.count || 0;
+}
+
+async function getRecentFederationActivity(db, limit = 5) {
+  const result = await db.prepare(`
+    SELECT id, title, 
+           json_extract(federation_metadata, '$.source_domain') as source_domain,
+           json_extract(federation_metadata, '$.received_at') as received_at,
+           post_type, moderation_status
+    FROM posts 
+    WHERE post_type IN ('federated', 'comment') AND federation_metadata IS NOT NULL
+    ORDER BY created_at DESC LIMIT ?
+  `).bind(limit).all();
+  return (result.results || []).map(row => ({
+    type: row.post_type,
+    title: row.title,
+    domain: row.source_domain,
+    timestamp: row.received_at,
+    status: row.moderation_status
+  }));
+}
+
+async function getLastFederationSent(db) {
+  const result = await db.prepare(`
+    SELECT federation_sent_at, title FROM posts 
+    WHERE federation_sent_at IS NOT NULL 
+    ORDER BY federation_sent_at DESC LIMIT 1
+  `).first();
+  return result ? { timestamp: result.federation_sent_at, title: result.title } : null;
+}
+
+async function getLastFederationReceived(db) {
+  const result = await db.prepare(`
+    SELECT json_extract(federation_metadata, '$.received_at') as received_at, title
+    FROM posts WHERE post_type = 'federated' AND federation_metadata IS NOT NULL
+    ORDER BY created_at DESC LIMIT 1
+  `).first();
+  return result ? { timestamp: result.received_at, title: result.title } : null;
 }
 
 export const handleProxyTests = {
@@ -195,12 +249,12 @@ export const handleProxyTests = {
     async healthCheck(request, env) {
         try {
             const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-            const outboxService = new EnhancedOutboxService(env);
+            const queueService = new QueueService(env);
             const federationService = new FederationService(env);
             
             const [proxyHealth, queueStatus, federationStatus] = await Promise.allSettled([
                 proxyService.healthCheck(),
-                outboxService.getStatus(),
+                queueService.getStatus(),
                 federationService.getConnectedDomains()
             ]);
             
@@ -247,7 +301,7 @@ export const handleProxyTests = {
 
     async clearFailed(request, env) {
         try {
-            const outboxService = new EnhancedOutboxService(env);
+            const queueService = new QueueService(env);
             
             // Clear failed operations from the outbox
             const result = await env.DB.prepare(`
@@ -318,7 +372,7 @@ export const handleProxyTests = {
 
     async sendTestEmail(request, env) {
         const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-        const outboxService = new EnhancedOutboxService(env);
+        const queueService = new QueueService(env);
         
         try {
             const { email } = await request.json();
@@ -340,7 +394,7 @@ export const handleProxyTests = {
                 });
             } catch (proxyError) {
                 console.log('Proxy unavailable, queuing email via outbox...');
-                await outboxService.queueEmailNotification(1, emailData);
+                await queueService.queueEmailNotification(1, emailData);
                 
                 return Response.json({ 
                     success: true, 
@@ -387,7 +441,7 @@ export const handleProxyTests = {
 
     async testSms(request, env) {
         const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-        const outboxService = new EnhancedOutboxService(env);
+        const queueService = new QueueService(env);
         
         try {
             const { phone } = await request.json();
@@ -407,7 +461,7 @@ export const handleProxyTests = {
                     circuit_state: proxyService.getCircuitState()
                 });
             } catch (proxyError) {
-                await outboxService.queueSms(1, phone, smsData.message);
+                await queueService.queueSms(1, phone, smsData.message);
                 
                 return Response.json({ 
                     success: true, 
@@ -430,7 +484,7 @@ export const handleProxyTests = {
 
     async processQueue(request, env) {
         const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-        const outboxService = new EnhancedOutboxService(env);
+        const queueService = new QueueService(env);
 
         try {
             const isAvailable = await proxyService.isProxyAvailable();
@@ -442,7 +496,7 @@ export const handleProxyTests = {
                 });
             }
             
-            const result = await outboxService.processQueue();
+            const result = await queueervice.processQueue();
             return Response.json({
                 success: true,
                 data: result
@@ -460,8 +514,8 @@ export const handleProxyTests = {
 
     async getQueueStatus(request, env) {
         try {
-            const outboxService = new EnhancedOutboxService(env);
-            const status = await outboxService.getStatus();
+            const queueService = new QueueService(env);
+            const status = await queueService.getStatus();
             
             return Response.json({
                 success: true,
@@ -501,24 +555,38 @@ export const handleProxyTests = {
         }
     },
 
+    // POST /admin/proxy/discover-domain
     async discoverDomain(request, env) {
         try {
-            const { domain } = await request.json();
-            const federationService = new FederationService(env);
-            
-            const result = await federationService.discoverDomain(domain);
-            
+            // 1. Parse form data (not JSON)
+            const formData = await request.formData();
+            const domain = formData.get('domain')?.trim();
+
+            if (!domain) {
+            return Response.json({ success: false, error: 'Domain is required' }, { status: 400 });
+            }
+
+            // 2. Normalize URL
+            let normalized = domain;
+            if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+            normalized = 'https://' + normalized;
+            }
+
+            // 3. Call federation discovery
+            const federationService = env.services.federation;
+            const result = await federationService.discoverAndTrust(normalized);
+
             return Response.json({
-                success: true,
-                data: result,
-                message: `Discovery request sent to ${domain}`
+            success: true,
+            domain: normalized,
+            result,
             });
         } catch (error) {
             console.error('Domain discovery error:', error);
             return Response.json({
-                success: false,
-                error: error.message
-            });
+            success: false,
+            error: error.message || 'Discovery failed',
+            }, { status: 500 });
         }
     },
 
@@ -537,12 +605,12 @@ export const handleProxyTests = {
                 const sendUpdate = async () => {
                     try {
                         const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-                        const outboxService = new EnhancedOutboxService(env);
+                        const queueService = new QueueService(env);
                         const federationService = new FederationService(env); // Add this
                         
                         const [proxyStatus, queueStatus, federationStatus] = await Promise.allSettled([
                             proxyService.healthCheck(),
-                            outboxService.getStatus(),
+                            queueService.getStatus(),
                             getFederationRealtimeStatus(env) // New function
                         ]);
                         
@@ -629,109 +697,6 @@ export const handleProxyTests = {
                 circuit_state: proxyService.getCircuitState()
             });
         }
-    },
-
-    getCircuitRecommendations(circuitState) {
-        const recommendations = [];
-        
-        if (circuitState.state === 'OPEN') {
-            recommendations.push('Circuit breaker is OPEN - proxy appears to be down');
-            recommendations.push('Check proxy server status and network connectivity');
-            recommendations.push('Operations are being queued until proxy recovers');
-        } else if (circuitState.state === 'HALF_OPEN') {
-            recommendations.push('Circuit breaker is testing connectivity');
-            recommendations.push('Next request will determine if circuit closes');
-        } else if (circuitState.failures > 0) {
-            recommendations.push(`${circuitState.failures} recent failures detected`);
-            recommendations.push('Monitor proxy health closely');
-        } else {
-            recommendations.push('All systems operating normally');
-        }
-        
-        return recommendations;
     }
     
 };
-
-// New function for real-time federation monitoring
-async function getFederationRealtimeStatus(env) {
-    const federationService = new FederationService(env);
-    
-    const [domains, pendingPosts, recentActivity] = await Promise.allSettled([
-        federationService.getConnectedDomains(),
-        getPendingFederationPosts(env.DB),
-        getRecentFederationActivity(env.DB)
-    ]);
-    
-    return {
-        connected_domains: domains.status === 'fulfilled' ? domains.value.length : 0,
-        trust_levels: domains.status === 'fulfilled' 
-            ? domains.value.reduce((acc, d) => { 
-                acc[d.trust_level] = (acc[d.trust_level] || 0) + 1; 
-                return acc; 
-              }, {})
-            : {},
-        pending_posts: pendingPosts.status === 'fulfilled' ? pendingPosts.value : 0,
-        recent_activity: recentActivity.status === 'fulfilled' ? recentActivity.value : [],
-        last_outgoing: await getLastFederationSent(env.DB),
-        last_incoming: await getLastFederationReceived(env.DB)
-    };
-}
-
-async function getPendingFederationPosts(db) {
-    const result = await db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM posts 
-        WHERE federation_pending = 1
-    `).first();
-    return result?.count || 0;
-}
-
-async function getRecentFederationActivity(db, limit = 5) {
-    const result = await db.prepare(`
-        SELECT 
-            id, title, 
-            json_extract(federation_metadata, '$.source_domain') as source_domain,
-            json_extract(federation_metadata, '$.received_at') as received_at,
-            post_type,
-            moderation_status
-        FROM posts 
-        WHERE post_type IN ('federated', 'comment') 
-            AND federation_metadata IS NOT NULL
-        ORDER BY created_at DESC 
-        LIMIT ?
-    `).bind(limit).all();
-    
-    return (result.results || []).map(row => ({
-        type: row.post_type,
-        title: row.title,
-        domain: row.source_domain,
-        timestamp: row.received_at,
-        status: row.moderation_status
-    }));
-}
-
-async function getLastFederationSent(db) {
-    const result = await db.prepare(`
-        SELECT federation_sent_at, title
-        FROM posts 
-        WHERE federation_sent_at IS NOT NULL 
-        ORDER BY federation_sent_at DESC 
-        LIMIT 1
-    `).first();
-    return result ? { timestamp: result.federation_sent_at, title: result.title } : null;
-}
-
-async function getLastFederationReceived(db) {
-    const result = await db.prepare(`
-        SELECT 
-            json_extract(federation_metadata, '$.received_at') as received_at,
-            title
-        FROM posts 
-        WHERE post_type = 'federated' 
-            AND federation_metadata IS NOT NULL
-        ORDER BY created_at DESC 
-        LIMIT 1
-    `).first();
-    return result ? { timestamp: result.received_at, title: result.title } : null;
-}

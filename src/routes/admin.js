@@ -7,7 +7,7 @@ import {
 } from '../templates/admin/index.js';
 import { federationDashboard } from '../templates/admin/federationDashboard.js';
 import { FederationService }     from '../services/federation.js';
-import { loadModerationKeywords, checkModeration } from '../services/moderation.js';
+import { requireAdminMiddleware } from '../middleware/index.js';
 import { handleProxyRoutes, handleProxyTests } from './proxy.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { renderTemplate } from '../templates/base.js';
@@ -16,12 +16,12 @@ import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { DatabaseError } from '../../../lib.deadlight/core/src/db/base.js';
 import { getAnalyticsSummary, getTopPaths, getCountryStats, getHourlyTraffic } from '../middleware/analytics.js';
 import { ProxyService } from '../services/proxy.js';
-import { EnhancedOutboxService } from '../services/enhanced-outbox.js';
-import { configService } from '../services/config.js';
+import { QueueService } from '../services/queue.js';
 import { renderAdminDashboard } from '../templates/admin/index.js';
 import { SettingsModel } from '../../../lib.deadlight/core/src/db/models/index.js';        
 import { renderSettings } from '../templates/admin/settings.js';
 import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
+import { ConfigService } from '../services/config.js';
 
 export const adminRoutes = {
   '/admin': {
@@ -32,7 +32,7 @@ export const adminRoutes = {
       }
 
       try {
-        const config = await configService.getConfig(env.DB);
+        const config = await env.services.config.getConfig();
         const postModel = new PostModel(env.DB);
         const userModel = new UserModel(env.DB);
         
@@ -135,7 +135,6 @@ export const adminRoutes = {
       }
     }
   },
-  
 
   '/admin/edit/:id': {
     GET: async (request, env) => {
@@ -147,7 +146,7 @@ export const adminRoutes = {
       }
 
       try {
-        const config = await configService.getConfig(env.DB);
+        const config = await env.services.config.getConfig();
         
         const postId = request.params.id;
         const post = await postModel.getById(postId);
@@ -274,8 +273,7 @@ export const adminRoutes = {
         await settingsModel.set('maintenance_mode', formData.has('maintenance_mode'), 'boolean');
         
         // Clear config cache so changes take effect immediately
-        const { configService } = await import('../services/config.js');
-        configService.clearCache();
+        ConfigService.clearCache();
         
         return Response.redirect(`${new URL(request.url).origin}/admin`);
       } catch (error) {
@@ -292,9 +290,7 @@ export const adminRoutes = {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
 
-      // Get dynamic config
-      const { configService } = await import('../services/config.js');
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
 
       return new Response(renderAddPostForm(user, config), {
         headers: { 'Content-Type': 'text/html' }
@@ -396,8 +392,7 @@ export const adminRoutes = {
       const postId = request.params.postId;
       const fedSvc = new FederationService(env);
       const comments = await fedSvc.getThreadedComments(postId);
-      const { configService } = await import('../services/config.js');
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       const { renderCommentList } = await import('../templates/admin/comments.js');
       return new Response(renderCommentList(comments, postId, user, config), {
         headers: { 'Content-Type': 'text/html' }
@@ -462,7 +457,7 @@ export const adminRoutes = {
 
       const domains = await fedSvc.getConnectedDomains();
       const targetDomains = domains.map(d => d.domain);
-      await fedSvc.sendFederatedComment(comment, targetDomains);
+      await fedSvc.publishComment(comment, targetDomains);
 
       return Response.redirect(`${new URL(request.url).origin}/admin/comments/${postId}`);
     }
@@ -543,7 +538,7 @@ export const adminRoutes = {
 
       const domains = await fedSvc.getConnectedDomains();
       const targetDomains = domains.map(d => d.domain);
-      await fedSvc.sendFederatedComment(reply, targetDomains);
+      await fedSvc.publishComment(reply, targetDomains);
 
       return Response.redirect(`${new URL(request.url).origin}/admin/comments/${parentComment.parent_id || parentComment.thread_id}`);
     }
@@ -585,8 +580,7 @@ export const adminRoutes = {
 
       try {
         // Get dynamic config
-        const { configService } = await import('../services/config.js');
-        const config = await configService.getConfig(env.DB);
+        const config = await env.services.config.getConfig();
         
         // Get all users (paginated in the future if needed)
         const users = await userModel.list({ limit: 50 });
@@ -613,8 +607,7 @@ export const adminRoutes = {
       }
 
       // Get dynamic config
-      const { configService } = await import('../services/config.js');
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
 
       return new Response(renderAddUserForm(user, config), {
         headers: { 'Content-Type': 'text/html' }
@@ -700,7 +693,7 @@ export const adminRoutes = {
       return await handleProxyRoutes(request, env, user);
     }
   },
-  // Add this to your adminRoutes in routes/admin.js
+
   '/admin/proxy/discover-domain': {
     POST: async (request, env) => {
       const user = await checkAuth(request, env);
@@ -757,7 +750,7 @@ export const adminRoutes = {
     }
   },
   
-  '/admin/process-outbox': {
+  '/admin/process-queue': {
       POST: async (request, env) => {
           const user = await checkAuth(request, env);
           if (!user) {
@@ -765,9 +758,8 @@ export const adminRoutes = {
           }
 
           try {
-              // Import and use the OutboxService (you'll create this)
-              const { OutboxService } = await import('../services/outbox.js');
-              const outbox = new OutboxService(env);
+              const { QueueService } = await import('../services/outbox.js');
+              const outbox = new QueueService(env);
               const result = await outbox.processQueue();
 
               if (result.error) {
@@ -785,7 +777,7 @@ export const adminRoutes = {
                   message: `✅ Processed ${result.processed || 0} operations. ${result.queued || 0} remaining in queue.`
               });
           } catch (error) {
-              console.error('Outbox processing error:', error);
+              console.error('Queue processing error:', error);
               return Response.json({ 
                   success: false, 
                   error: error.message,
@@ -815,7 +807,7 @@ export const adminRoutes = {
     }
   },
 
-  '/federation/outbox' : {
+  '/federation/queue' : {
     GET: async (request, env) => {
       const url = new URL(request.url);
       const limit = parseInt(url.searchParams.get('limit') || '50');
@@ -891,7 +883,7 @@ export const adminRoutes = {
         return Response.json({ success: false, error: 'No federated domains found' });
       }
       
-      const results = await federationService.sendFederatedPost(post, targetDomains);
+      const results = await federationService.publishPost(post, targetDomains);
       
       return Response.json({ 
         success: true, 
@@ -1095,6 +1087,36 @@ export const adminRoutes = {
       `).bind(user.id).all();
       // Render template
     }
+  },
+
+  'admin/moderation-keywords' : {
+    GET: async (req, env) => {
+      const keywords = await env.services.config.getModerationKeywords(); // ← from ConfigService
+      return new Response(JSON.stringify({ keywords }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+
+    POST: async (req, env) => {
+      const { keywords } = await req.json();
+      if (!Array.isArray(keywords)) {
+        return new Response(JSON.stringify({ error: 'keywords must be array' }), { status: 400 });
+      }
+
+      await env.services.moderation.setKeywords(keywords); // ← uses ModerationService
+      return new Response(JSON.stringify({ success: true, keywords }));
+    },
+  },
+
+  // Example: Check content moderation (e.g., for preview)
+  'admin/check-moderation' : {
+    POST: async (req, env) => {
+      const { content } = await req.json();
+      const result = await env.services.moderation.check(content);
+      return new Response(JSON.stringify(result), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
   },
 
   '/admin/moderation' : {
@@ -1302,11 +1324,11 @@ export const adminRoutes = {
 
       try {
         const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-        const outboxService = new EnhancedOutboxService(env);
+        const queueService = new QueueService(env);
         
         const [proxyStatus, queueStatus] = await Promise.allSettled([
           proxyService.healthCheck(),
-          outboxService.getStatus()
+          queueService.getStatus()
         ]);
         
         return Response.json({
@@ -1411,7 +1433,7 @@ export const adminRoutes = {
       }
 
       // load dynamic config
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
 
       // instantiate service
       const fed = new FederationService(env);
@@ -1432,7 +1454,7 @@ export const adminRoutes = {
 
   '/admin/analytics': {
     GET: async (request, env, ctx) => {
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       const timeRange = request.query.range || '7d'; // Get from query param
 
       let timeClause;

@@ -1,7 +1,7 @@
 // src/routes/user.js
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { renderUserProfile } from '../templates/user/profile.js';
-import { configService } from '../services/config.js';
+import { ConfigService } from '../services/config.js';
 import { renderUserPostForm } from '../templates/admin/addPost.js'
 import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js'
 import { renderUserSettings } from '../templates/user/settings.js';
@@ -42,7 +42,7 @@ export const userRoutes = {
         const currentUser = await checkAuth(request, env);
         
         // Get dynamic config
-        const config = await configService.getConfig(env.DB);
+        const config = await env.services.config.getConfig();;
         
         // Find user by subdomain (which should match username)
         const user = await env.DB.prepare(`
@@ -130,7 +130,7 @@ export const userRoutes = {
         SELECT key, value FROM user_settings WHERE user_id = ?
       `).bind(currentUser.id).all();
       
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       
       const { renderUserSettings } = await import('../templates/user/settings.js');
       return new Response(renderUserSettings(user, additionalSettings.results || [], config), {
@@ -196,8 +196,7 @@ export const userRoutes = {
           SELECT * FROM users WHERE id = ?
         `).bind(currentUser.id).first();
         
-        const { configService } = await import('../services/config.js');
-        const config = await configService.getConfig(env.DB);
+        const config = await env.services.config.getConfig();
         
         const { renderUserSettings } = await import('../templates/user/settings.js');
         return new Response(renderUserSettings(user, [], config, error.message), {
@@ -217,7 +216,7 @@ export const userRoutes = {
         return Response.redirect(new URL('/login', request.url).toString(), 302);
       }
       
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       
       return new Response(renderUserPostForm(currentUser, config), {
         headers: { 'Content-Type': 'text/html' }
@@ -254,7 +253,7 @@ export const userRoutes = {
         return Response.redirect(redirectUrl, 302);
         
       } catch (error) {
-        const config = await configService.getConfig(env.DB);
+        const config = await env.services.config.getConfig();
         return new Response(renderUserPostForm(currentUser, config, error.message), {
           status: 400,
           headers: { 'Content-Type': 'text/html' }
@@ -282,7 +281,7 @@ export const userRoutes = {
         return new Response('Not found', { status: 404 });
       }
       
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       
       return new Response(renderUserPostForm(currentUser, config, null, post), {
         headers: { 'Content-Type': 'text/html' }

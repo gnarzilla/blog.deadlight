@@ -2,8 +2,7 @@
 import { PostModel, UserModel, SettingsModel } from '../../../lib.deadlight/core/src/db/models/index.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { FederationService } from '../services/federation.js';
-import { OutboxService } from '../services/outbox.js';
-import { EnhancedOutboxService } from '../services/enhanced-outbox.js';
+import { QueueService } from '../services/queue.js';
 import { ProxyService } from '../services/proxy.js';
 
 const logger = new Logger({ context: 'api' });

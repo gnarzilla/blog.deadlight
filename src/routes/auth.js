@@ -6,8 +6,8 @@ import { UserModel } from '../../../lib.deadlight/core/src/db/models/user.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { Validator, FormValidator, CSRFProtection } from '../../../lib.deadlight/core/src/security/validation.js';
 import { authLimiter } from '../../../lib.deadlight/core/src/security/ratelimit.js';
-import { authService } from '../services/auth-proxy.js';
-import { configService } from '../services/config.js';
+import { ProxyService } from '../services/proxy.js';
+import { ConfigService } from '../services/config.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { renderRegistrationForm } from '../templates/auth/register.js';
 
@@ -20,7 +20,7 @@ export const authRoutes = {
         try {
           // Verify with proxy if enabled
           if (env.USE_PROXY_AUTH) {
-            const verification = await authService.verify(existingToken);
+            const verification = await ProxyService.verify(existingToken);
             if (verification.valid) {
               return new Response(null, {
                 status: 302,
@@ -398,7 +398,7 @@ export const authRoutes = {
         }
         
         // Call proxy refresh endpoint
-        const result = await authService.refresh(refreshToken);
+        const result = await ProxyService.refresh(refreshToken);
         
         // Return new tokens
         const headers = new Headers({ 'Content-Type': 'application/json' });
@@ -456,7 +456,7 @@ export const authRoutes = {
               });
             } else {
               // Browser environment (shouldn't happen in Worker)
-              await authService.logout(token);
+              await ProxyService.logout(token);
             }
           } catch (error) {
             logger.warn('Proxy logout failed', { error: error.message });

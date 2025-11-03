@@ -12,149 +12,147 @@ import { federationRoutes } from './routes/federation.js';
 import { errorMiddleware, loggingMiddleware } from './middleware/index.js';
 import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './middleware/index.js';
 import { rateLimitMiddleware, securityHeadersMiddleware } from '../../lib.deadlight/core/src/security/middleware.js';
-import { OutboxService } from './services/outbox.js';
 import { analyticsMiddleware } from './middleware/analytics.js';
 import { handleProxyTests } from './routes/proxy.js';
+import { initServices } from './services/index.js';
 
 const router = new Router();
 
-// Global middleware
+/* ==============================================================
+   GLOBAL MIDDLEWARE
+   ============================================================== */
 router.use(errorMiddleware);
 router.use(loggingMiddleware);
 router.use(analyticsMiddleware);
 
-// Public routes (no auth required)
+/* ==============================================================
+   PUBLIC ROUTES
+   ============================================================== */
 router.group([], (r) => {
-  // Blog routes
-  Object.entries(blogRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
-  
-  // Style routes
-  Object.entries(styleRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
-  
-  // Static routes
-  Object.entries(staticRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
-  
-  // Auth routes (login/logout)
-  Object.entries(authRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
-  
-  // Public API endpoints
+  // Blog
+  Object.entries(blogRoutes).forEach(([p, h]) => r.register(p, h));
+  // Styles
+  Object.entries(styleRoutes).forEach(([p, h]) => r.register(p, h));
+  // Static assets
+  Object.entries(staticRoutes).forEach(([p, h]) => r.register(p, h));
+  // Auth (login / logout)
+  Object.entries(authRoutes).forEach(([p, h]) => r.register(p, h));
+
+  // Public API
   r.register('/api/health', apiRoutes['/api/health']);
   r.register('/api/status', apiRoutes['/api/status']);
   r.register('/api/blog/status', apiRoutes['/api/blog/status']);
   r.register('/api/blog/posts', apiRoutes['/api/blog/posts']);
   r.register('/api/metrics', apiRoutes['/api/metrics']);
 
-  // Public federation endpoints
+  // Public federation discovery
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
   r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
-  // Use proxy.js handlers instead of federation.js
-  r.register('/api/federation/connect', { 
+
+  // Proxy-based federation helpers (keep your existing handlers)
+  r.register('/api/federation/connect', {
     POST: async (req, env) => {
       try {
         return await handleProxyTests.addFederationDomain(req, env);
-      } catch (error) {
-        console.error('Federation connect error:', error);
-        return new Response(JSON.stringify({
-          success: false,
-          error: error.message,
-          stack: error.stack  // Helpful for debugging
-        }), {
+      } catch (e) {
+        console.error('Federation connect error:', e);
+        return new Response(JSON.stringify({ success: false, error: e.message }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       }
-    }
+    },
   });
   r.register('/api/federation/test/*', federationRoutes['/api/federation/test/*']);
-  r.register('/api/federation/remove', { 
-    POST: (req, env) => handleProxyTests.removeFederationDomain(req, env) 
+  r.register('/api/federation/remove', {
+    POST: (req, env) => handleProxyTests.removeFederationDomain(req, env),
   });
-
 });
 
-// Authenticated user routes
+/* ==============================================================
+   AUTHENTICATED USER ROUTES
+   ============================================================== */
 router.group([authMiddleware], (r) => {
-  // User routes
-  Object.entries(userRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
-  
-  // Inbox routes
-  Object.entries(inboxRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
+  Object.entries(userRoutes).forEach(([p, h]) => r.register(p, h));
+  Object.entries(inboxRoutes).forEach(([p, h]) => r.register(p, h));
 });
 
-// Admin routes (requires auth + admin role)
+/* ==============================================================
+   ADMIN ROUTES
+   ============================================================== */
 router.group([authMiddleware, requireAdminMiddleware], (r) => {
-  // Register ALL admin routes from adminRoutes object
-  Object.entries(adminRoutes).forEach(([path, handlers]) => {
-    r.register(path, handlers);
-  });
+  Object.entries(adminRoutes).forEach(([p, h]) => r.register(p, h));
 });
 
-// Protected API routes (requires API key auth)
+/* ==============================================================
+   PROTECTED API (API-key)
+   ============================================================== */
 router.group([apiAuthMiddleware], (r) => {
-  // Email API endpoints
   r.register('/api/email/receive', apiRoutes['/api/email/receive']);
   r.register('/api/email/fetch', apiRoutes['/api/email/fetch']);
   r.register('/api/email/pending-replies', apiRoutes['/api/email/pending-replies']);
-  
-  // Federation inbox
   r.register('/api/federation/inbox', federationRoutes['/api/federation/inbox']);
 });
 
-// Log registered routes for debugging
+/* ==============================================================
+   DEBUG – list routes (optional)
+   ============================================================== */
 console.log('Routes registered:', Array.from(router.routes.keys()));
 
-// Start queue processor when Worker initializes
+/* ==============================================================
+   QUEUE PROCESSOR (replaces old OutboxService)
+   ============================================================== */
 let queueProcessorStarted = false;
-async function startQueueProcessor(env, intervalMs = 300000) {
+
+async function startQueueProcessor(env, intervalMs = 30_000) { // 30 s default
   if (!env.ENABLE_QUEUE_PROCESSING) {
-    console.log('Queue processing disabled');
+    console.log('Queue processing disabled (ENABLE_QUEUE_PROCESSING not set)');
     return;
   }
-  if (queueProcessorStarted) {
-    console.log('Queue processor already started');
-    return;
-  }
+  if (queueProcessorStarted) return;
   queueProcessorStarted = true;
-  const outbox = new OutboxService(env);
+
+  const services = initServices(env);
+  env.services = services;               // make it globally reachable for route handlers
+
   setInterval(async () => {
     try {
-      const result = await outbox.processQueue();
-      console.log(`Queue processed: ${result.processed} operations, ${result.queued} remaining`);
-    } catch (error) {
-      console.error('Queue processing error:', error);
+      const result = await services.queue.processAll();
+      console.log(`Queue processed: ${result.processed} ops, ${result.queued?.total ?? 0} remaining`);
+    } catch (err) {
+      console.error('Queue processing error:', err);
     }
   }, intervalMs);
 }
 
+/* ==============================================================
+   EXPORTED WORKER
+   ============================================================== */
 export default {
+  /** HTTP entry point */
   async fetch(request, env, ctx) {
+    // Initialise services **once** per request (cheap because they are cached inside)
+    const services = initServices(env);
+    env.services = services;               // expose to all route handlers
+
+    // Start background queue processor (fire-and-forget)
     ctx.waitUntil(startQueueProcessor(env));
-    
-    // Check if rate limiting is enabled
+
+    // Rate-limiting toggle
+    const next = () => router.handle(request, env, ctx);
+
     if (env.DISABLE_RATE_LIMITING === 'true') {
-      // Skip rate limiting entirely
-      return securityHeadersMiddleware(request, env, ctx, () =>
-        router.handle(request, env, ctx)
-      );
+      return securityHeadersMiddleware(request, env, ctx, next);
     }
-    
-    // Normal flow with rate limiting
+
     return rateLimitMiddleware(request, env, ctx, () =>
-      securityHeadersMiddleware(request, env, ctx, () =>
-        router.handle(request, env, ctx)
-      )
+      securityHeadersMiddleware(request, env, ctx, next)
     );
-  }
+  },
+
+  /** Cron entry point (optional – Cloudflare cron) */
+  async scheduled(controller, env, ctx) {
+    const services = initServices(env);
+    await services.queue.processAll();
+  },
 };
