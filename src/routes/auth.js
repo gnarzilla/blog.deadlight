@@ -228,7 +228,7 @@ export const authRoutes = {
   '/register': {
     GET: async (request, env, ctx) => {
       // Check if registration is enabled
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       if (!config.enableRegistration) {
         return new Response('Registration is currently disabled', { status: 403 });
       }
@@ -250,7 +250,7 @@ export const authRoutes = {
       });
     },
     POST: async (request, env, ctx) => {
-      const config = await configService.getConfig(env.DB);
+      const config = await env.services.config.getConfig();
       if (!config.enableRegistration) {
         return new Response('Registration is currently disabled', { status: 403 });
       }
