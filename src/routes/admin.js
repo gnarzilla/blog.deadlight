@@ -9,7 +9,7 @@ import { federationDashboard } from '../templates/admin/federationDashboard.js';
 import { FederationService }     from '../services/federation.js';
 import { requireAdminMiddleware } from '../middleware/index.js';
 import { handleProxyRoutes, handleProxyTests } from './proxy.js';
-import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
+import { checkAuth } from '../middleware/auth.js';
 import { renderTemplate } from '../templates/base.js';
 import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';

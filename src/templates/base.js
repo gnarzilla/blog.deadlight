@@ -26,12 +26,14 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
       `;
     } else {
       authLinks = commonLinks + `
+        <a href="/analytics">Analytics</a> |
         <a href="/user/${user.username}/new-post">Post</a> |
         <a href="/logout">Logout</a>
       `;
     }
   } else {
     authLinks = `
+    <a href="/analytics">Analytics</a> |
     <a href="/register">Register</a> |
     <a href="/login">Login</a>
     `;

@@ -39,7 +39,6 @@ export async function checkAuth(request, env) {
   }
 }
 
-// Fixed checkApiAuth (was being imported from deleted file)
 async function checkApiAuth(request, env) {
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
@@ -92,7 +91,7 @@ export async function optionalAuthMiddleware(request, env, ctx, next) {
   return next();
 }
 
-// New: API-specific auth middleware
+// API-specific auth middleware
 export async function apiAuthMiddleware(request, env, ctx, next) {
   const authHeader = request.headers.get('Authorization');
   const apiKey = request.headers.get('X-API-Key');
@@ -116,25 +115,12 @@ export async function apiAuthMiddleware(request, env, ctx, next) {
   return next();
 }
 
-// Keep your existing functions for backward compatibility
 export const requireAuth = (handler) => async (request, env, ctx) => {
   const user = await checkAuth(request, env);
   if (!user) {
     return request.url.includes('/api/')
       ? Response.json({ error: 'Unauthorized' }, { status: 401 })
       : Response.redirect(new URL('/login', request.url).toString(), 302);
-  }
-  request.user = user;
-  return handler(request, env, ctx);
-};
-
-export const requireAdmin = (handler) => async (request, env, ctx) => {
-  const user = await checkAuth(request, env);
-  if (!user || !user.isAdmin) {
-    if (request.url.includes('/api/')) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
-    }
-    return new Response('Forbidden', { status: 403 });
   }
   request.user = user;
   return handler(request, env, ctx);
