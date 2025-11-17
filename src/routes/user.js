@@ -5,6 +5,9 @@ import { ConfigService } from '../services/config.js';
 import { renderUserPostForm } from '../templates/admin/addPost.js'
 import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js'
 import { renderUserSettings } from '../templates/user/settings.js';
+import { hashPassword } from '../../../lib.deadlight/core/src/auth/password.js';
+
+
 
 // Username validation (reusing your slug pattern)
 function validateUsername(username) {
@@ -132,7 +135,6 @@ export const userRoutes = {
       
       const config = await env.services.config.getConfig();
       
-      const { renderUserSettings } = await import('../templates/user/settings.js');
       return new Response(renderUserSettings(user, additionalSettings.results || [], config), {
         headers: { 'Content-Type': 'text/html' }
       });
@@ -178,7 +180,6 @@ export const userRoutes = {
           }
           
           // Use your existing password hashing
-          const { hashPassword } = await import('../../../lib.deadlight/core/src/auth/password.js');
           const { hash, salt } = await hashPassword(newPassword);
           
           await env.DB.prepare(`
@@ -198,7 +199,6 @@ export const userRoutes = {
         
         const config = await env.services.config.getConfig();
         
-        const { renderUserSettings } = await import('../templates/user/settings.js');
         return new Response(renderUserSettings(user, [], config, error.message), {
           status: 400,
           headers: { 'Content-Type': 'text/html' }

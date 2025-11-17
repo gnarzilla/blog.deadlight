@@ -3,13 +3,30 @@ set -e
 
 VERBOSE=false
 REMOTE=false
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 for arg in "$@"; do
   case $arg in
     --verbose|-v) VERBOSE=true ;;
     --remote|-r) REMOTE=true ;;
+    --db=*) DB_NAME="${arg#*=}" ;;
   esac
 done
+
+# If DB_NAME not provided via flag, read from wrangler.toml
+if [ -z "$DB_NAME" ]; then
+  DB_NAME=$(grep -A 2 '
+$$
+\[d1_databases
+$$\]' "$PROJECT_ROOT/wrangler.toml" | \
+    grep "database_name" | \
+    cut -d'"' -f2)
+fi
+
+if [ "$VERBOSE" = true ]; then
+  echo "Using database: $DB_NAME"
+fi
 
 # Prompt for admin username/email and password
 read -p "Enter admin username: " ADMIN_USER
@@ -31,14 +48,14 @@ if [ "$REMOTE" = true ]; then
   WRANGLER_FLAGS="--remote"
 fi
 
-# Check for existing user
+# Check for existing user - FIXED: use $DB_NAME instead of hardcoded name
 if [ "$VERBOSE" = true ]; then
-  EXISTS=$(wrangler d1 execute blog_content_new $WRANGLER_FLAGS --command \
+  EXISTS=$(wrangler d1 execute "$DB_NAME" $WRANGLER_FLAGS --command \
     "SELECT COUNT(*) AS count FROM users WHERE username = '$ADMIN_USER' OR email = '$ADMIN_EMAIL';" \
     --json | jq -r '.[0].results[0].count')
   echo "Duplicate check result: $EXISTS existing user(s) found."
 else
-  EXISTS=$(wrangler d1 execute blog_content_new $WRANGLER_FLAGS --command \
+  EXISTS=$(wrangler d1 execute "$DB_NAME" $WRANGLER_FLAGS --command \
     "SELECT COUNT(*) AS count FROM users WHERE username = '$ADMIN_USER' OR email = '$ADMIN_EMAIL';" \
     --json 2>/dev/null | jq -r '.[0].results[0].count')
 fi
@@ -57,12 +74,12 @@ sed \
   -e "s#{{SALT}}#$SALT#g" \
   scripts/gen-admin/seed-template.sql > "$TMP_SEED"
 
-# Execute the seed
+# Execute the seed - FIXED: use $DB_NAME instead of hardcoded name
 if [ "$VERBOSE" = true ]; then
-  wrangler d1 execute blog_content_new $WRANGLER_FLAGS --file="$TMP_SEED"
+  wrangler d1 execute "$DB_NAME" $WRANGLER_FLAGS --file="$TMP_SEED"
 else
-  wrangler d1 execute blog_content_new $WRANGLER_FLAGS --file="$TMP_SEED" 2>/dev/null
+  wrangler d1 execute "$DB_NAME" $WRANGLER_FLAGS --file="$TMP_SEED" 2>/dev/null
 fi
 
 rm "$TMP_SEED"
-echo "Admin user created."
+echo "Admin user created successfully in database: $DB_NAME"

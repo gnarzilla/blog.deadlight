@@ -30,8 +30,8 @@ export function renderRegistrationForm(config, error = null) {
           </div>
           
           <div class="form-group">
-            <label for="email">Email (optional)</label>
-            <input type="email" id="email" name="email">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
           </div>
           
           <div class="form-group">
