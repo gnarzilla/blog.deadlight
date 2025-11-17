@@ -126,25 +126,48 @@ wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
 wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 ```
 
-**Wrangler is not directoly compatible with ARM64 systems, bootstrap the remote D1 database**
+### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux, etc.)
+
+Deadlight runs perfectly on ARM64! Wrangler’s **local D1 emulator fails on ARM** due to TCMalloc issues, but you can skip it entirely and bootstrap everything remotely on Cloudflare’s edge.
+
 ```bash
-# Create your d1 database:
-npx wrangler d1 create your-db-name
+# 1. Install prerequisites
+# On Raspberry Pi OS / Kali / Ubuntu:
+sudo apt update && sudo apt install nodejs-lts npm git jq openssl-tool
 
-# Apply schema
-npx wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
+# On Android (Termux):
+pkg update && pkg install nodejs-lts git jq openssl-tool
 
-# Confirm structure
-npx wrangler d1 execute your-db-name --remote --command="SELECT name FROM sqlite_master WHERE type='table';"
+# 2. Clone and enter repo
+git clone https://github.com/gnarzilla/blog.deadlight
+cd blog.deadlight
 
-# Create admin user for initial access
-chmod +x scripts/gen-admin/seed-dev.sh
-./scripts/gen-admin/seed-dev.sh -v
+# 3. Install deps (root + shared lib)
+npm install
+cd lib.deadlight && npm install marked xss --save && cd ..
+
+# 4. Log in to Cloudflare
+npx wrangler login
+
+# 5. Create & bootstrap remote D1 database (skip local entirely)
+npx wrangler d1 create meshtastic-deadlight          # note the database_id
+npx wrangler d1 execute meshtastic-deadlight --remote --file=migrations/20250911_schema.sql
+
+# 6. Create your admin user (use -r to force remote)
+./scripts/gen-admin/seed-dev.sh -v -r
+
+# 7. Set required secrets
+openssl rand -base64 32 | wrangler secret put JWT_SECRET
+echo "https://meshtastic.deadlight.boo" | wrangler secret put SITE_URL   # or your domain
+
+# 8. Fix assets path in wrangler.toml (if needed)
+# Change: directory = "src/static" → directory = "src/assets"
+
+# 9. Deploy!
+npx wrangler deploy --env=""     # add --env=your-env if using multiple
 ```
 
 ![ARM64 wrangler Install](src/assets/blog-install.png)
-
-```
 
 ## Configuration
 
