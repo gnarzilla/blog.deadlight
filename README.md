@@ -124,6 +124,7 @@ wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
 
 # Production
 wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
+```
 
 **Wrangler is not directoly compatible with ARM64 systems, bootstrap the remote D1 database**
 ```bash
@@ -141,7 +142,7 @@ chmod +x scripts/gen-admin/seed-dev.sh
 ./scripts/gen-admin/seed-dev.sh -v
 ```
 
-
+![ARM64 wrangler Install](src/assets/blog-install.png)
 
 ```
 

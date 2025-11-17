@@ -9,7 +9,7 @@ export class ConfigService {
     this.CACHE_TTL = 5 * 60 * 1000; // 5 min
   }
 
-  // NEW: Full config object (used by blog.js, admin.js, etc.)
+  // Full config object (used by blog.js, admin.js, etc.)
   async getConfig() {
     const cacheKey = 'full_config';
     const now = Date.now();
@@ -29,7 +29,6 @@ export class ConfigService {
       requireLoginToRead: raw.require_login_to_read === true,
       maintenanceMode: raw.maintenance_mode === true,
       proxyUrl: raw.proxy_url || 'http://127.0.0.1:8080',
-      // Add any other settings you use
     };
 
     this.cache.set(cacheKey, { data: config, ts: now });
