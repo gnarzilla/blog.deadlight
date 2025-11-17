@@ -125,6 +125,24 @@ wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
 # Production
 wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 
+**Wrangler is not directoly compatible with ARM64 systems, bootstrap the remote D1 database**
+```bash
+# Create your d1 database:
+npx wrangler d1 create your-db-name
+
+# Apply schema
+npx wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
+
+# Confirm structure
+npx wrangler d1 execute your-db-name --remote --command="SELECT name FROM sqlite_master WHERE type='table';"
+
+# Create admin user for initial access
+chmod +x scripts/gen-admin/seed-dev.sh
+./scripts/gen-admin/seed-dev.sh -v
+```
+
+
+
 ```
 
 ## Configuration
