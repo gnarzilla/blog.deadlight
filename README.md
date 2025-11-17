@@ -126,6 +126,9 @@ wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
 wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 ```
 
+![ARM64 wrangler Install](src/assets/blog-install.png)
+
+
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux, etc.)
 
 Deadlight runs perfectly on ARM64! Wrangler’s **local D1 emulator fails on ARM** due to TCMalloc issues, but you can skip it entirely and bootstrap everything remotely on Cloudflare’s edge.
@@ -166,8 +169,6 @@ echo "https://meshtastic.deadlight.boo" | wrangler secret put SITE_URL   # or yo
 # 9. Deploy!
 npx wrangler deploy --env=""     # add --env=your-env if using multiple
 ```
-
-![ARM64 wrangler Install](src/assets/blog-install.png)
 
 ## Configuration
 
