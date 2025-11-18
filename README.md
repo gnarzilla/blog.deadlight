@@ -50,6 +50,17 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 ![Admin Dash - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/admin_dual.png)
 
+### Built without Bloat - Efficiency Designed for Edge Blogging (over LoRa)
+
+What the offline-first world desperately needs,How Deadlight solves it
+1. Runs with zero local infrastructure,"Cloudflare Workers + D1 = zero servers, zero power draw at the edge node. Your Pi or phone only needs to push updates when it has connectivity."
+"2. Works over insanely slow, high-latency links",A single post is ~3–8 KB of HTML + Markdown. That’s <10 seconds at 5 kbps LoRa. Most “modern” blogs won’t even load their tracking scripts in that time.
+3. No JavaScript required for reading,"Deadlight serves clean, semantic HTML. You can read the entire site over lynx, w3m, or a Meshtastic text client with zero JS. Try doing that with Ghost, WordPress, or Substack."
+4. Can be fully controlled over weird transports,"The proxy bridge + admin dashboard mean you can POST new articles over SMTP, IMAP APPEND, or even raw TCP sockets if you write a tiny client. That’s huge when your only uplink is a 300-baud packet radio link."
+5. No third-party analytics or trackers by default,"The analytics are local to the instance. No Google, no Cloudflare Analytics beacons, no privacy leak. Critical when you’re documenting sensitive disaster response or operating in authoritarian networks."
+"6. Tiny, auditable attack surface","~8 npm dependencies total, no React bloat, no webpack, no node_modules megabytes. You can actually read and understand the entire codebase in an afternoon."
+7. Works behind any reverse proxy or tunnel,"Because it’s just HTTP + optional basic auth, you can front it with Gotenna, Meshtastic+Deadlight proxy, Beartooth, or even a sneakernet USB stick → Wi-Fi hotspot workflow."
+
 ![Proxy/Analytics - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/proxy_anal_dual.png)
 
 ---
