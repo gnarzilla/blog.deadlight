@@ -114,20 +114,19 @@ deadlight/
 git clone https://github.com/gnarzilla/blog.deadlight
 cd blog.deadlight
 npm install
-
-# Create your D1 database:
-wrangler d1 create your-db-name
-
-# Initialize the database:
-# Local development
-wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
-
-# Production
-wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 ```
 
-![ARM64 wrangler Install](src/assets/blog-install.png)
+Create your D1 database:
+`wrangler d1 create your-db-name`
 
+Initialize the database:
+Local development
+`wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql`
+
+Production
+`wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql`
+
+![ARM64 wrangler Install](src/assets/blog-install.png)
 
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux, etc.)
 
