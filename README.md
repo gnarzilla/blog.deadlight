@@ -130,7 +130,7 @@ Production
 
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux, etc.)
 
-Deadlight runs perfectly on ARM64! Wrangler’s **local D1 emulator fails on ARM** due to TCMalloc issues, but you can skip it entirely and bootstrap everything remotely on Cloudflare’s edge.
+Wrangler’s **local D1 emulator fails on ARM** due to TCMalloc issues, but you can skip it entirely and bootstrap everything remotely on Cloudflare’s edge. As follows:
 
 ```bash
 # 1. Install prerequisites
@@ -152,15 +152,15 @@ cd lib.deadlight && npm install marked xss --save && cd ..
 npx wrangler login
 
 # 5. Create & bootstrap remote D1 database (skip local entirely)
-npx wrangler d1 create meshtastic-deadlight          # note the database_id
-npx wrangler d1 execute meshtastic-deadlight --remote --file=migrations/20250911_schema.sql
+npx wrangler d1 create your-db-name         # note the database_id
+npx wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 
 # 6. Create your admin user (use -r to force remote)
 ./scripts/gen-admin/seed-dev.sh -v -r
 
 # 7. Set required secrets
 openssl rand -base64 32 | wrangler secret put JWT_SECRET
-echo "https://meshtastic.deadlight.boo" | wrangler secret put SITE_URL   # or your domain
+echo "https://your-domain.tld" | wrangler secret put SITE_URL   # or your domain
 
 # 8. Fix assets path in wrangler.toml (if needed)
 # Change: directory = "src/static" → directory = "src/assets"
