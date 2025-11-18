@@ -126,8 +126,6 @@ Local development
 Production
 `wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql`
 
-![ARM64 wrangler Install](src/assets/blog-install.png)
-
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux, etc.)
 
 Wrangler’s **local D1 emulator fails on ARM** due to TCMalloc issues, but you can skip it entirely and bootstrap everything remotely on Cloudflare’s edge. As follows:
