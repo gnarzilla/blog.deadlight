@@ -6,6 +6,8 @@ REMOTE=false
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+DB_NAME="${database_name:-meshtastic-deadlight}"
+
 for arg in "$@"; do
   case $arg in
     --verbose|-v) VERBOSE=true ;;
@@ -48,16 +50,37 @@ if [ "$REMOTE" = true ]; then
   WRANGLER_FLAGS="--remote"
 fi
 
+<<<<<<< HEAD
+# Check for existing user
+
+
+
+
+
+
+
+
+
+
+
+if [ "$VERBOSE" = true ]; then
+  EXISTS=$(wrangler d1 execute $DB_NAME $WRANGLER_FLAGS --command \
+=======
 # Check for existing user - FIXED: use $DB_NAME instead of hardcoded name
 if [ "$VERBOSE" = true ]; then
   EXISTS=$(wrangler d1 execute "$DB_NAME" $WRANGLER_FLAGS --command \
+>>>>>>> refs/remotes/origin/main
     "SELECT COUNT(*) AS count FROM users WHERE username = '$ADMIN_USER' OR email = '$ADMIN_EMAIL';" \
-    --json | jq -r '.[0].results[0].count')
+    --json | jq -r 'to_entries[0].value.results[0].count // 0')
   echo "Duplicate check result: $EXISTS existing user(s) found."
 else
+<<<<<<< HEAD
+  EXISTS=$(wrangler d1 execute $DB_NAME $WRANGLER_FLAGS --command \
+=======
   EXISTS=$(wrangler d1 execute "$DB_NAME" $WRANGLER_FLAGS --command \
+>>>>>>> refs/remotes/origin/main
     "SELECT COUNT(*) AS count FROM users WHERE username = '$ADMIN_USER' OR email = '$ADMIN_EMAIL';" \
-    --json 2>/dev/null | jq -r '.[0].results[0].count')
+    --json 2>/dev/null | jq -r 'to_entries[0].value.results[0].count // 0')
 fi
 
 if [ "$EXISTS" -gt 0 ]; then
@@ -76,10 +99,16 @@ sed \
 
 # Execute the seed - FIXED: use $DB_NAME instead of hardcoded name
 if [ "$VERBOSE" = true ]; then
+<<<<<<< HEAD
+  wrangler d1 execute $DB_NAME $WRANGLER_FLAGS --file="$TMP_SEED"
+else
+  wrangler d1 execute $DB_NAME $WRANGLER_FLAGS --file="$TMP_SEED" 2>/dev/null
+=======
   wrangler d1 execute "$DB_NAME" $WRANGLER_FLAGS --file="$TMP_SEED"
 else
   wrangler d1 execute "$DB_NAME" $WRANGLER_FLAGS --file="$TMP_SEED" 2>/dev/null
+>>>>>>> refs/remotes/origin/main
 fi
 
 rm "$TMP_SEED"
-echo "Admin user created successfully in database: $DB_NAME"
+echo "Admin user created successfully in database: $DB_NAME"                                                                                                                   

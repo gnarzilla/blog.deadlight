@@ -50,6 +50,17 @@ A modular, security-hardened blog platform built on Cloudflare Workers with inte
 
 ![Admin Dash - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/admin_dual.png)
 
+### Built without Bloat - Efficiency Designed for Edge Blogging (over LoRa)
+
+What the offline-first world desperately needs,How Deadlight solves it
+1. Runs with zero local infrastructure,"Cloudflare Workers + D1 = zero servers, zero power draw at the edge node. Your Pi or phone only needs to push updates when it has connectivity."
+"2. Works over insanely slow, high-latency links",A single post is ~3–8 KB of HTML + Markdown. That’s <10 seconds at 5 kbps LoRa. Most “modern” blogs won’t even load their tracking scripts in that time.
+3. No JavaScript required for reading,"Deadlight serves clean, semantic HTML. You can read the entire site over lynx, w3m, or a Meshtastic text client with zero JS. Try doing that with Ghost, WordPress, or Substack."
+4. Can be fully controlled over weird transports,"The proxy bridge + admin dashboard mean you can POST new articles over SMTP, IMAP APPEND, or even raw TCP sockets if you write a tiny client. That’s huge when your only uplink is a 300-baud packet radio link."
+5. No third-party analytics or trackers by default,"The analytics are local to the instance. No Google, no Cloudflare Analytics beacons, no privacy leak. Critical when you’re documenting sensitive disaster response or operating in authoritarian networks."
+"6. Tiny, auditable attack surface","~8 npm dependencies total, no React bloat, no webpack, no node_modules megabytes. You can actually read and understand the entire codebase in an afternoon."
+7. Works behind any reverse proxy or tunnel,"Because it’s just HTTP + optional basic auth, you can front it with Gotenna, Meshtastic+Deadlight proxy, Beartooth, or even a sneakernet USB stick → Wi-Fi hotspot workflow."
+
 ![Proxy/Analytics - Dual Screen](https://github.com/gnarzilla/blog.deadlight/blob/374775bddc1948b7fd8cae9bb37ac89dd07b463f/src/assets/proxy_anal_dual.png)
 
 ---
@@ -114,36 +125,57 @@ deadlight/
 git clone https://github.com/gnarzilla/blog.deadlight
 cd blog.deadlight
 npm install
-
-# Create your D1 database:
-wrangler d1 create your-db-name
-
-# Initialize the database:
-# Local development
-wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql
-
-# Production
-wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 ```
 
-**Wrangler is not directoly compatible with ARM64 systems, bootstrap the remote D1 database**
-```bash
-# Create your d1 database:
-npx wrangler d1 create your-db-name
+Create your D1 database:
+`wrangler d1 create your-db-name`
 
-# Apply schema
+Initialize the database:
+Local development
+`wrangler d1 execute your-db-name --local --file=migrations/20250911_schema.sql`
+
+Production
+`wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql`
+
+### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux, etc.)
+
+Wrangler’s **local D1 emulator fails on ARM** due to TCMalloc issues, but you can skip it entirely and bootstrap everything remotely on Cloudflare’s edge. As follows:
+
+```bash
+# 1. Install prerequisites
+# On Raspberry Pi OS / Kali / Ubuntu:
+sudo apt update && sudo apt install nodejs-lts npm git jq openssl-tool
+
+# On Android (Termux):
+pkg update && pkg install nodejs-lts git jq openssl-tool
+
+# 2. Clone and enter repo
+git clone https://github.com/gnarzilla/blog.deadlight
+cd blog.deadlight
+
+# 3. Install deps (root + shared lib)
+npm install
+cd lib.deadlight && npm install marked xss --save && cd ..
+
+# 4. Log in to Cloudflare
+npx wrangler login
+
+# 5. Create & bootstrap remote D1 database (skip local entirely)
+npx wrangler d1 create your-db-name         # note the database_id
 npx wrangler d1 execute your-db-name --remote --file=migrations/20250911_schema.sql
 
-# Confirm structure
-npx wrangler d1 execute your-db-name --remote --command="SELECT name FROM sqlite_master WHERE type='table';"
+# 6. Create your admin user (use -r to force remote)
+./scripts/gen-admin/seed-dev.sh -v -r
 
-# Create admin user for initial access
-chmod +x scripts/gen-admin/seed-dev.sh
-./scripts/gen-admin/seed-dev.sh -v
-```
+# 7. Set required secrets
+openssl rand -base64 32 | wrangler secret put JWT_SECRET
+echo "https://your-domain.tld" | wrangler secret put SITE_URL   # or your domain
 
-![ARM64 wrangler Install](src/assets/blog-install.png)
+# 8. Fix assets path in wrangler.toml (if needed)
+# Change: directory = "src/static" → directory = "src/assets"
 
+# 9. Deploy!
+npx wrangler deploy --env=""     # add --env=your-env if using multiple
 ```
 
 ## Configuration
