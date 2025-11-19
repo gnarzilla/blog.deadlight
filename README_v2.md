@@ -1,14 +1,13 @@
-# Deadlight – Edge-native publishing for resilient networks
+# Deadlight Blog – Edge-Native Publishing for Resilient Networks
 [Key Features](#key-features) · [Quick Start](#quick-start) · [Usage](#usage) · [Configuration](#configuration) · [Architecture](#architecture) · [Use Cases](#use-cases) · [Roadmap & Status](#roadmap-&-status) · [License](#license)
 
 > Built for the 80% of the internet that isn't fiber and datacenters
 
 [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo) [deadlight.boo](https://deadlight.boo) · [zero-JS instance](https://thatch-dt.deadlight.boo) · [LoRa gateway blog](https://meshtastic.deadlight.boo)
 
-**3–8 KB pages · Zero JS required · Deployable from a PinePhone**
-
 ![Deadlight running in Termux on PinePhone](src/assets/mobile_trip_hero.png)
 
+**3–8 KB pages · Zero JS required · Deployable from a PinePhone**
 ---
 
 ## Why this exists
@@ -549,6 +548,7 @@ Go deploy it. Break it. Blog from a mountain with a LoRa node.
 
 
 I'll be here.
+
 
 
 
