@@ -30,7 +30,7 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 
 ## It actually works
 
-This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**
+[This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**.]: # 
 
 ### Live Deployments
 
@@ -545,5 +545,6 @@ See [docs/LICENSE](docs/LICENSE) for details.
 **It's trying to be the last one that still works when everything else is on fire.**
 
 Go deploy it. Break it. Blog from a mountain with a LoRa node.
+
 
 I'll be here.
