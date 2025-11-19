@@ -3,9 +3,9 @@
 
 > Built for the 80% of the internet that isn't fiber and datacenters
 
-**3–8 KB pages · Zero JS required · Deployable from a PinePhone**
-
 [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo) [deadlight.boo](https://deadlight.boo) · [zero-JS instance](https://thatch-dt.deadlight.boo) · [LoRa gateway blog](https://meshtastic.deadlight.boo)
+
+**3–8 KB pages · Zero JS required · Deployable from a PinePhone**
 
 ![Deadlight running in Termux on PinePhone](src/assets/mobile_trip_hero.png)
 
@@ -549,5 +549,6 @@ Go deploy it. Break it. Blog from a mountain with a LoRa node.
 
 
 I'll be here.
+
 
 
