@@ -1,4 +1,4 @@
-# Deadlight – The blog platform for when the internet barely works
+# Deadlight - Edge-Native Publishing for Resilient Networks
 
 Most blogging tools are built for fiber and data centers.  
 Deadlight is built for the rest of the planet.
@@ -7,6 +7,8 @@ https://deadlight.boo (main demo) • https://thatch-dt.deadlight.boo (zero-JS i
 
 ![deadlight running in termux on a pinephone](https://github.com/user-attachments/assets/YOUR_GIF_HERE.gif)
 *Yes, the entire thing is developed and deployed from a phone.*
+
+[Features](#features) · [Quick Start](#quick-start) · [Usage](#usage) · [Configuration](#configuration) · [Architecture](#architecture) · [Use Cases](#use-cases) · [Roadmap](#roadmap) · [License](#license)
 
 | The internet most people actually have (2025 → 2040) | Why Ghost / WordPress / Substack / Next.js die here | How Deadlight just works |
 |------------------------------------------------------|------------------------------------------------------|---------------------------|
@@ -36,7 +38,13 @@ Deadlight is part of a larger ecosystem (edge.deadlight) that also includes a C-
 - https://threat-level-midnight.deadlight.boo – isolated test deployment
 - https://meshtastic.deadlight.boo – blog that is literally published over LoRa mesh
 
-## Quick start (works on Raspberry Pi, PinePhone, Android Termux, or any laptop)
+## Quick start
+- Cloudflare account (free tier works)
+- Node.js 20+
+- Wrangler CLI (`npm install -g wrangler`)
+
+- For mesh/edge operators [ARM64-friendly path]
+works on Raspberry Pi, PinePhone, Android Termux, or any laptop
 
 ```bash
 git clone https://github.com/gnarzilla/blog.deadlight
@@ -59,7 +67,10 @@ npx wrangler deploy
 
 That’s it. Your blog is now global, costs pennies, and survives apocalypse-level connectivity.
 
-## Architecture & philosophy
+- For standard deployments
+
+
+## Architecture
 
 - Cloudflare Workers + D1 (SQLite at the edge)
 - Full Markdown posts, clean semantic HTML output
@@ -77,7 +88,7 @@ deadlight/
 └── edge.deadlight      ← umbrella that ties everything together
 ```
 
-## Current features
+## Features
 
 - Blazing-fast global reads
 - Full admin dashboard (works over terrible connections)
@@ -87,14 +98,6 @@ deadlight/
 - Secure headers, CSRF protection, rate limiting
 - Zero-JS reading mode
 - Deployable from ARM64 phones
-
-## Alpha / cooking features (help welcome)
-
-- Post-by-email (SMTP → new article)
-- Blog-to-blog federation over email protocols
-- Full proxy.deadlight integration (control your local VPN gateway from the dashboard)
-- Comment system
-- Plugin architecture
 
 ## Related projects
 
@@ -106,6 +109,14 @@ deadlight/
 | lib.deadlight             | Shared edge-native libraries                     | JS + C   |
 
 ## Roadmap
+
+### Alpha / cooking features (help welcome)
+- Post-by-email (SMTP → new article)
+- Blog-to-blog federation over email protocols
+- Full proxy.deadlight integration (control your local VPN gateway from the dashboard)
+- Comment system
+- Plugin architecture
+
 
 - 2025 Q4 – stable post-by-email + comment system
 - 2026 Q1 – full proxy dashboard integration
@@ -119,7 +130,7 @@ deadlight/
 [![Runs on a phone](https://img.shields.io/badge/deployed-from_phone-purple)]()
 [![Costs pennies](https://img.shields.io/badge/costs-pennies-green)]()
 
-## Support the madness
+## Support
 
 Building the post-apocalypse internet from a phone is expensive in coffee and weird hardware.
 
@@ -130,6 +141,6 @@ https://ko-fi.com/gnarzilla
 Deadlight isn’t trying to be the coolest blog platform.  
 It’s trying to be the last one that still works when everything else is on fire.
 
-Go deploy it. Break it. Blog from a mountain with a LoRa node.  
+Deploy it. Break it. Blog from a mountain top with a LoRa node.  
 I’ll be here.
 
