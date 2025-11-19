@@ -1,5 +1,6 @@
 # Deadlight – Edge-native publishing for resilient networks
 [Key Features](#key-features) · [Quick Start](#quick-start) · [Usage](#usage) · [Configuration](#configuration) · [Architecture](#architecture) · [Use Cases](#use-cases) · [Roadmap & Status](#roadmap-&-status) · [License](#license)
+
 > Built for the 80% of the internet that isn't fiber and datacenters
 
 **3–8 KB pages · Zero JS required · Deployable from a PinePhone**
@@ -548,4 +549,5 @@ Go deploy it. Break it. Blog from a mountain with a LoRa node.
 
 
 I'll be here.
+
 
