@@ -513,8 +513,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 ## Support
 
-Building the post-apocalypse internet from a phone is expensive in coffee and weird hardware.
-
 **[Support on Ko-fi](https://ko-fi.com/gnarzilla)**
 
 Other ways to help:
@@ -547,6 +545,7 @@ Go deploy it. Break it. Blog from a mountain with a LoRa node.
 
 
 I'll be here.
+
 
 
 
