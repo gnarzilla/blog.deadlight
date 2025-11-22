@@ -18,26 +18,33 @@ export class FederationService {
      OUTBOUND – called by routes when a post/comment is published
      -------------------------------------------------------------- */
   async publishPost(post, targetDomains) {
+    const domain = await this._domain();
+    const siteUrl = await this._siteUrl();
+    
     const payload = {
       post,
       federationType: 'new_post',
-      instanceUrl: this._siteUrl(),
-      domain: this._domain(),
+      instanceUrl: siteUrl,
+      domain: domain,
     };
     const signed = await this._sign(payload);
     await this.queue.queueItem('federation', { ...signed, targetDomains });
   }
 
   async publishComment(comment, targetDomains) {
+    const domain = await this._domain();
+    const siteUrl = await this._siteUrl();
+    
     const payload = {
       comment,
       federationType: 'comment',
-      instanceUrl: this._siteUrl(),
-      domain: this._domain(),
+      instanceUrl: siteUrl,
+      domain: domain,
     };
     const signed = await this._sign(payload);
     await this.queue.queueItem('federation', { ...signed, targetDomains });
   }
+
 
   /* --------------------------------------------------------------
      PROCESSING – called by QueueService (see _processFederation)
@@ -96,26 +103,209 @@ export class FederationService {
   }
 
   async _privateKey() {
-    return this.env.FEDERATION_PRIVATE_KEY ?? 'dev-private-key';
+    // Try env first (for testing), then config service
+    if (this.env.FEDERATION_PRIVATE_KEY) {
+      return this.env.FEDERATION_PRIVATE_KEY;
+    }
+    
+    const configData = await this.config.getConfig();
+    if (configData.federationPrivateKey) {
+      return configData.federationPrivateKey;
+    }
+    
+    throw new Error('Federation private key not configured. Run: scripts/gen-fed-keys.sh');
+  }
+  async _publicKey() {
+    // For responses to /.well-known/deadlight
+    const configData = await this.config.getConfig();
+    if (configData.federationPublicKey) {
+      return configData.federationPublicKey;
+    }
+    
+    throw new Error('Federation public key not configured');
   }
 
-  _siteUrl() { return this.env.SITE_URL ?? 'https://deadlight.boo'; }
-  _domain() { return new URL(this._siteUrl()).hostname; }
+  async _siteUrl() {
+    // Use env variable first, fall back to config
+    if (this.env.SITE_URL) return this.env.SITE_URL;
+    
+    const configData = await this.config.getConfig();
+    return configData.siteUrl || 'https://deadlight.boo';
+  }
 
+  async _domain() {
+    // Now async since _siteUrl is async
+    const url = await this._siteUrl();
+    return new URL(url).hostname;
+  }
   /* --------------------------------------------------------------
-     INBOUND HANDLERS (you can keep your existing logic)
+     INBOUND HANDLERS
      -------------------------------------------------------------- */
-  async _handleNewPost(postData, email) {
-    // duplicate check, moderation, insert → return {status, postId}
-    // … (copy from your original handleNewPost)
+  async _handleNewPost(postData, email, sourceDomain) {
+    try {
+      // Check for duplicates using federation metadata
+      const existing = await this.db.prepare(`
+        SELECT id FROM posts 
+        WHERE json_extract(federation_metadata, '$.source_id') = ?
+          AND json_extract(federation_metadata, '$.source_domain') = ?
+      `).bind(postData.id?.toString() || 'unknown', sourceDomain).first();
+
+      if (existing) {
+        this.logger.info('Duplicate federated post ignored', { 
+          sourceId: postData.id, 
+          sourceDomain 
+        });
+        return { status: 'duplicate', postId: existing.id };
+      }
+
+      // Create federated post
+      const federationMeta = JSON.stringify({
+        source_id: postData.id || Date.now(),
+        source_domain: sourceDomain,
+        source_url: postData.source_url || postData.instanceUrl,
+        received_at: new Date().toISOString(),
+        author: postData.author || email.from,
+        verified: !!postData.signature
+      });
+
+      const slug = `federated-${sourceDomain.replace(/\./g, '-')}-${postData.id || Date.now()}`;
+      
+      const result = await this.db.prepare(`
+        INSERT INTO posts (
+          title, slug, content, author_id, 
+          post_type, federation_metadata,
+          moderation_status, published, created_at
+        ) VALUES (?, ?, ?, 1, 'federated', ?, 'pending', 0, ?)
+      `).bind(
+        postData.title || 'Untitled Federated Post',
+        slug,
+        postData.content || '',
+        federationMeta,
+        new Date().toISOString()
+      ).run();
+
+      this.logger.info('Federated post received', { 
+        sourceDomain, 
+        slug,
+        postId: result.meta?.last_row_id 
+      });
+      
+      return { 
+        status: 'queued_for_moderation', 
+        slug,
+        postId: result.meta?.last_row_id 
+      };
+    } catch (error) {
+      this.logger.error('Failed to handle federated post', { 
+        error: error.message,
+        sourceDomain 
+      });
+      throw error;
+    }
   }
 
-  async _handleComment(commentData, email) {
-    // … (copy from original)
+  async _handleComment(commentData, email, sourceDomain) {
+    try {
+      // Find the parent post
+      const parentId = commentData.parent_id || commentData.thread_id;
+      
+      if (!parentId) {
+        throw new Error('Comment missing parent_id');
+      }
+
+      const parent = await this.db.prepare(
+        'SELECT id, comments_enabled FROM posts WHERE id = ?'
+      ).bind(parentId).first();
+
+      if (!parent) {
+        throw new Error(`Parent post ${parentId} not found`);
+      }
+
+      if (!parent.comments_enabled) {
+        throw new Error('Comments disabled on parent post');
+      }
+
+      // Check for duplicate
+      const existing = await this.db.prepare(`
+        SELECT id FROM posts 
+        WHERE json_extract(federation_metadata, '$.source_id') = ?
+          AND json_extract(federation_metadata, '$.source_domain') = ?
+      `).bind(commentData.id?.toString() || 'unknown', sourceDomain).first();
+
+      if (existing) {
+        return { status: 'duplicate', commentId: existing.id };
+      }
+
+      // Create federated comment
+      const federationMeta = JSON.stringify({
+        source_id: commentData.id || Date.now(),
+        source_domain: sourceDomain,
+        source_url: commentData.source_url,
+        received_at: new Date().toISOString(),
+        author: commentData.author || email.from,
+        verified: !!commentData.signature
+      });
+
+      const slug = `comment-${sourceDomain.replace(/\./g, '-')}-${commentData.id || Date.now()}`;
+
+      const result = await this.db.prepare(`
+        INSERT INTO posts (
+          title, slug, content, author_id,
+          post_type, parent_id, thread_id,
+          federation_metadata, moderation_status,
+          published, created_at
+        ) VALUES (?, ?, ?, 1, 'comment', ?, ?, ?, 'pending', 0, ?)
+      `).bind(
+        `Comment from ${sourceDomain}`,
+        slug,
+        commentData.content || '',
+        parentId,
+        parentId,
+        federationMeta,
+        new Date().toISOString()
+      ).run();
+
+      this.logger.info('Federated comment received', { 
+        sourceDomain, 
+        parentId,
+        commentId: result.meta?.last_row_id 
+      });
+
+      return { 
+        status: 'queued_for_moderation', 
+        slug,
+        commentId: result.meta?.last_row_id 
+      };
+    } catch (error) {
+      this.logger.error('Failed to handle federated comment', { 
+        error: error.message,
+        sourceDomain 
+      });
+      throw error;
+    }
+  }
+
+  async _handleDiscovery(discoveryData, sourceDomain) {
+    try {
+      await this.establishTrust(
+        sourceDomain,
+        discoveryData.public_key || '',
+        'unverified'
+      );
+
+      this.logger.info('Discovery announcement received', { sourceDomain });
+      return { status: 'trust_established', domain: sourceDomain };
+    } catch (error) {
+      this.logger.error('Failed to handle discovery', { 
+        error: error.message,
+        sourceDomain 
+      });
+      throw error;
+    }
   }
 
   /* --------------------------------------------------------------
-     DISCOVERY – NEW METHOD FOR DOMAIN DISCOVERY
+     METHOD FOR DOMAIN DISCOVERY
      -------------------------------------------------------------- */
   async discoverAndTrust(domain) {
     try {

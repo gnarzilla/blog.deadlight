@@ -3,25 +3,51 @@ import { FederationService } from '../services/federation.js';
 
 export const federationRoutes = {
   // Well-known discovery endpoint (public)
+
   '/.well-known/deadlight': {
     GET: async (request, env) => {
-      const federationService = new FederationService(env);
-      return new Response(JSON.stringify({
-        version: "1.0",
-        instance: federationService.getDomain(),
-        software: "deadlight",
-        federation: {
-          protocols: ["deadlight-email", "activitypub"],
-          inbox: `${env.SITE_URL}/api/federation/inbox`,
-          outbox: `${env.SITE_URL}/api/federation/outbox`,
-          email_bridge: `blog@${federationService.getDomain()}`,
-          public_key: await federationService.getPublicKey()
-        },
-        features: ["email_bridge", "proxy_management", "real_time_analytics", "threaded_comments"],
-        capabilities: ["posts", "comments", "discovery", "proxy_status"]
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      try {
+        const config = await env.services.config.getConfig();
+        const publicKey = await env.services.federation._publicKey();
+        const siteUrl = config.siteUrl || env.SITE_URL || new URL(request.url).origin;
+        const domain = new URL(siteUrl).hostname;
+
+        return new Response(JSON.stringify({
+          version: "1.0",
+          instance: siteUrl,
+          domain: domain,
+          software: "deadlight",
+          public_key: publicKey,  // CRITICAL: enables signature verification
+          federation: {
+            protocols: ["deadlight-email", "activitypub"],
+            inbox: `${siteUrl}/api/federation/inbox`,
+            outbox: `${siteUrl}/api/federation/outbox`,
+            email_bridge: `blog@${domain}`,
+          },
+          features: [
+            "email_bridge", 
+            "proxy_management", 
+            "real_time_analytics", 
+            "threaded_comments"
+          ],
+          capabilities: ["posts", "comments", "discovery", "proxy_status"]
+        }), {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=300'
+          }
+        });
+      } catch (error) {
+        console.error('Discovery endpoint error:', error);
+        return new Response(JSON.stringify({
+          error: 'Discovery failed',
+          message: error.message
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
   },
 
@@ -126,20 +152,87 @@ export const federationRoutes = {
   // Federation inbox (protected - requires API auth)
   '/api/federation/inbox': {
     POST: async (request, env) => {
-      const federationService = new FederationService(env);
-      const data = await request.json();
-      
       try {
-        const result = await federationService.processIncomingFederation(data);
-        return new Response(JSON.stringify(result), {
+        const emailData = await request.json();
+
+        console.log('Federation inbox received:', {
+          from: emailData.from,
+          subject: emailData.subject,
+          hasHeaders: !!emailData.headers,
+          isDLFederation: emailData.headers?.['X-Deadlight-Type'] === 'federation'
+        });
+
+        // Validate email structure
+        if (!emailData.from || !emailData.body) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Invalid email data: missing from or body'
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Check for Deadlight federation header
+        const isDLFederation = emailData.headers?.['X-Deadlight-Type'] === 'federation';
+        
+        if (!isDLFederation) {
+          console.log('Not a federation message, treating as regular email');
+          
+          // Store as regular email post
+          const metadata = JSON.stringify({
+            from: emailData.from,
+            to: emailData.to,
+            date: emailData.timestamp || new Date().toISOString(),
+            subject: emailData.subject,
+            message_id: emailData.headers?.['Message-ID']
+          });
+
+          const slug = `email-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+          await env.DB.prepare(`
+            INSERT INTO posts (
+              title, content, slug, author_id, 
+              is_email, email_metadata, published, created_at
+            ) VALUES (?, ?, ?, 1, 1, ?, 0, ?)
+          `).bind(
+            emailData.subject || 'No Subject',
+            emailData.body,
+            slug,
+            metadata,
+            new Date().toISOString()
+          ).run();
+
+          return new Response(JSON.stringify({
+            success: true,
+            type: 'email',
+            slug
+          }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Process the federated content
+        console.log('Processing federation message...');
+        const result = await env.services.federation.handleIncoming(emailData);
+
+        return new Response(JSON.stringify({
+          success: true,
+          type: 'federation',
+          result: result
+        }), {
           headers: { 'Content-Type': 'application/json' }
         });
+
       } catch (error) {
+        console.error('Federation inbox error:', error);
+        
         return new Response(JSON.stringify({
           success: false,
-          error: error.message
+          error: error.message,
+          stack: env.NODE_ENV === 'development' ? error.stack : undefined
         }), {
-          status: 400,
+          status: 500,
           headers: { 'Content-Type': 'application/json' }
         });
       }

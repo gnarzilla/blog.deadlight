@@ -29,13 +29,18 @@ export class ConfigService {
       requireLoginToRead: raw.require_login_to_read === true,
       maintenanceMode: raw.maintenance_mode === true,
       proxyUrl: raw.proxy_url || 'http://127.0.0.1:8080',
+      
+      // Federation support
+      siteUrl: raw.site_url || 'https://deadlight.boo',
+      federationEnabled: raw.federation_enabled === true || raw.federation_enabled === 'true',
+      federationPrivateKey: raw.federation_private_key || null,
+      federationPublicKey: raw.federation_public_key || null,
     };
 
     this.cache.set(cacheKey, { data: config, ts: now });
     return config;
   }
 
-  // Existing methods
   async getSetting(key, fallback = null) {
     try {
       const val = await this.settingsModel.get(key);
