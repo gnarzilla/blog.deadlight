@@ -9,7 +9,7 @@ import { federationDashboard } from '../templates/admin/federationDashboard.js';
 import { FederationService }     from '../services/federation.js';
 import { requireAdminMiddleware } from '../middleware/index.js';
 import { handleProxyRoutes, handleProxyTests } from './proxy.js';
-import { checkAuth } from '../middleware/auth.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { renderTemplate } from '../templates/base.js';
 import { UserModel, PostModel } from '../../../lib.deadlight/core/src/db/models/index.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
@@ -1438,11 +1438,21 @@ export const adminRoutes = {
       // instantiate service
       const fed = new FederationService(env);
 
-      // fetch stats
-      const [domains, posts] = await Promise.all([
-        fed.getConnectedDomains(),
-        fed.getFederatedPosts(),
-      ]);
+      let domains = [];
+      let posts = [];
+      try {
+        domains = await fed.getConnectedDomains() || [];
+        const postRes = await env.DB.prepare(`
+          SELECT * FROM posts 
+          WHERE post_type = 'federated' 
+          ORDER BY created_at DESC 
+          LIMIT 20
+        `).all();
+        posts = postRes.results || [];
+      } catch (err) {
+        console.error('Federation data fetch failed:', err);
+        // Render with empty data to avoid crash
+      }
 
       // render
       return new Response(

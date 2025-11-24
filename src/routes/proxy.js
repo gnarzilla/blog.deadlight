@@ -160,7 +160,7 @@ export const handleProxyTests = {
             const federationService = new FederationService(env);
             
             // First, discover the domain
-            const discoveryResult = await federationService.discoverDomain(domain);
+            const discoveryResult = await federationService.discoverAndTrust(domain);
             
             // Use correct table name: federation_trust
             await env.DB.prepare(`

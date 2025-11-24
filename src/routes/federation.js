@@ -1,9 +1,41 @@
 // src/routes/federation.js
 import { FederationService } from '../services/federation.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 
 export const federationRoutes = {
-  // Well-known discovery endpoint (public)
+  '/api/federation/trust': {
+    POST: async (request, env) => {
+      const user = await checkAuth(request, env);
+      if (!user?.isAdmin) return new Response('Unauthorized', { status: 401 });
 
+      const { domain } = await request.json();
+      if (!domain) return Response.json({ error: 'domain required' }, { status: 400 });
+
+      try {
+        const federation = env.services.federation;
+        const result = await federation.discoverAndTrust(domain);
+        return Response.json({ success: true, ...result });
+      } catch (err) {
+        return Response.json({ success: false, error: err.message }, { status: 400 });
+      }
+    }
+  },
+
+  '/api/federation/follow': {
+    POST: async (request, env) => {
+      const user = await checkAuth(request, env);
+      if (!user?.isAdmin) return new Response('Unauthorized', { status: 401 });
+
+      const { domain } = await request.json();
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO federation_follows (domain) VALUES (?)
+      `).bind(domain).run();
+
+      return Response.json({ success: true, following: domain });
+    }
+  },
+
+  // Well-known discovery endpoint (public)
   '/.well-known/deadlight': {
     GET: async (request, env) => {
       try {

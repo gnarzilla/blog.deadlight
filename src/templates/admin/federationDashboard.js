@@ -2,95 +2,104 @@
 import { renderTemplate } from '../base.js';
 
 export function federationDashboard(federatedPosts, domains, user, config) {
-  // Build the static HTML with IDs for dynamic updates
+  const trusted = domains || [];
+  const federatedPostsSafe = federatedPosts || [];
+
   const html = `
-    <h2>Federation Network</h2>
-
-    <div class="federation-stats">
-      <div class="stat-card">
-        <h3 id="connected-blogs">${domains.length}</h3>
-        <p>Connected Blogs</p>
+    <div class="container">
+      <h1>Federation Control Panel</h1>
+      
+      <div class="grid-3">
+        <div class="card">
+          <h3>${trusted.length}</h3>
+          <p>Connected Blogs</p>
+        </div>
+        <div class="card">
+          <h3>${federatedPostsSafe.length}</h3>
+          <p>Federated Posts</p>
+        </div>
+        <div class="card">
+          <h3>${trusted.length}</h3>
+          <p>Connected Domains</p>
+        </div>
       </div>
-      <div class="stat-card">
-        <h3 id="federated-posts-count">${federatedPosts.length}</h3>
-        <p>Federated Posts</p>
+
+      <div class="section">
+        <h2>Add a Deadlight Blog</h2>
+        <form id="add-domain-form">
+          <input type="text" placeholder="threat-level-midnight.deadlight.boo" id="domain-input" required />
+          <button type="submit">Discover & Trust</button>
+          <span id="discover-status"></span>
+        </form>
+
+        <div id="trusted-list">
+          ${(trusted || []).map(d => `
+            <div class="trusted-domain" data-domain="${d.domain}">
+              <strong>${d.domain}</strong> 
+              <span class="badge ${d.trust_level}">${d.trust_level}</span>
+            </div>
+          `).join('')}
+        </div>
       </div>
-      <div class="stat-card">
-        <h3 id="connected-blogs">${domains.list}</h3>
-        <p>Connected Domains</p>
-    </div>
 
-    <div class="federation-actions">
-      <button id="test-btn">Test Federation</button>
-      <button id="sync-btn">Sync Network</button>
-      <span id="sync-status" style="margin-left:8px;"></span>
-    </div>
-
-    <h3>Recent Posts from Network:</h3>
-    <div id="federated-list">
-      ${federatedPosts.map(post => `
-        <article class="federated-post" data-id="${post.id}">
-          <h4>
-            <a href="${post.source_url}" target="_blank">${post.title}</a>
-          </h4>
-          <p>by ${post.author} from ${post.source_domain}</p>
-          <div class="post-content">${post.content.substring(0,200)}…</div>
-        </article>
-      `).join('')}
+      <div class="section">
+        <h2>Posts from the Federation</h2>
+        <div id="federated-posts">
+          ${federatedPostsSafe.length === 0 
+            ? '<p>No federated posts yet. Add a blog to start receiving!</p>'
+            : federatedPostsSafe.map(p => `
+              <article class="federated-post">
+                <h3><a href="${p.source_url || '/post/' + p.id}" target="_blank">${p.title}</a></h3>
+                <p>
+                  <em>by ${p.author || 'Unknown'} from <strong>${p.source_domain}</strong></em>
+                  ${p.published_at ? ' · ' + new Date(p.published_at).toLocaleDateString() : ''}
+                </p>
+                <div class="preview">${p.content.substring(0, 300)}...</div>
+              </article>
+            `).join('')}
+        </div>
+      </div>
     </div>
 
     <script>
-      // Test Federation button
-      document.getElementById('test-btn').onclick = async () => {
-        const res = await fetch('/admin/proxy/test-federation');
-        const { success, error } = await res.json();
-        alert(success ? 'Federation test succeeded' : 'Error: ' + error);
-      };
+      const form = document.getElementById('add-domain-form');
+      const status = document.getElementById('discover-status');
 
-      // Sync Network button
-      document.getElementById('sync-btn').onclick = async function() {
-        const btn = this;
-        const status = document.getElementById('sync-status');
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const domain = document.getElementById('domain-input').value.trim();
+        if (!domain) return;
 
-        btn.disabled = true;
-        status.textContent = 'Syncing…';
+        status.textContent = 'Discovering...';
+        const res = await fetch('/api/federation/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain, auto_discover: true })
+        });
+        const json = await res.json();
 
-        try {
-          const res = await fetch('/admin/federation/sync', { method: 'POST' });
-          const data = await res.json();
-
-          alert(data.message);
-
-          // Update stats
-          document.getElementById('connected-blogs').textContent = data.domains;
-          document.getElementById('federated-posts-count').textContent = 
-            parseInt(document.getElementById('federated-posts-count').textContent) 
-            + data.imported;
-
-          // Append new posts if provided
-          if (Array.isArray(data.newPosts)) {
-            const list = document.getElementById('federated-list');
-            data.newPosts.forEach(post => {
-              const el = document.createElement('article');
-              el.className = 'federated-post';
-              el.innerHTML = \`
-                <h4><a href="\${post.source_url}" target="_blank">\${post.title}</a></h4>
-                <p>by \${post.author} from \${post.source_domain}</p>
-                <div class="post-content">\${post.content.substring(0,200)}…</div>
-              \`;
-              list.prepend(el);
-            });
-          }
-        } catch (err) {
-          alert('Sync failed: ' + err.message);
-        } finally {
-          btn.disabled = false;
-          status.textContent = '';
+        if (json.success) {
+          status.textContent = 'Trusted!';
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          status.textContent = 'Error: ' + json.error;
         }
       };
     </script>
+
+    <style>
+      .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+      .card { background: var(--card); padding: 1.5rem; border-radius: 8px; text-align: center; }
+      .card h3 { margin: 0; font-size: 2.5rem; }
+      .section { margin: 3rem 0; }
+      .trusted-domain { padding: 0.75rem; background: var(--card); margin: 0.5rem 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+      .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+      .badge.verified { background: #0f0; color: #000; }
+      .badge.unverified { background: #ff0; color: #000; }
+      .federated-post { border-bottom: 1px solid var(--border); padding: 1rem 0; }
+      .preview { margin-top: 0.5rem; opacity: 0.9; }
+    </style>
   `;
 
-  // Wrap in your site’s layout
-  return renderTemplate('Federation Network', html, user, config);
+  return renderTemplate('Federation Dashboard', html, user, config);
 }
