@@ -49,7 +49,7 @@ router.group([], (r) => {
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
   r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
 
-  // Proxy-based federation helpers (keep your existing handlers)
+  // Proxy-based federation helpers 
   r.register('/api/federation/connect', {
     POST: async (req, env) => {
       try {

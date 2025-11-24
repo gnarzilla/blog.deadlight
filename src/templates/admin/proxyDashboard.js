@@ -1,164 +1,167 @@
-// src/templates/admin/proxyDashboard.js - Improved version
+// src/templates/admin/proxyDashboard.js
 import { renderTemplate } from '../base.js';
 
-// src/templates/admin/proxyDashboard.js - Proxy dashboard template
 export function proxyDashboardTemplate(data, user, config) {
-  const { status, queue, federation, config: proxyConfig } = data;
+  const { status, queue, federation } = data || {};
 
-  // Status indicators
-  const connectedStatus = status.proxy_connected 
-    ? '<span style="color: var(--status-healthy);">Connected</span>' 
-    : '<span style="color: var(--status-error);">Disconnected</span>';
-  
-  const circuitStatus = status.circuit_state?.state || proxyConfig.circuitState?.state || 'UNKNOWN';
-  const circuitColor = circuitStatus === 'CLOSED' 
-    ? 'var(--status-healthy)' 
-    : circuitStatus === 'OPEN' ? 'var(--status-error)' : 'var(--status-warning)';
+  // Safe data extraction
+  const connected = status?.proxy_connected ?? false;
+  const circuitState = status?.circuit_state ?? { state: 'UNKNOWN', failures: 0 };
+  const queuedTotal = queue?.status?.queued?.total ?? 0;
+  const connectedDomains = federation?.connected_domains ?? [];
+  const recentActivity = federation?.recent_activity ?? [];
+  const recommendations = status?.recommendations ?? [];
+  const lastProcessing = queue?.lastProcessing ?? null;
 
-  // Queue summary
-  const queuedTotal = queue.status.queued_operations?.total || 0;
-  const queueColor = queuedTotal > 0 ? 'var(--status-warning)' : 'var(--status-healthy)';
+  // Status colors
+  const connectedColor = connected ? 'green' : 'red';
+  const circuitColor = circuitState.state === 'CLOSED' ? 'green' : circuitState.state === 'OPEN' ? 'red' : 'yellow';
+  const queueColor = queuedTotal > 0 ? 'yellow' : 'green';
 
-  // Domains table
-  const domainsHtml = federation.connected_domains.length > 0 ? `
-    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
-      <thead>
-        <tr style="border-bottom: 1px solid var(--border-color);">
-          <th style="text-align: left; padding: 0.5rem;">Domain</th>
-          <th style="text-align: left; padding: 0.5rem;">Trust Level</th>
-          <th style="text-align: left; padding: 0.5rem;">Last Seen</th>
-          <th style="text-align: left; padding: 0.5rem;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${federation.connected_domains.map(d => `
-          <tr style="border-bottom: 1px solid var(--border-color);">
-            <td style="padding: 0.5rem;">${d.domain}</td>
-            <td style="padding: 0.5rem;">${d.trust_level}</td>
-            <td style="padding: 0.5rem;">${new Date(d.last_seen).toLocaleString() || 'N/A'}</td>
-            <td style="padding: 0.5rem;">
-              <form method="POST" action="/admin/proxy/test-federation" style="display: inline;">
-                <input type="hidden" name="domain" value="${d.domain}">
-                <button type="submit" class="button edit-button">Test</button>
-              </form>
-              <form method="POST" action="/api/federation/remove" style="display: inline;">
-                <input type="hidden" name="domain" value="${d.domain}">
-                <button type="submit" class="button delete-button">Remove</button>
-              </form>
-            </td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  ` : '<p>No connected domains.</p>';
-
-  // Recommendations list
-  const recommendationsHtml = status.recommendations ? `
-    <ul style="margin: 1rem 0; padding-left: 1.5rem;">
-      ${status.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-    </ul>
-  ` : '';
-
-  const proxyInfoHtml = `
-
-     <div class="card" style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 1rem; margin-bottom: 1rem;">
-       <h2>Proxy Configuration</h2>
-      <p><strong>Outbound Proxy URL:</strong> <code>${data.config.proxyUrl || '—'}</code></p>
-       <p>
-         <strong>Inbound URLs (other blogs to you):</strong><br>
-        <code>${data.siteUrl}/.well-known/deadlight</code> – discovery<br>
-        <code>${data.siteUrl}/api/federation/inbox</code> – inbox<br>
-        <code>${data.siteUrl}/api/federation/outbox</code> – outbox
-       </p>
-       <p style="font-size:0.85rem; color:var(--text-secondary);">
-         Share the three URLs above with any remote instance that wants to federate with you.
-       </p>
-     </div>
-   `;
-
-  // Recent activity (if available from getFederationRealtimeStatus)
-  const recentActivityHtml = federation.recent_activity?.length > 0 ? `
-    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
-      <thead>
-        <tr style="border-bottom: 1px solid var(--border-color);">
-          <th style="text-align: left; padding: 0.5rem;">Type</th>
-          <th style="text-align: left; padding: 0.5rem;">Title</th>
-          <th style="text-align: left; padding: 0.5rem;">Domain</th>
-          <th style="text-align: left; padding: 0.5rem;">Timestamp</th>
-          <th style="text-align: left; padding: 0.5rem;">Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${federation.recent_activity.map(act => `
-          <tr style="border-bottom: 1px solid var(--border-color);">
-            <td style="padding: 0.5rem;">${act.type}</td>
-            <td style="padding: 0.5rem;">${act.title}</td>
-            <td style="padding: 0.5rem;">${act.domain || 'N/A'}</td>
-            <td style="padding: 0.5rem;">${new Date(act.timestamp).toLocaleString()}</td>
-            <td style="padding: 0.5rem;">${act.status}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  ` : '<p>No recent activity.</p>';
-
-  return `
-    <div class="container">
-      <h1>Proxy Dashboard</h1>
-      
-      <!-- Proxy Status Card -->
-      <div class="card" style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 1rem; margin-bottom: 1rem;">
-        <h2>Proxy Status</h2>
-        <p>Connected: ${connectedStatus}</p>
-        <p>Circuit Breaker: <span style="color: ${circuitColor};">${circuitStatus}</span> (${status.circuit_state?.failures || 0} failures)</p>
-        <p>Last Check: ${status.last_check || 'N/A'}</p>
-        ${recommendationsHtml}
-      </div>
-      
-      <!-- Queue Status Card -->
-      <div class="card" style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 1rem; margin-bottom: 1rem;">
-        <h2>Queue Status</h2>
-        <p>Total Queued: <span style="color: ${queueColor};">${queuedTotal}</span></p>
-        <p>Email Replies: ${queue.status.queued_operations?.email_replies || 0}</p>
-        <p>Notifications: ${queue.status.queued_operations?.notifications || 0}</p>
-        <p>Federation: ${queue.status.queued_operations?.federation || 0}</p>
-        <p>Last Processing: ${queue.lastProcessing?.processed || 0} items (${queue.lastProcessing?.status || 'N/A'})</p>
-      </div>
-      
-      <!-- Connected Domains Card -->
-      <div class="card" style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 1rem; margin-bottom: 1rem;">
-        <h2>Connected Domains (${federation.connected_domains.length})</h2>
-        ${domainsHtml}
-      </div>
-      
-      <!-- Federation Activity Card -->
-      <div class="card" style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 1rem; margin-bottom: 1rem;">
-        <h2>Recent Federation Activity</h2>
-        ${recentActivityHtml}
-        <p>Last Outgoing: ${federation.last_outgoing ? `${federation.last_outgoing.title} at ${new Date(federation.last_outgoing.timestamp).toLocaleString()}` : 'None'}</p>
-        <p>Last Incoming: ${federation.last_incoming ? `${federation.last_incoming.title} at ${new Date(federation.last_incoming.timestamp).toLocaleString()}` : 'None'}</p>
-      </div>
-      ${proxyInfoHtml}
-      <!-- Quick Actions -->
-      <div class="card" style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 1rem;">
-        <h2>Quick Actions</h2>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-          <form method="POST" action="/admin/proxy/discover-domain" style="display: flex;">
-            <input type="text" name="domain" placeholder="example.com" required style="margin-right: 0.5rem; padding: 0.5rem; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary);">
-            <button type="submit" class="button">Discover Domain</button>
-          </form>
-          <button onclick="fetch('/admin/proxy/test-blog-api', {method: 'POST'}).then(() => location.reload())" class="button">Test Blog API</button>
-          <button onclick="fetch('/admin/proxy/test-email-api', {method: 'POST'}).then(() => location.reload())" class="button">Test Email API</button>
-          <button onclick="fetch('/admin/proxy/test-federation', {method: 'POST'}).then(() => location.reload())" class="button">Test Federation</button>
-          <button onclick="fetch('/admin/proxy/send-test-email', {method: 'POST'}).then(() => location.reload())" class="button">Send Test Email</button>
-          <button onclick="fetch('/admin/process-queue', {method: 'POST'}).then(() => location.reload())" class="button">Process Queue</button>
-          <button onclick="fetch('/admin/federation/sync', {method: 'POST'}).then(() => location.reload())" class="button">Sync Federation</button>
-        </div>
-      </div>
+  // HTML sections
+  const statusHtml = `
+    <div class="card">
+      <h3>Proxy Status</h3>
+      <p>Connected: <span style="color: ${connectedColor};">${connected ? 'Yes' : 'No'}</span></p>
+      <p>Circuit Breaker: <span style="color: ${circuitColor};">${circuitState.state} (${circuitState.failures} failures)</span></p>
     </div>
-
-    
   `;
 
-    return renderTemplate('Proxy Server Dashboard', content, user, config);
+  const queueHtml = `
+    <div class="card">
+      <h3>Queue Status</h3>
+      <p>Total Queued: <span style="color: ${queueColor};">${queuedTotal}</span></p>
+      <p>Last Processed: ${lastProcessing ? new Date(lastProcessing.timestamp).toLocaleString() : 'N/A'}</p>
+      <button class="button" onclick="processQueue()">Process Now</button>
+    </div>
+  `;
+
+  const domainsHtml = `
+    <div class="card">
+      <h3>Connected Domains (${connectedDomains.length || 0})</h3>
+      ${connectedDomains.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Trust Level</th>
+              <th>Last Seen</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${connectedDomains.map(d => `
+              <tr>
+                <td>${d.domain}</td>
+                <td>${d.trust_level}</td>
+                <td>${new Date(d.last_seen).toLocaleString()}</td>
+                <td>
+                  <button onclick="testDomain('${d.domain}')">Test</button>
+                  <button onclick="removeDomain('${d.domain}')">Remove</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<p>No connected domains.</p>'}
+      <form id="add-domain-form" style="margin-top: 1rem;">
+        <input type="text" id="new-domain" placeholder="example.com" required />
+        <button type="submit">Add Domain</button>
+      </form>
+    </div>
+  `;
+
+  const activityHtml = `
+    <div class="card">
+      <h3>Recent Federation Activity</h3>
+      ${recentActivity.length > 0 ? `
+        <ul>
+          ${recentActivity.map(a => `
+            <li>${a.type}: ${a.description} at ${new Date(a.timestamp).toLocaleString()}</li>
+          `).join('')}
+        </ul>
+      ` : '<p>No recent activity.</p>'}
+    </div>
+  `;
+
+  const recommendationsHtml = `
+    <div class="card">
+      <h3>Recommendations</h3>
+      ${recommendations.length > 0 ? `
+        <ul>
+          ${recommendations.map(r => `<li>${r}</li>`).join('')}
+        </ul>
+      ` : '<p>All systems normal.</p>'}
+    </div>
+  `;
+
+  const content = `
+    <div class="container">
+      <h1>Proxy Dashboard</h1>
+      ${statusHtml}
+      ${queueHtml}
+      ${domainsHtml}
+      ${activityHtml}
+      ${recommendationsHtml}
+    </div>
+
+    <script>
+      // Add domain
+      document.getElementById('add-domain-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const domain = document.getElementById('new-domain').value.trim();
+        if (!domain) return;
+
+        const res = await fetch('/api/federation/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain, auto_discover: true })
+        });
+        if (res.ok) {
+          location.reload();
+        } else {
+          alert('Error adding domain');
+        }
+      };
+
+      // Process queue
+      async function processQueue() {
+        await fetch('/admin/process-queue', { method: 'POST' });
+        location.reload();
+      }
+
+      // Test domain
+      async function testDomain(domain) {
+        await fetch('/admin/proxy/test-federation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain })
+        });
+        alert('Test complete');
+      }
+
+      // Remove domain
+      async function removeDomain(domain) {
+        if (confirm('Remove domain?')) {
+          await fetch('/api/federation/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domain })
+          });
+          location.reload();
+        }
+      }
+    </script>
+
+    <style>
+      .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+      .card { background: var(--card-bg, #f8f9fa); border: 1px solid var(--border, #dee2e6); border-radius: 0.25rem; padding: 1rem; margin-bottom: 1rem; }
+      .button { padding: 0.5rem 1rem; background: var(--primary, #007bff); color: white; border: none; cursor: pointer; border-radius: 0.25rem; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 0.5rem; border-bottom: 1px solid var(--border, #dee2e6); text-align: left; }
+      ul { list-style-type: disc; padding-left: 1.5rem; }
+    </style>
+  `;
+
+  return content;
 }

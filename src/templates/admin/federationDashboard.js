@@ -33,10 +33,11 @@ export function federationDashboard(federatedPosts, domains, user, config) {
         </form>
 
         <div id="trusted-list">
-          ${(trusted || []).map(d => `
+          ${trusted.map(d => `
             <div class="trusted-domain" data-domain="${d.domain}">
               <strong>${d.domain}</strong> 
               <span class="badge ${d.trust_level}">${d.trust_level}</span>
+              <button class="small follow-btn" data-domain="${d.domain}">Follow</button>
             </div>
           `).join('')}
         </div>
@@ -85,6 +86,20 @@ export function federationDashboard(federatedPosts, domains, user, config) {
           status.textContent = 'Error: ' + json.error;
         }
       };
+
+      document.querySelectorAll('.follow-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const domain = btn.dataset.domain;
+          const res = await fetch('/api/federation/connect', {  // Reuse connect for follow, or add new endpoint
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domain, auto_discover: false })  // Skip rediscovery
+          });
+          if (res.ok) {
+            btn.replaceWith('<span class="badge success">Following</span>');
+          }
+        };
+      });
     </script>
 
     <style>
@@ -96,6 +111,8 @@ export function federationDashboard(federatedPosts, domains, user, config) {
       .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
       .badge.verified { background: #0f0; color: #000; }
       .badge.unverified { background: #ff0; color: #000; }
+      .badge.success { background: #0f0; color: #000; }
+      .small { font-size: 0.8rem; }
       .federated-post { border-bottom: 1px solid var(--border); padding: 1rem 0; }
       .preview { margin-top: 0.5rem; opacity: 0.9; }
     </style>

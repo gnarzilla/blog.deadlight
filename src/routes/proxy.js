@@ -32,7 +32,7 @@ export async function handleProxyRoutes(request, env, user) {
      const recommendations = getCircuitRecommendations(circuitState);
 
      const data = {
-      siteUrl,                     // ← NEW – used in proxyDashboardTemplate
+      siteUrl,                     
        status: { ...status, recommendations, circuit_state: circuitState },
        queue: { status: queueStatus, lastProcessing },
        federation: { connected_domains: domains, ...realtimeFed },
@@ -43,7 +43,7 @@ export async function handleProxyRoutes(request, env, user) {
      };
 
     const config = cfg;   // reuse the already-fetched config
-     const body = proxyDashboardTemplate(data, user, config);
+    //const body = proxyDashboardTemplate(data, user, config);
 
      return new Response(
        renderTemplate('Proxy Dashboard', body, user, config),

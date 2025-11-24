@@ -125,6 +125,12 @@ export class FederationService {
     throw new Error('Federation public key not configured');
   }
 
+  async getPublicKey() {
+    // For testing/dev, derive from private key (symmetric for now - note: not secure for production; upgrade to asymmetric later)
+    const privateKey = await this._privateKey();
+    return privateKey;  // Returns 'dev-private-key' locally; use env.FEDERATION_PRIVATE_KEY in production
+  }
+
   async _siteUrl() {
     // Use env variable first, fall back to config
     if (this.env.SITE_URL) return this.env.SITE_URL;
