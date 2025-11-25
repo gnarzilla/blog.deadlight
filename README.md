@@ -20,7 +20,7 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 | **Connectivity drops for hours** | Needs 30–60s of stable link to render a post | Fully readable offline after first visit. New posts need ~4 seconds of uplink |
 | **Text-only clients**<br>(Meshtastic, packet radio, lynx) | 99% of modern blogs are JavaScript-only | 100% functional in w3m, links, or a 300-baud terminal |
 | **Power is scarce**<br>(solar Pi, phone in the desert) | Always-on containers burn watts for nothing | Zero compute when idle. D1 + Workers sleep completely |
-| **Hostile networks**<br>(DPI, censorship, no DNS) | Third-party analytics + CDN beacons = instant fingerprint | Zero external requests by default. Private instance analytics |
+| **Hostile networks**<br>(DPI, censorship, no DNS) | Third-party analytics + CDN beacons = instant fingerprint | Zero external requests by default. Private instance analytis. Prevents fingerprinting and bypasses DNS blackouts |
 | **You might post over email, SMS, or LoRa** | Normal dashboards require browser + stable link | Admin dashboard works over SMTP/IMAP. Post from a burner address if needed |
 
 **Deadlight isn't trying to be the coolest blog platform.**  
