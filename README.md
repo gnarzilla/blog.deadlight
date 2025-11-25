@@ -539,20 +539,4 @@ See [docs/LICENSE](docs/LICENSE) for details.
 
 ---
 
-**Deadlight isn't trying to be the coolest blog platform.**  
-**It's trying to be the last one that still works when everything else is on fire.**
-
-Go deploy it. Break it. Blog from a mountain with a LoRa node.
-
-
-I'll be here.
-
-
-
-
-
-
-
-
-
-
+EOF
