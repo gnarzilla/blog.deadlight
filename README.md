@@ -404,7 +404,7 @@ See [docs/API.md](docs/API.md) for full endpoint documentation.
 ### Planned 
 - **2025 Q4** – Stable post-by-email + comments
 - **2026 Q1** – Full proxy dashboard integration
-- **2026 Q2** – Meshtastic-native posting client
+- **2026 Q2** – Meshtastic-native posting client and Visual Edge Network Topology integration.
 - **Eventually** – ActivityPub federation, plugin architecture
 
 ### Help Wanted
