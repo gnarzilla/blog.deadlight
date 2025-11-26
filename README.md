@@ -8,9 +8,6 @@
 
 ![Landing Page Tri-Instance View](src/assets/landing.gif)
 
-
-![Deadlight running in Termux on PinePhone](src/assets/mobile_trip_hero.png)
-
 ---
 
 ## Why this exists
@@ -543,5 +540,6 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 EOF
+
 
 
