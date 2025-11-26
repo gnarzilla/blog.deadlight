@@ -15,27 +15,56 @@ export const blogRoutes = {
         const postsPerPage = parseInt(config.postsPerPage) || 10;
         const url = new URL(request.url);
         const page = parseInt(url.searchParams.get('page') || '1');
+        const sort = url.searchParams.get('sort') || 'newest'; // Add sort parameter
         const offset = (page - 1) * postsPerPage;
+
+        // Build ORDER BY based on sort parameter
+        let orderByClause;
+        switch(sort) {
+          case 'oldest':
+            orderByClause = 'posts.created_at ASC';
+            break;
+          case 'karma':
+            orderByClause = `(
+              SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id AND reaction = 'like'
+            ) - (
+              SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id AND reaction = 'dislike'
+            ) DESC`;
+            break;
+          case 'discussed':
+            orderByClause = `(
+              SELECT COUNT(*) FROM posts c WHERE c.parent_id = posts.id AND c.post_type = 'comment'
+            ) DESC`;
+            break;
+          case 'newest':
+          default:
+            orderByClause = 'posts.created_at DESC';
+        }
 
         const countResult = await env.DB.prepare(`
           SELECT COUNT(*) as total 
           FROM posts 
           WHERE published = 1 
             AND post_type != 'comment'
-            AND visibility = 'public'  -- Add this line
+            AND visibility = 'public'
         `).first();
-
         const totalPosts = countResult.total;
         const totalPages = Math.ceil(totalPosts / postsPerPage);
 
         const result = await env.DB.prepare(`
-          SELECT posts.*, users.username as author_username 
+          SELECT posts.*, users.username as author_username,
+            posts.content,  -- Make sure content is included for excerpt extraction
+            (
+              SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id AND reaction = 'like'
+            ) - (
+              SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id AND reaction = 'dislike'
+            ) AS karma
           FROM posts 
           JOIN users ON posts.author_id = users.id 
           WHERE posts.published = 1 
             AND posts.post_type != 'comment'
-            AND posts.visibility = 'public'  -- Add this line
-          ORDER BY posts.created_at DESC
+            AND posts.visibility = 'public'
+          ORDER BY ${orderByClause}
           LIMIT ? OFFSET ?
         `).bind(postsPerPage, offset).all();
 
@@ -47,7 +76,8 @@ export const blogRoutes = {
           hasPrevious: page > 1,
           hasNext: page < totalPages,
           previousPage: page - 1,
-          nextPage: page + 1
+          nextPage: page + 1,
+          currentSort: sort // Pass sort to template
         };
 
         return new Response(
@@ -158,7 +188,7 @@ export const blogRoutes = {
       }
     }
   },
-  
+
   '/post/:slug/comment': {
     POST: async (request, env, ctx) => {
       const currentUser = await checkAuth(request, env);

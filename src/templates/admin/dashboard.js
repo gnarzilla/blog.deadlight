@@ -1,4 +1,4 @@
-// src/templates/admin/dashboard.js - Remove the database calls
+// src/templates/admin/dashboard.js
 import { renderTemplate } from '../base.js';
 
 export function renderAdminDashboard(stats, posts, requestStats = [], user, config = null) { 
@@ -18,7 +18,6 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
   const content = `
     <div class="container">
       <div class="page-header">
-        <h1>Dashboard</h1>
         ${stats.activeVisitors > 0 ? `
           <div class="active-visitors">
             <span class="pulse"></span>
@@ -71,13 +70,8 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
         <div class="quick-actions">
           <h2>Quick Actions</h2>
           <div class="action-buttons">
-            <a href="/admin/add" class="button">Create New Post</a>
-            <a href="/admin/users" class="button">Manage Users</a>
             <a href="/admin/settings" class="button">Settings</a>
-            <a href="/admin/proxy" class="button">Proxy Dashboard</a>
             <a href="/admin/federation" class="button">Federation</a>
-            <a href="/admin/analytics" class="button">Analytics</a>
-            <a href="/" class="button">View Blog</a>
           </div>
         </div>
 
