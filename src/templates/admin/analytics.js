@@ -1,8 +1,8 @@
 // src/templates/admin/analytics.js
 import { renderTemplate } from '../base.js';
 
-export function renderAnalyticsTemplate({ summary, topPaths, hourlyTraffic, countryStats, user, config=null }) {
-  const maxRequests = Math.max(...hourlyTraffic.map(h => h.requests), 1);
+export function renderAnalyticsTemplate({ summary = {}, topPaths = [], hourlyTraffic = [], countryStats = [], user, config=null }) {
+  const maxRequests = Math.max(...hourlyTraffic.map(h => h.requests || 0), 1);  // Avoid divide-by-zero
 
   const content = `
     <!DOCTYPE html>
@@ -20,21 +20,21 @@ export function renderAnalyticsTemplate({ summary, topPaths, hourlyTraffic, coun
         <!-- Summary Section -->
         <div class="analytics-summary">
           <div class="metric">
-            <div class="metric-value">${summary?.total_requests || 0}</div>
+            <div class="metric-value">${summary.total_requests || 0}</div>
             <div class="metric-label">Total Requests</div>
           </div>
           <div class="metric">
-            <div class="metric-value">${summary?.unique_visitors || 0}</div>
+            <div class="metric-value">${summary.unique_visitors || 0}</div>
             <div class="metric-label">Unique Visitors</div>
           </div>
           <div class="metric">
-            <div class="metric-value">${Math.round(summary?.avg_duration || 0)}ms</div>
+            <div class="metric-value">${Math.round(summary.avg_duration || 0)}ms</div>
             <div class="metric-label">Avg Response Time</div>
           </div>
           <div class="metric">
             <div class="metric-value">
-              ${summary?.total_requests
-                ? Math.round((summary.error_count / summary.total_requests) * 100)
+              ${summary.total_requests > 0
+                ? Math.round((summary.error_count || 0) / summary.total_requests * 100)
                 : 0}%
             </div>
             <div class="metric-label">Error Rate</div>
@@ -44,63 +44,69 @@ export function renderAnalyticsTemplate({ summary, topPaths, hourlyTraffic, coun
         <!-- Traffic Chart -->
         <div class="chart-section">
           <h2>Traffic by Hour (Last 24h)</h2>
-          <div class="simple-chart">
-            ${hourlyTraffic.map(hour => `
-              <div class="chart-bar" style="--height:${(hour.requests / maxRequests) * 100}%">
-                <div class="bar"></div>
-                <div class="value">${hour.requests}</div>
-                <div class="label">${hour.hour}:00</div>
-              </div>
-            `).join('')}
-          </div>
+          ${hourlyTraffic.length > 0 ? `
+            <div class="simple-chart">
+              ${hourlyTraffic.map(hour => `
+                <div class="chart-bar" style="--height:${( (hour.requests || 0) / maxRequests) * 100}%" title="${hour.requests} requests, ${hour.unique_visitors} visitors">
+                  <div class="bar"></div>
+                  <div class="value">${hour.requests || 0}</div>
+                  <div class="label">${hour.hour}:00</div>
+                </div>
+              `).join('')}
+            </div>
+          ` : '<p>No traffic data yet.</p>'}
         </div>
 
         <!-- Top Pages -->
         <div class="chart-section">
           <h2>Top Pages</h2>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Path</th>
-                <th>Hits</th>
-                <th>Visitors</th>
-                <th>Avg Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${topPaths.map(path => `
+          ${topPaths.length > 0 ? `
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <td>${path.path}</td>
-                  <td>${path.hit_count}</td>
-                  <td>${path.unique_visitors}</td>
-                  <td>${Math.round(path.avg_duration)}ms</td>
+                  <th>Path</th>
+                  <th>Hits</th>
+                  <th>Visitors</th>
+                  <th>Avg Time</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${topPaths.map(path => `
+                  <tr>
+                    <td>${path.path}</td>
+                    <td>${path.hit_count}</td>
+                    <td>${path.unique_visitors}</td>
+                    <td>${Math.round(path.avg_duration || 0)}ms</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p>No page data yet.</p>'}
         </div>
 
         <!-- Top Countries -->
         <div class="chart-section">
           <h2>Top Countries</h2>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Country</th>
-                <th>Requests</th>
-                <th>Visitors</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${countryStats.map(country => `
+          ${countryStats.length > 0 ? `
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <td>${country.country}</td>
-                  <td>${country.requests}</td>
-                  <td>${country.unique_visitors}</td>
+                  <th>Country</th>
+                  <th>Requests</th>
+                  <th>Visitors</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${countryStats.map(country => `
+                  <tr>
+                    <td>${country.country}</td>
+                    <td>${country.requests}</td>
+                    <td>${country.unique_visitors}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : '<p>No country data yet.</p>'}
         </div>
 
         <!-- Back link -->
