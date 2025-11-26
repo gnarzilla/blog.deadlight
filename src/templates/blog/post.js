@@ -20,7 +20,8 @@ export function renderPost(post, author) {
   `;
 }
 
-export function renderPostActions(post) {
+export function renderPostActions(post, user) {  
+  if (!user || user.role !== 'admin') return '';
   return `
     <div class="post-actions">
       <a href="/admin/edit/${post.id}" class="edit-button button">Edit</a>

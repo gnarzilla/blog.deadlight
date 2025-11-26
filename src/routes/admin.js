@@ -4,7 +4,7 @@ import {
   renderEditPostForm, 
   renderAddUserForm, 
   renderDeleteConfirmation
-} from '../templates/admin/index.js';
+} from '../../../lib.deadlight/core/src/components/admin/index.js';
 import { federationDashboard } from '../templates/admin/federationDashboard.js';
 import { FederationService }     from '../services/federation.js';
 import { requireAdminMiddleware } from '../middleware/index.js';
@@ -21,7 +21,6 @@ import { renderAdminDashboard } from '../templates/admin/index.js';
 import { SettingsModel } from '../../../lib.deadlight/core/src/db/models/index.js';        
 import { renderSettings } from '../templates/admin/settings.js';
 import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
-import { ConfigService } from '../services/config.js';
 
 export const adminRoutes = {
   '/admin': {
@@ -43,7 +42,8 @@ export const adminRoutes = {
           includeAuthor: true,
           orderBy: 'created_at',
           orderDirection: 'DESC',
-          publishedOnly: false
+          publishedOnly: false,
+          visibility: null
         });
         
         // Get basic stats
@@ -189,7 +189,8 @@ export const adminRoutes = {
         const slug = formData.get('slug') || '';
         const excerpt = formData.get('excerpt') || '';
         const published = formData.has('published');
-        
+        const visibility = formData.has('private_visibility') ? 'private' : 'public';
+        const comments_enabled = formData.has('comments_enabled');
         if (!title || !content) {
           return new Response('Title and content are required', { status: 400 });
         }
@@ -205,14 +206,17 @@ export const adminRoutes = {
           content,
           slug: updatedSlug,
           excerpt,
-          published
+          published,
+          visibility,
+          comments_enabled
         });
 
         logger.info('Post updated successfully', { 
           postId, 
           title,
           slug: updatedPost.slug,
-          published: updatedPost.published 
+          published: updatedPost.published,
+          visibility: updatedPost.visibility
         });
 
         return Response.redirect(`${new URL(request.url).origin}/`);
@@ -284,6 +288,7 @@ export const adminRoutes = {
     }
   },
 
+  // Add Post Handler
   '/admin/add': {
     GET: async (request, env) => {
       const user = await checkAuth(request, env);
@@ -313,13 +318,14 @@ export const adminRoutes = {
         const content = formData.get('content');
         const slug = formData.get('slug') || '';
         const excerpt = formData.get('excerpt') || '';
-        // Check if checkbox is present (checkboxes only send value when checked)
         const published = formData.has('published');
-
+        const visibility = formData.has('private_visibility') ? 'private' : 'public';
+        const comments_enabled = formData.has('comments_enabled');
         logger.info('Adding post', { 
           title, 
           contentLength: content?.length,
-          published // Log the published status
+          published,
+          visibility
         });
 
         if (!title || !content) {
@@ -333,13 +339,16 @@ export const adminRoutes = {
           slug: slug || postModel.generateSlug(title),
           excerpt,
           author_id: user.id,
-          published // This will be true/false
+          published,
+          visibility,
+          comments_enabled
         });
 
         logger.info('Post created successfully', { 
           postId: newPost.id, 
           title,
-          published: newPost.published 
+          published: newPost.published,
+          visibility: newPost.visibility
         });
 
         return Response.redirect(`${new URL(request.url).origin}/`);

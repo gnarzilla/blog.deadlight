@@ -32,7 +32,11 @@ export function renderEditPostForm(post, user, config = null) {
         <div class="form-group checkbox-group">
           <label class="checkbox-label">
             <input type="checkbox" name="published" value="true" ${post.published ? 'checked' : ''}>
-            <span>${post.published ? 'Published' : 'Draft'} - uncheck to unpublish</span>
+            <span>${post.published ? 'Published' : 'Draft'}</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="visibility" value="public" ${post.visibility ? 'checked' : ''}>
+            <span>${post.visibility ? 'Public' : 'Private'}</span>
           </label>
         </div>
         

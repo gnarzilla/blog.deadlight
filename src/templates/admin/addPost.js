@@ -89,6 +89,10 @@ Add <!--more--> to create a custom excerpt break point."></textarea>
             <input type="checkbox" name="published" value="true" checked>
             <span>Publish immediately</span>
           </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="visibility" value="private">
+            <span>Publish to Profile Only</span>
+          </label>
         </div>
         
         <div class="form-actions">
