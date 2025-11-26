@@ -6,7 +6,7 @@
 ### Live Demos
 [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo) [deadlight.boo](https://deadlight.boo) · [zero-JS instance](https://thatch-dt.deadlight.boo) · [LoRa gateway blog](https://meshtastic.deadlight.boo)
 
-![Landing Page Tri-Instance View](src/assts/landing.gif)
+![Landing Page Tri-Instance View](src/assets/landing.gif)
 
 
 ![Deadlight running in Termux on PinePhone](src/assets/mobile_trip_hero.png)
@@ -543,4 +543,5 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 EOF
+
 
