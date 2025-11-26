@@ -266,15 +266,16 @@ export const adminRoutes = {
         await settingsModel.set('posts_per_page', formData.get('posts_per_page') || '10', 'number');
         await settingsModel.set('date_format', formData.get('date_format') || 'M/D/YYYY', 'string');
         await settingsModel.set('timezone', formData.get('timezone') || 'UTC', 'string');
+        await settingsModel.set('accent_color', formData.get('accent_color') || '#8ba3c7', 'string');
         
         // Update boolean settings (checkboxes)
         await settingsModel.set('enable_registration', formData.has('enable_registration'), 'boolean');
         await settingsModel.set('require_login_to_read', formData.has('require_login_to_read'), 'boolean');
         await settingsModel.set('maintenance_mode', formData.has('maintenance_mode'), 'boolean');
-        
+
         // Clear config cache so changes take effect immediately
-        ConfigService.clearCache();
-        
+        env.services.config.clearCache();  // Change to this (instance method call)
+
         return Response.redirect(`${new URL(request.url).origin}/admin`);
       } catch (error) {
         console.error('Settings update error:', error);

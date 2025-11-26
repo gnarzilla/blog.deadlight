@@ -35,6 +35,8 @@ export class ConfigService {
       federationEnabled: raw.federation_enabled === true || raw.federation_enabled === 'true',
       federationPrivateKey: raw.federation_private_key || null,
       federationPublicKey: raw.federation_public_key || null,
+
+      accent_color: raw.accent_color || '#8ba3c7',
     };
 
     this.cache.set(cacheKey, { data: config, ts: now });
@@ -54,6 +56,10 @@ export class ConfigService {
     const result = await this.settingsModel.set(key, value, type);
     this.cache.clear(); // invalidate
     return result;
+  }
+
+  clearCache() {
+    this.cache.clear();
   }
 
   async getModerationKeywords() {

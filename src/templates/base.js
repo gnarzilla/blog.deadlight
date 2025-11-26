@@ -5,6 +5,8 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
   const siteTitle = config?.title || 'D E A D L I G H T';
   const pageTitle = title === 'home' ? siteTitle : `${title} | ${siteTitle}`;
   
+  const cacheBust = Date.now();  // Cache bust for CSS
+  
   let authLinks = '';
   
   // Alternative with more features for regular users
@@ -39,6 +41,8 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
     `;
   }
 
+  const accentColor = config?.accent_color || '#8ba3c7';  // Add this line
+
   return `
     <!DOCTYPE html>
     <html lang="en" data-theme="dark">
@@ -49,8 +53,15 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
       <link rel="icon" type="image/x-icon" href="/favicon.ico">
       <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
       <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-      <link rel="stylesheet" href="/styles/theme.css">
-      <link rel="stylesheet" href="/styles/dark_min.css" id="theme-stylesheet">
+      <link rel="stylesheet" href="/styles/theme.css?v=${cacheBust}">
+      <link rel="stylesheet" href="/styles/dark_min.css?v=${cacheBust}" id="theme-stylesheet">
+
+      <!-- Add this inline style block -->
+      <style>
+        :root {
+          --accent-color: ${accentColor};
+        }
+      </style>
     </head>
     <body>
       <header>
@@ -59,43 +70,44 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
           ${authLinks}
           <div class="theme-toggle-container">
             <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
-              <span class="theme-icon">✵</span>
+              <span class="theme-icon">♤</span>
             </button>
           </div>
         </nav>
       </header>
-      ${bodyContent}
+      <div class="container">
+        ${bodyContent}
+      </div>
       <script>
-        document.addEventListener('DOMContentLoaded', () => {
-          const themeToggle = document.getElementById('theme-toggle');
-          const html = document.documentElement;
-          const stylesheet = document.getElementById('theme-stylesheet');
-          
-          // Load saved theme
-          let currentTheme = localStorage.getItem('theme') || 'dark';
-          html.setAttribute('data-theme', currentTheme);
-          stylesheet.href = '/styles/' + currentTheme + '_min.css';
+        // Theme Toggle Script
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        const stylesheet = document.getElementById('theme-stylesheet');
+        
+        // Load saved theme
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        html.setAttribute('data-theme', currentTheme);
+        stylesheet.href = '/styles/' + currentTheme + '_min.css?v=${cacheBust}';
 
-          // Update theme icon
-          const themeIcon = themeToggle.querySelector('.theme-icon');
-          themeIcon.textContent = currentTheme === 'dark' ? '♧' : '◇';
+        // Update theme icon
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+        themeIcon.textContent = currentTheme === 'dark' ? '♧' : '◇';
+        
+        // Handle theme toggle
+        themeToggle.addEventListener('click', () => {
+          currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
           
-          // Handle theme toggle
-          themeToggle.addEventListener('click', () => {
-            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            // Update localStorage
-            localStorage.setItem('theme', currentTheme);
-            
-            // Update HTML attribute
-            html.setAttribute('data-theme', currentTheme);
-            
-            // Update stylesheet
-            stylesheet.href = '/styles/' + currentTheme + '_min.css';
-            
-            // Update icon
-            themeIcon.textContent = currentTheme === 'dark' ? '♡' : '♤';
-          });
+          // Update localStorage
+          localStorage.setItem('theme', currentTheme);
+          
+          // Update HTML attribute
+          html.setAttribute('data-theme', currentTheme);
+          
+          // Update stylesheet
+          stylesheet.href = '/styles/' + currentTheme + '_min.css?v=${cacheBust}';
+          
+          // Update icon
+          themeIcon.textContent = currentTheme === 'dark' ? '♡' : '♤';
         });
 
         // Keyboard navigation for pagination (moved outside of theme toggle)

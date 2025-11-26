@@ -1,9 +1,34 @@
 // src/routes/styles.js
 
+function lightenDarkenColor(col, amt) {
+  let usePound = false;
+  if (col[0] === "#") {
+    col = col.slice(1);
+    usePound = true;
+  }
+  const num = parseInt(col, 16);
+  let r = (num >> 16) + amt;
+  let g = ((num >> 8) & 0x00FF) + amt;
+  let b = (num & 0x0000FF) + amt;
+
+  r = Math.min(255, Math.max(0, r));
+  g = Math.min(255, Math.max(0, g));
+  b = Math.min(255, Math.max(0, b));
+
+  return (usePound ? "#" : "") +
+    ((r << 16) | (g << 8) | b)
+      .toString(16)
+      .padStart(6, '0');
+}
+
 const CACHE_HEADERS = {
   'Content-Type': 'text/css',
   'Cache-Control': 'public, max-age=3600'
 };
+
+// ------------------------------
+//  ENTIRE FULL BASE STYLES
+// ------------------------------
 
 // Base styles that work for both themes
 const baseStyles = `
@@ -1704,6 +1729,195 @@ const baseStyles = `
   }
   }`;
 
+// ------------------------------
+//  FULL DARK THEME TEMPLATE
+// ------------------------------
+
+const darkThemeTemplate = `
+:root[data-theme="dark"] {
+  --bg-primary: #000;
+  --bg-secondary: #222222;
+  --text-primary: #fff;
+  --text-secondary: #888;
+  --border-color: #444444;
+  --border-hover: #666666;
+
+  /* dynamic: to be replaced */
+  --link-color: #8ba3c7;
+  --link-hover: #adc3e7;
+
+  --nav-hover-bg: #333;
+  --nav-hover-color: #fff;
+
+  --button-primary-bg: #333;
+  --button-primary-text: #fff;
+  --button-primary-hover: #555;
+
+  --button-secondary-bg: #444;
+  --button-secondary-text: #fff;
+  --button-secondary-hover: #666;
+
+  --button-danger-bg: #614f4fff; 
+  --button-danger-text: #fff;
+  --button-danger-hover: #ada6a6;
+
+  --theme-toggle-box-shadow: #ffffffff;
+  --theme-toggle-background-color: #000;
+
+  --input-bg: #121212;
+  --input-border: #333;
+
+  --code-bg: #1a1a1a;
+
+  --success-bg: #0a4f0a;
+  --success-text: #90ee90;
+  --success-border: #0f7f0f;
+
+  --error-bg: #4f0a0a;
+  --error-text: #ff9090;
+  --error-border: #7f0f0f;
+
+  --card-bg: #1a1a1a;
+  --card-border: #333;
+  --card-text: #e0e0e0;
+
+  --metric-bg: #0a0a0a;
+  --metric-border: #333;
+
+  --activity-bg: #0a0a0a;
+
+  --status-healthy: #4ade80;
+  --status-error: #f87171;
+  --status-warning: #fbbf24;
+}
+`;
+
+
+// ------------------------------
+//  FULL LIGHT THEME TEMPLATE
+// ------------------------------
+
+const lightThemeTemplate = `
+:root[data-theme="light"] {
+  --bg-primary: #fff;
+  --bg-secondary: #f5f5f5;
+  --text-primary: #333;
+  --text-secondary: #666;
+  --border-color: #ddd;
+  --border-hover: #999;
+
+  /* dynamic: to be replaced */
+  --link-color: #0066cc;
+  --link-hover: #0052a3;
+
+  --nav-hover-bg: #f0f0f0;
+  --nav-hover-color: #333;
+
+  --button-primary-bg: #333;
+  --button-primary-text: #fff;
+  --button-primary-hover: #555;
+
+  --button-secondary-bg: #666;
+  --button-secondary-text: #fff;
+  --button-secondary-hover: #888;
+
+  --button-danger-bg: #000;
+  --button-danger-text: #fff;
+  --button-danger-hover: #333;
+
+  --theme-toggle-box-shadow: #00000000;
+
+  --input-bg: #fff;
+  --input-border: #ccc;
+
+  --code-bg: #f4f4f4;
+
+  --success-bg: #d4edda;
+  --success-text: #155724;
+  --success-border: #c3e6cb;
+
+  --error-bg: #f8d7da;
+  --error-text: #721c24;
+  --error-border: #f5c6cb;
+
+  --card-bg: #f5f5f5;
+  --card-border: #ddd;
+  --card-text: #333;
+
+  --metric-bg: #fff;
+  --metric-border: #e0e0e0;
+
+  --activity-bg: #fafafa;
+
+  --status-healthy: #22c55e;
+  --status-error: #ef4444;
+  --status-warning: #f59e0b;
+}
+`;
+
+
+// ------------------------------
+//  APPLY ACCENT COLOR dynamically
+// ------------------------------
+
+function applyDynamicAccent(themeTemplate, defaultColor) {
+  const accent = defaultColor;
+  const hover = defaultColor
+    ? lightenDarkenColor(defaultColor, themeTemplate.includes('dark') ? 35 : -30)
+    : defaultColor;
+
+  return themeTemplate
+    .replace(/--link-color: #[0-9a-fA-F]{6};/, `--link-color: ${accent};`)
+    .replace(/--link-hover: #[0-9a-fA-F]{6};/, `--link-hover: ${hover};`);
+}
+
+// ------------------------------
+//  STYLE ROUTES
+// ------------------------------
+
+export const styleRoutes = {
+
+  '/styles/dark_min.css': {
+    GET: async (req, env) => {
+      const config = await env.services.config.getConfig();
+      const accent = config.accent_color || '#8ba3c7';
+
+      const dynamicDark = applyDynamicAccent(darkThemeTemplate, accent);
+
+      return new Response(baseStyles + dynamicDark, {
+        headers: CACHE_HEADERS
+      });
+    }
+  },
+
+  '/styles/light_min.css': {
+    GET: async (req, env) => {
+      const config = await env.services.config.getConfig();
+      const accent = config.accent_color || '#0066cc';
+
+      const dynamicLight = applyDynamicAccent(lightThemeTemplate, accent);
+
+      return new Response(baseStyles + dynamicLight, {
+        headers: CACHE_HEADERS
+      });
+    }
+  },
+
+  // theme.css = dark by default
+  '/styles/theme.css': {
+    GET: async (req, env) => {
+      const config = await env.services.config.getConfig();
+      const accent = config.accent_color || '#8ba3c7';
+
+      const dynamicDark = applyDynamicAccent(darkThemeTemplate, accent);
+
+      return new Response(baseStyles + dynamicDark, {
+        headers: CACHE_HEADERS
+      });
+    }
+  }
+};
+
 // Dark theme variables
 const darkTheme = `
   :root[data-theme="dark"] {
@@ -1829,21 +2043,3 @@ const darkTheme = `
       --status-warning: #f59e0b;
     }
 `;
-
-export const styleRoutes = {
-  '/styles/dark_min.css': {
-    GET: () => new Response(baseStyles + darkTheme, { 
-      headers: CACHE_HEADERS 
-    })
-  },
-  '/styles/light_min.css': {
-    GET: () => new Response(baseStyles + lightTheme, { 
-      headers: CACHE_HEADERS 
-    })
-  },
-  '/styles/theme.css': {
-    GET: () => new Response(baseStyles + darkTheme, {
-      headers: CACHE_HEADERS 
-    })
-  }
-};

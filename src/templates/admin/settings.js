@@ -1,4 +1,4 @@
-// src/templates/admin/settings.js - Updated with proper checkbox styling
+// src/templates/admin/settings.js - Updated with accent color
 import { renderTemplate } from '../base.js';
 
 export function renderSettings(settings, user, config = null) {
@@ -51,18 +51,28 @@ export function renderSettings(settings, user, config = null) {
                      value="${settings.timezone || 'UTC'}" placeholder="UTC">
               <small>Timezone for post timestamps</small>
             </div>
+
+            <div class="setting-item">
+              <label for="accent_color">Accent Color</label>
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <input type="color" id="accent_color" name="accent_color" 
+                       value="${settings.accent_color || '#8ba3c7'}">
+                <small>Preview: <a href="#" style="color: ${settings.accent_color || '#8ba3c7'};">Link color</a></small>
+              </div>
+              <small>Changes the color of links and accents (restart or clear cache to see changes)</small>
+            </div>
           </div>
 
           <div class="setting-group">
             <h3>Access Control</h3>
             
-          <div class="checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" name="enable_registration" ${settings.enable_registration ? 'checked' : ''}>
-              <span>Enable User Registration</span>
-            </label>
-            <small>Allow visitors to create new accounts (currently placeholder)</small>
-          </div>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" name="enable_registration" ${settings.enable_registration ? 'checked' : ''}>
+                <span>Enable User Registration</span>
+              </label>
+              <small>Allow visitors to create new accounts (currently placeholder)</small>
+            </div>
             
             <div class="checkbox-group">
               <label class="checkbox-label">
