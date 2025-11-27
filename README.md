@@ -1,4 +1,7 @@
 # Deadlight Blog | Edge-Native Publishing for Resilient Networks
+.
+[ ### top .]: # 
+
 [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [Architecture](#architecture) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Roadmap](#roadmap) · [License](#license)
 
 > Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS required · Deployable from a Raspberry Pi**
