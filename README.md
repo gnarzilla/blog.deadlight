@@ -540,7 +540,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 
 ---
 
-EOF
+[EOF](#top)
 
 
 
