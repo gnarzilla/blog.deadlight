@@ -5,7 +5,7 @@
 
 ### Live Demos
 
-| [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo) [deadlight.boo](https://deadlight.boo) | [![zero-JS](https://thatch-dt.deadlight.boo/favicon.ico)](https://thatch-dt.deadlight.boo) [zero-JS instance](https://thatch-dt.deadlight.boo) | [![Mesh](https://meshtastic.deadlight.boo/favicon.ico)](https://meshtastic.deadlight.boo)[LoRa gateway blog](https://meshtastic.deadlight.boo) |
+|  [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo) [deadlight.boo](https://deadlight.boo)  |  [![zero-JS](https://thatch-dt.deadlight.boo/favicon.ico)](https://thatch-dt.deadlight.boo) [zero-JS instance](https://thatch-dt.deadlight.boo)  |  [![Mesh](https://meshtastic.deadlight.boo/favicon.ico)](https://meshtastic.deadlight.boo)[LoRa gateway blog](https://meshtastic.deadlight.boo)  |
 |----------------------------------------|--------------------------------------|--------------------------|
 
 ![Landing Page Tri-Instance View](src/assets/landing.gif)
