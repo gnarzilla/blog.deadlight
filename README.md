@@ -1,7 +1,7 @@
 # Deadlight Blog | Edge-Native Publishing for Resilient Networks
 [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [Architecture](#architecture) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Roadmap](#roadmap) · [License](#license)
 
-> Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS required · Deployable from a PinePhone**
+> Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS required · Deployable from a Raspberry Pi**
 
 ### Live Demos
 
@@ -43,7 +43,6 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 
 ### Tested On
 
-- PinePhone (Mobian/PostmarketOS)
 - Raspberry Pi 4
 - Android (Termux) IN PROGRESS
 - Standard x86_64 Linux/macOS/Windows
