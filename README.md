@@ -44,8 +44,8 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 ### Tested On
 
 - PinePhone (Mobian/PostmarketOS)
-- Raspberry Pi Zero 2W / 3B+ / 4
-- Android (Termux)
+- Raspberry Pi 4
+- Android (Termux) IN PROGRESS
 - Standard x86_64 Linux/macOS/Windows
 
 ### Proof Points
