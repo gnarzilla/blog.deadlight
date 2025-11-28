@@ -98,7 +98,7 @@ npx wrangler deploy
 
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux)
 
-Wrangler's local D1 emulator fails on ARM due to TCMalloc issues. Skip it entirely and bootstrap remotely.
+Deadlight can be deployed entirely from a phone, but on ARM64 Android you’ll need to run a Debian userland inside Termux using proot. This bypasses Android’s memory layout limitations that break workerd.
 
 ```bash
 # 1. Install Termux + proot
