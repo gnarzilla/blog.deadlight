@@ -6,7 +6,7 @@ const postList = new PostList({
   showActions: true,
   showAuthor: true,
   showDate: true,
-  showKarma: true  // Add karma display
+  showKarma: true
 });
 
 const pagination = new Pagination({

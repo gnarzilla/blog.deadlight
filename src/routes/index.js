@@ -1,4 +1,4 @@
-// src/routes/index.js - Enhanced Router with group method
+// src/routes/index.js
 export class Router {
   constructor() {
     this.routes = new Map();
@@ -24,7 +24,7 @@ export class Router {
     });
   }
 
-  // NEW METHOD: Register multiple routes with shared middleware
+  // Register multiple routes with shared middleware
   group(middleware, registerFunc) {
     const groupRouter = {
       register: (path, handlers) => {

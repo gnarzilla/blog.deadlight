@@ -3,6 +3,7 @@ import { PostModel, UserModel, SettingsModel } from '../../../lib.deadlight/core
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { FederationService } from '../services/federation.js';
 import { QueueService } from '../services/queue.js';
+import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { ProxyService } from '../services/proxy.js';
 
 const logger = new Logger({ context: 'api' });
@@ -45,11 +46,11 @@ export const apiRoutes = {
     }
   },
 
-  // ===== NEW METRICS ENDPOINT (Corrected DB Logic) =====
+  // ===== METRICS ENDPOINT (Corrected DB Logic) =====
   '/api/metrics': {
     GET: async (request, env, ctx) => {
       try {
-        // 1. Prepare the D1 queries (without .first() or .all() at this stage)
+        // 1. Prepare the D1 queries
         const statements = [
           env.DB.prepare('SELECT COUNT(id) as total_posts FROM posts'),
           env.DB.prepare('SELECT COUNT(id) as published_posts FROM posts WHERE published = 1 AND is_email = 0'),
@@ -390,5 +391,64 @@ export const apiRoutes = {
         }, { status: 500 });
       }
     }
+  },
+
+  '/api/posts/:id/upvote': {
+    POST: async (request, env) => {
+      const user = await checkAuth(request, env);
+      
+      // If not authenticated, redirect to auth prompt
+      if (!user) {
+        const origin = new URL(request.url).origin;
+        const returnUrl = request.headers.get('Referer') || '/';
+        return Response.redirect(
+          `${origin}/auth/prompt?return=${encodeURIComponent(returnUrl)}&action=vote`, 
+          302
+        );
+      }
+      
+      const postId = request.params.id;
+      const postModel = new PostModel(env.DB);
+      
+      try {
+        await postModel.recordReaction(postId, user.id, 'like');
+        const referer = request.headers.get('Referer') || '/';
+        return Response.redirect(referer, 302);
+      } catch (error) {
+        console.error('Upvote error:', error);
+        const referer = request.headers.get('Referer') || '/';
+        return Response.redirect(referer, 302);
+      }
+    }
+  },
+
+  '/api/posts/:id/downvote': {
+    POST: async (request, env) => {
+      const user = await checkAuth(request, env);
+      
+      if (!user) {
+        const origin = new URL(request.url).origin;
+        const returnUrl = request.headers.get('Referer') || '/';
+        return Response.redirect(
+          `${origin}/auth/prompt?return=${encodeURIComponent(returnUrl)}&action=vote`, 
+          302
+        );
+      }
+      
+      const postId = request.params.id;
+      const postModel = new PostModel(env.DB);
+      
+      try {
+        await postModel.recordReaction(postId, user.id, 'dislike');
+        const referer = request.headers.get('Referer') || '/';
+        return Response.redirect(referer, 302);
+      } catch (error) {
+        console.error('Downvote error:', error);
+        const referer = request.headers.get('Referer') || '/';
+        return Response.redirect(referer, 302);
+      }
+    }
   }
+
+
 };

@@ -77,7 +77,7 @@ export const blogRoutes = {
           hasNext: page < totalPages,
           previousPage: page - 1,
           nextPage: page + 1,
-          currentSort: sort // Pass sort to template
+          currentSort: sort 
         };
 
         return new Response(

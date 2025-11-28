@@ -44,6 +44,8 @@ router.group([], (r) => {
   r.register('/api/blog/status', apiRoutes['/api/blog/status']);
   r.register('/api/blog/posts', apiRoutes['/api/blog/posts']);
   r.register('/api/metrics', apiRoutes['/api/metrics']);
+  r.register('/api/posts/:id/upvote', apiRoutes['/api/posts/:id/upvote']);
+  r.register('/api/posts/:id/downvote', apiRoutes['/api/posts/:id/downvote']);
 
   // Public federation discovery
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
@@ -100,7 +102,7 @@ router.group([apiAuthMiddleware], (r) => {
 console.log('Routes registered:', Array.from(router.routes.keys()));
 
 /* ==============================================================
-   QUEUE PROCESSOR (replaces old OutboxService)
+   QUEUE PROCESSOR 
    ============================================================== */
 let queueProcessorStarted = false;
 

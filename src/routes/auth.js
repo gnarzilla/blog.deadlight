@@ -7,7 +7,7 @@ import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
 import { Validator, FormValidator, CSRFProtection } from '../../../lib.deadlight/core/src/security/validation.js';
 import { authLimiter } from '../../../lib.deadlight/core/src/security/ratelimit.js';
 import { ProxyService } from '../services/proxy.js';
-import { ConfigService } from '../services/config.js';
+import { renderTemplate } from '../templates/base.js'
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { renderRegistrationForm } from '../templates/auth/register.js';
 
@@ -378,6 +378,50 @@ export const authRoutes = {
     }
   },
 
+  '/auth/prompt': {
+    GET: async (request, env) => {
+      const url = new URL(request.url);
+      const returnUrl = url.searchParams.get('return') || '/';
+      const action = url.searchParams.get('action') || 'continue';
+      
+      const content = `
+        <div class="auth-prompt-container">
+          <h1>Join the Conversation</h1>
+          <p>Sign in or create an account to ${action}.</p>
+          
+          <div class="auth-options">
+            <div class="auth-option">
+              <h3>Already have an account?</h3>
+              <a href="/login?return=${encodeURIComponent(returnUrl)}" class="button primary">
+                Sign In
+              </a>
+            </div>
+            
+            <div class="auth-divider">
+              <span>OR</span>
+            </div>
+            
+            <div class="auth-option">
+              <h3>New to ${env.SITE_NAME || 'Deadlight'}?</h3>
+              <a href="/register?return=${encodeURIComponent(returnUrl)}" class="button">
+                Create Account
+              </a>
+              <p class="auth-hint">Takes just a moment</p>
+            </div>
+          </div>
+          
+          <div class="auth-cancel">
+            <a href="${returnUrl}" class="link-subtle">← Go back</a>
+          </div>
+        </div>
+      `;
+      
+      return new Response(renderTemplate('Sign In or Register', content, null, await env.services.config.getConfig()), {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
+  },
+
   '/auth/refresh': {
     POST: async (request, env) => {
       if (!env.USE_PROXY_AUTH) {
@@ -471,37 +515,6 @@ export const authRoutes = {
       headers.append('Set-Cookie', `refresh_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
       
       return new Response(null, { status: 302, headers });
-    }
-  },
-
-  // Remove these temporary routes in production
-  //'/check-users': {
-  //  GET: async (request, env) => {
-  //    const result = await env.DB.prepare('SELECT id, username, role FROM users').all();
-  //    return new Response(JSON.stringify(result.results, null, 2), {
-  //      headers: { 'Content-Type': 'application/json' }
-  //    });
-  //  }
-  // },
-
-  '/generate-admin': {
-    GET: async (request, env) => {
-      
-      const password = 'gross-gnar';
-      const { hash, salt } = await hashPassword(password);
-      
-      const html = `
-        <h1>Admin User Creation</h1>
-        <p>Password: ${password}</p>
-        <p>Hash: ${hash}</p>
-        <p>Salt: ${salt}</p>
-        <h2>Run this command:</h2>
-        <pre>wrangler d1 execute blog_content_v3 --local --command "INSERT INTO users (username, password, salt, role) VALUES ('admin', '${hash}', '${salt}', 'admin')"</pre>
-      `;
-      
-      return new Response(html, {
-        headers: { 'Content-Type': 'text/html' }
-      });
     }
   },
 

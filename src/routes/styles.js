@@ -13,6 +13,86 @@ function lightenDarkenColor(col, amt) {
   return (usePound ? "#" : "") + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
 }
 
+// Convert hex to HSL
+function hexToHSL(hex) {
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex[1] + hex[2], 16);
+    g = parseInt(hex[3] + hex[4], 16);
+    b = parseInt(hex[5] + hex[6], 16);
+  }
+  
+  r /= 255; g /= 255; b /= 255;
+  
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  
+  return { h: h * 360, s: s * 100, l: l * 100 };
+}
+
+// Convert HSL back to hex
+function hslToHex(h, s, l) {
+  s /= 100;
+  l /= 100;
+  
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  
+  if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+  else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+  else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+  else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+  else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+  else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+  
+  r = Math.round((r + m) * 255);
+  g = Math.round((g + m) * 255);
+  b = Math.round((b + m) * 255);
+  
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+// Generate a color palette from a single accent color
+function generateColorPalette(accent) {
+  const hsl = hexToHSL(accent);
+  
+  // Create complementary colors using color theory
+  const colors = {
+    primary: accent,
+    // Analogous color (30 degrees on color wheel)
+    analogous: hslToHex((hsl.h + 30) % 360, hsl.s, hsl.l),
+    // Triadic color (120 degrees on color wheel)
+    triadic: hslToHex((hsl.h + 120) % 360, hsl.s, hsl.l),
+    // Complementary color (180 degrees on color wheel)
+    complementary: hslToHex((hsl.h + 180) % 360, hsl.s, hsl.l),
+    // Lighter variation
+    lighter: hslToHex(hsl.h, hsl.s, Math.min(hsl.l + 20, 90)),
+    // Darker variation
+    darker: hslToHex(hsl.h, hsl.s, Math.max(hsl.l - 20, 20))
+  };
+  
+  return colors;
+}
+
+
 const CACHE_HEADERS = { 'Content-Type': 'text/css', 'Cache-Control': 'public, max-age=3600' };
 
 // =============================
@@ -42,7 +122,7 @@ const baseStyles = `
 
   h1, h2, h3, h4, h5, h6 { margin-top: 0; color: var(--text-primary); }
 
-  /* ===== FIXED BUTTONS — THIS IS THE REAL FIX ===== */
+  /* ===== BUTTONS ===== */
   button, .button, .edit-button, .delete-button, .delete-link button, [type="submit"] {
     padding: 0.45rem 0.9rem !important;
     border-radius: var(--border-radius) !important;
@@ -74,11 +154,166 @@ const baseStyles = `
   article, .post-preview { padding-bottom: 2rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); }
   article:last-child, .post-preview:last-child { border-bottom: none; }
   .post-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+
+
+  /* =============================
+   KARMA/VOTING STYLES
+   ============================= */
+  
+  /* Sort controls */
+  .sort-controls {
+    margin: 2rem 0;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .sort-controls label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .sort-controls select {
+    padding: 0.5rem 0.8rem;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 120px;
+  }
+
+  /* Karma button and score in post meta */
+  .post-meta form {
+    display: inline-block;
+    margin: 0;
+    vertical-align: middle;
+  }
+
+  .karma-button {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 2px 8px !important;
+    margin: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+  }
+
+  .karma-button:hover {
+    background: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  .karma-button:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  /* Karma score */
+  .karma-score {
+    display: inline-block;
+    margin-left: 6px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    vertical-align: middle;
+  }
+
+  /* Visual separator between karma and other meta */
+  .post-meta > span:has(.karma-button) {
+    position: relative;
+    padding-right: 1rem;
+    margin-right: 0.5rem;
+  }
+
+  .post-meta > span:has(.karma-button)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 16px;
+    width: 1px;
+    background: var(--border-color);
+  }
+
+  /* For single post view with both up/down votes */
+  .post-voting-single {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 1rem 0;
+    padding: 0.5rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+  }
+
+  .post-voting-single form {
+    margin: 0;
+    display: inline-block;
+  }
+
+  .vote-button {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 10px !important;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    transition: all 0.2s ease;
+  }
+
+  .vote-button:hover {
+    border-color: var(--link-color);
+    color: var(--link-color);
+    background: rgba(139, 163, 199, 0.1);
+  }
+
+  /* Upvote specific */
+  .vote-button[value="like"]:hover,
+  .karma-button:hover {
+    background: #4ade80;
+    border-color: #4ade80;
+    color: #000;
+  }
+
+  /* Downvote specific */
+  .vote-button[value="dislike"]:hover {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+    color: #fff;
+  }
+
+  /* Active/voted state (for future enhancement) */
+  .karma-button.voted,
+  .vote-button.voted {
+    background: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+  }
+
 `;
 
 
 // =============================
-// 2. ADMIN DASHBOARD STYLES (preserved exactly)
+// 2. ADMIN DASHBOARD STYLES 
 // =============================
 const adminStyles = `
   /* =============================
@@ -162,7 +397,7 @@ const adminStyles = `
     font-weight: 500;
   }
 
-  /* SIMPLE CHART — FINAL VERSION (used on BOTH pages) */
+  /* SIMPLE CHART */
   .simple-chart {
     display: flex;
     align-items: flex-end;
@@ -447,8 +682,184 @@ const adminStyles = `
   .auth-links a:hover {
     text-decoration: underline;
   }
+
   /* =============================
-    STURDY HEADER — Mobile + Desktop (FINAL FOREVER VERSION)
+   AUTH PROMPT PAGE (Vote/Action Prompt)
+   ============================= */
+  .auth-prompt-container {
+    max-width: 600px;
+    margin: 4rem auto;
+    padding: 3rem;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--border-radius);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    text-align: center;
+  }
+
+  .auth-prompt-container h1 {
+    margin: 0 0 1rem;
+    font-size: 2rem;
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .auth-prompt-container > p {
+    margin: 0 0 2.5rem;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+  }
+
+  /* Auth options layout */
+  .auth-options {
+    display: flex;
+    gap: 2rem;
+    align-items: stretch;
+    justify-content: center;
+    margin: 2rem 0;
+  }
+
+  .auth-option {
+    flex: 1;
+    padding: 2rem 1.5rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    min-width: 200px;
+  }
+
+  .auth-option h3 {
+    margin: 0 0 1.2rem;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .auth-option .button {
+    display: inline-block;
+    width: 100%;
+    max-width: 180px;
+    padding: 0.8rem 1.5rem !important;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .auth-option .button.primary {
+    background: var(--link-color);
+    color: white;
+  }
+
+  .auth-option .button.primary:hover {
+    background: var(--link-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 163, 199, 0.3);
+  }
+
+  .auth-option .button:not(.primary) {
+    background: var(--button-secondary-bg);
+    color: white;
+  }
+
+  .auth-option .button:not(.primary):hover {
+    background: var(--button-secondary-hover);
+    transform: translateY(-2px);
+  }
+
+  /* Divider */
+  .auth-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .auth-divider span {
+    padding: 0.5rem;
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.9rem;
+    z-index: 1;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .auth-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1px;
+    height: 100px;
+    background: var(--border-color);
+  }
+
+  /* Hint text */
+  .auth-hint {
+    margin-top: 0.8rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
+
+  /* Cancel/back link */
+  .auth-cancel {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .link-subtle {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+  }
+
+  .link-subtle:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 640px) {
+    .auth-prompt-container {
+      margin: 2rem auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .auth-options {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .auth-option {
+      padding: 1.5rem;
+    }
+    
+    .auth-divider {
+      width: 100%;
+      margin: 1rem 0;
+    }
+
+    .auth-divider::before {
+      width: 100px;
+      height: 1px;
+    }
+
+    .auth-divider span {
+      padding: 0.5rem 1rem;
+    }
+  }
+
+  /* =============================
+    STURDY HEADER — Mobile + Desktop
     ============================= */
   header {
     display: flex;
@@ -592,7 +1003,10 @@ const themes = {
 // =============================
 function applyAccent(css, accent) {
   if (!accent) return css;
+  
   const hover = lightenDarkenColor(accent, css.includes('dark') ? 40 : -40);
+  
+  // Just handle the CSS variables, gradient is handled in the routes
   return css
     .replace(/--link-color:[^;]+;/g, `--link-color: ${accent};`)
     .replace(/--link-hover:[^;]+;/g, `--link-hover: ${hover};`);
@@ -606,23 +1020,66 @@ export const styleRoutes = {
     GET: async (req, env) => {
       const config = await env.services.config.getConfig();
       const accent = config.accent_color || '#8ba3c7';
-      const css = baseStyles + adminStyles + themes.dark;
+      const palette = generateColorPalette(accent);
+      
+      // Create the dynamic gradient
+      // const gradient = `linear-gradient(135deg, ${palette.primary}, ${palette.analogous}, ${palette.primary}, ${palette.analogous}, ${palette.primary})`;
+      // const gradient = `linear-gradient(135deg, ${palette.primary}, ${palette.triadic}, ${palette.complementary}, ${palette.triadic}, ${palette.primary})`;
+      // const gradient = `linear-gradient(135deg, ${palette.darker}, ${palette.complementary}, ${palette.primary}, ${palette.complementary}, ${palette.lighter})`;
+      const gradient = `linear-gradient(135deg, ${palette.darker}, ${palette.primary}, ${palette.lighter}, ${palette.primary}, ${palette.darker})`;
+
+      // Replace the hardcoded gradient in adminStyles BEFORE concatenating
+      const dynamicAdminStyles = adminStyles.replace(
+        'background: linear-gradient(90deg, #ff4081, #8ba3c7, #ff4081);',
+        `background: ${gradient};`
+      );
+      
+      // Concatenate with the modified adminStyles
+      const css = baseStyles + dynamicAdminStyles + themes.dark;
+      
+      // Apply the other accent colors (links, etc)
       return new Response(applyAccent(css, accent), { headers: CACHE_HEADERS });
     }
   },
+  
   '/styles/dark_min.css': {
     GET: async (req, env) => {
       const config = await env.services.config.getConfig();
       const accent = config.accent_color || '#8ba3c7';
-      const css = baseStyles + adminStyles + themes.dark;
+      const palette = generateColorPalette(accent);
+      
+      // const gradient = `linear-gradient(135deg, ${palette.primary}, ${palette.analogous}, ${palette.primary}, ${palette.analogous}, ${palette.primary})`;
+      // const gradient = `linear-gradient(135deg, ${palette.primary}, ${palette.triadic}, ${palette.complementary}, ${palette.triadic}, ${palette.primary})`;
+      // const gradient = `linear-gradient(135deg, ${palette.darker}, ${palette.complementary}, ${palette.primary}, ${palette.complementary}, ${palette.lighter})`;
+      const gradient = `linear-gradient(135deg, ${palette.darker}, ${palette.primary}, ${palette.complementary}, ${palette.triadic}, ${palette.darker})`;
+
+      const dynamicAdminStyles = adminStyles.replace(
+        'background: linear-gradient(90deg, #ff4081, #8ba3c7, #ff4081);',
+        `background: ${gradient};`
+      );
+      
+      const css = baseStyles + dynamicAdminStyles + themes.dark;
       return new Response(applyAccent(css, accent), { headers: CACHE_HEADERS });
     }
   },
+  
   '/styles/light_min.css': {
     GET: async (req, env) => {
       const config = await env.services.config.getConfig();
       const accent = config.accent_color || '#0066cc';
-      const css = baseStyles + adminStyles + themes.light;
+      const palette = generateColorPalette(accent);
+      
+      // const gradient = `linear-gradient(135deg, ${palette.primary}, ${palette.analogous}, ${palette.primary}, ${palette.analogous}, ${palette.primary})`;
+      // const gradient = `linear-gradient(135deg, ${palette.primary}, ${palette.triadic}, ${palette.complementary}, ${palette.triadic}, ${palette.primary})`;
+      // const gradient = `linear-gradient(135deg, ${palette.darker}, ${palette.complementary}, ${palette.primary}, ${palette.complementary}, ${palette.lighter})`;
+      const gradient = `linear-gradient(135deg, ${palette.darker}, ${palette.primary}, ${palette.lighter}, ${palette.primary}, ${palette.darker})`;
+
+      const dynamicAdminStyles = adminStyles.replace(
+        'background: linear-gradient(90deg, #ff4081, #8ba3c7, #ff4081);',
+        `background: ${gradient};`
+      );
+      
+      const css = baseStyles + dynamicAdminStyles + themes.light;
       return new Response(applyAccent(css, accent), { headers: CACHE_HEADERS });
     }
   }

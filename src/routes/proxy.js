@@ -3,7 +3,7 @@ import { ProxyService } from '../services/proxy.js';
 import { QueueService } from '../services/queue.js';
 import { FederationService } from '../services/federation.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
-import { renderTemplate } from '../templates/base.js'; // ADD THIS
+import { renderTemplate } from '../templates/base.js'; 
 import { proxyDashboardTemplate } from '../templates/admin/proxyDashboard.js';
 
 export async function handleProxyRoutes(request, env, user) {
