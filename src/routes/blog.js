@@ -103,8 +103,6 @@ export const blogRoutes = {
         let visibilityParams = [];
         
         if (user) {
-          // Authenticated users can see public posts and their own private posts
-          // Admins can see all posts
           if (user.role === 'admin') {
             visibilityCondition = "(posts.visibility = 'public' OR posts.visibility = 'private')";
           } else {
@@ -113,9 +111,14 @@ export const blogRoutes = {
           }
         }
 
-        // Query by slug
+        // Query by slug - INCLUDE KARMA
         let post = await env.DB.prepare(`
-          SELECT posts.*, users.username as author_username
+          SELECT posts.*, users.username as author_username,
+            (
+              SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id AND reaction = 'like'
+            ) - (
+              SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id AND reaction = 'dislike'
+            ) AS karma
           FROM posts 
           LEFT JOIN users ON posts.author_id = users.id
           WHERE posts.slug = ? 
@@ -124,10 +127,15 @@ export const blogRoutes = {
             AND ${visibilityCondition}
         `).bind(slug, ...visibilityParams).first();
 
-        // Fallback to ID if slug didn't work and it's numeric
+        // Fallback to ID if slug didn't work and it's numeric - INCLUDE KARMA
         if (!post && !isNaN(slug)) {
           post = await env.DB.prepare(`
-            SELECT posts.*, users.username as author_username
+            SELECT posts.*, users.username as author_username,
+              (
+                SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id AND reaction = 'like'
+              ) - (
+                SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id AND reaction = 'dislike'
+              ) AS karma
             FROM posts 
             LEFT JOIN users ON posts.author_id = users.id
             WHERE posts.id = ? 
