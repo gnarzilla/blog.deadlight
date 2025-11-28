@@ -97,6 +97,8 @@ npx wrangler deploy
 
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux)
 
+![Termux Install & Deploy](assets/termux_remote_deployment.png)
+
 Wrangler's local D1 emulator fails on ARM due to TCMalloc issues. Skip it entirely and bootstrap remotely:
 
 ```bash
@@ -542,3 +544,4 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
