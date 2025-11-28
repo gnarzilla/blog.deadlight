@@ -327,7 +327,7 @@ See `wrangler.toml` for:
 - Environment variables
 - Asset handling
 
-See [docs/SAMPLE_wrangler.md](docs/SAMPLE_wrangler.md) for full examples.
+See [docs/SAMPLE_wrangler.md](docs/SAMPLE_wrangler.toml) for full examples.
 
 ### Security Settings
 
@@ -550,6 +550,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
