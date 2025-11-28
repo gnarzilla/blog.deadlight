@@ -31,6 +31,8 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 
 ---
 
+![termux deployment](src/assets/termux_deploy.gif)
+
 ## It actually works
 
 [This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**.]: # 
@@ -548,6 +550,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
