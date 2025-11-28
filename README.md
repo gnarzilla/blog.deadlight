@@ -1,12 +1,15 @@
 # Deadlight Blog | Edge-Native Publishing for Resilient Networks
-[Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [Architecture](#architecture) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Roadmap](#roadmap) · [License](#license)
 
-> Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS required · Deployable from a PinePhone**
+[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [Architecture](#architecture) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Roadmap](#roadmap) · [License](#license)
+
+> Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS required · Deployable from a Raspberry Pi**
 
 ### Live Demos
-[![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo) [deadlight.boo](https://deadlight.boo) · [zero-JS instance](https://thatch-dt.deadlight.boo) · [LoRa gateway blog](https://meshtastic.deadlight.boo)
 
-![Deadlight running in Termux on PinePhone](src/assets/mobile_trip_hero.png)
+|  [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo)  [deadlight.boo](https://deadlight.boo)  |  [![zero-JS](https://thatch-dt.deadlight.boo/favicon.ico)](https://thatch-dt.deadlight.boo) [zero-JS instance](https://thatch-dt.deadlight.boo)  |  [![Mesh](https://meshtastic.deadlight.boo/favicon.ico)](https://meshtastic.deadlight.boo) [LoRa gateway blog](https://meshtastic.deadlight.boo)  |
+|----------------------------------------|--------------------------------------|--------------------------|
+
+![Landing Page Tri-Instance View](src/assets/landing.gif)
 
 ---
 
@@ -41,9 +44,8 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 
 ### Tested On
 
-- PinePhone (Mobian/PostmarketOS)
-- Raspberry Pi Zero 2W / 3B+ / 4
-- Android (Termux)
+- Raspberry Pi 4
+- Android (Termux) IN PROGRESS
 - Standard x86_64 Linux/macOS/Windows
 
 ### Proof Points
@@ -539,4 +541,4 @@ See [docs/LICENSE](docs/LICENSE) for details.
 
 ---
 
-EOF
+[EOF](#live-demos)
