@@ -122,8 +122,8 @@ const baseStyles = `
 
   h1, h2, h3, h4, h5, h6 { margin-top: 0; color: var(--text-primary); }
 
-  /* ===== BUTTONS ===== */
-  button, .button, .edit-button, .delete-button, .delete-link button, [type="submit"] {
+    /* ===== BUTTON SYSTEM ===== */
+    button, .button, .edit-button, .delete-button, .delete-link button, [type="submit"] {
     padding: 0.45rem 0.9rem !important;
     border-radius: var(--border-radius) !important;
     font-size: 0.875rem;
@@ -134,15 +134,46 @@ const baseStyles = `
     transition: var(--transition);
   }
 
-  .edit-button, .button { background: var(--button-secondary-bg); color: var(--button-secondary-text); }
-  .edit-button:hover, .button:hover { background: var(--button-secondary-hover); }
+  /* Primary buttons (submit, post, save) */
+  [type="submit"], .button-primary {
+    background: var(--button-primary-bg);
+    color: var(--button-primary-text);
+    border: 1px solid transparent;
+  }
 
+  [type="submit"]:hover, .button-primary:hover {
+    background: var(--button-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--button-primary-shadow);
+  }
+
+  /* Secondary buttons (edit, cancel, etc.) */
+  .edit-button, .button {
+    background: var(--button-secondary-bg);
+    color: var(--button-secondary-text);
+    border: 1px solid var(--button-secondary-border);
+  }
+
+  .edit-button:hover, .button:hover {
+    background: var(--button-secondary-hover);
+    border-color: var(--button-secondary-border-hover);
+    transform: translateY(-1px);
+  }
+
+  /* Danger buttons (delete) */
   .delete-button, .delete-link button {
     background: var(--button-danger-bg) !important;
     color: var(--button-danger-text) !important;
-    border: 1px solid var(--button-danger-text) !important;
+    border: 1px solid var(--button-danger-border) !important;
   }
-  .delete-button:hover, .delete-link button:hover { background: var(--button-danger-hover); }
+
+  .delete-button:hover, .delete-link button:hover {
+    background: var(--button-danger-hover) !important;
+    border-color: var(--button-danger-border-hover) !important;
+    transform: translateY(-1px);
+  }
+
+  /* ... rest of baseStyles ... */
 
   /* Forms */
   input, textarea, select {
@@ -263,9 +294,81 @@ const baseStyles = `
     border-radius: var(--border-radius);
   }
 
+  /* For single post view - minimal voting */
+  .post-voting-single {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin: 1.5rem 0;
+    padding: 0;  /* Remove padding */
+    background: transparent;  /* No background */
+    border: none;  /* No border */
+  }
+
   .post-voting-single form {
     margin: 0;
     display: inline-block;
+  }
+
+  .post-voting-single .vote-button {
+    background: transparent;
+    border: none;  /* No border for cleaner look */
+    color: var(--text-secondary);
+    padding: 4px 8px !important;  /* Minimal padding */
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.4rem;  /* Slightly larger for single view */
+    line-height: 1;
+    transition: all 0.2s ease;
+    opacity: 0.6;  /* Subtle when not hovered */
+  }
+
+  .post-voting-single .vote-button:hover {
+    opacity: 1;
+    transform: scale(1.2);  /* Subtle grow effect */
+  }
+
+  /* Upvote specific - green on hover */
+  .post-voting-single .vote-button.upvote:hover {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+  }
+
+  /* Downvote specific - red on hover */
+  .post-voting-single .vote-button.downvote:hover {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+  }
+
+  /* Karma score in single view */
+  .post-voting-single .karma-score {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 30px;
+    text-align: center;
+  }
+
+  /* Remove border from list view karma button too for consistency */
+  .karma-button {
+    background: transparent;
+    border: none;  /* Remove border */
+    color: var(--text-secondary);
+    padding: 2px 6px !important;
+    margin: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+    opacity: 0.6;
+  }
+
+  .karma-button:hover {
+    opacity: 1;
+    color: #4ade80;
+    transform: scale(1.1);
   }
 
   .vote-button {
@@ -391,7 +494,6 @@ const adminStyles = `
   .action-buttons .button {
     padding: 0.7rem 1.3rem;
     background: var(--button-secondary-bg);
-    color: #fff;
     border-radius: var(--border-radius);
     font-size: 0.95rem;
     font-weight: 500;
@@ -402,13 +504,14 @@ const adminStyles = `
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    height: 180px;
-    padding: 20px 10px 30px;
+    height: 240px;  /* Increased from 180px */
+    padding: 20px 10px 40px;  /* More bottom padding for rotated labels */
     gap: 6px;
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: var(--border-radius);
     overflow: hidden;
+    position: relative;  /* For absolute positioned labels */
   }
 
   .simple-chart .chart-bar {
@@ -418,22 +521,23 @@ const adminStyles = `
     justify-content: flex-end;
     position: relative;
     min-width: 28px;
+    max-width: 80px;  /* Prevent bars from getting too wide */
   }
 
   .simple-chart .bar {
     width: 100%;
     height: var(--height, 0%);
     min-height: 4px;
-    background: #e91e63;
+    background: var(--link-color);  /* Use accent color instead of hardcoded pink */
     border-radius: 4px 4px 0 0;
     transition: all 0.4s ease;
-    box-shadow: 0 2px 6px rgba(233, 30, 99, 0.3);
+    box-shadow: 0 2px 6px var(--button-primary-shadow);  /* Match accent shadow */
   }
 
   .simple-chart .chart-bar:hover .bar {
-    background: #ff4081;
+    background: var(--link-hover);
     transform: scaleY(1.05);
-    box-shadow: 0 4px 12px rgba(255, 64, 129, 0.4);
+    box-shadow: 0 4px 12px var(--button-primary-shadow);
   }
 
   .simple-chart .value {
@@ -441,21 +545,35 @@ const adminStyles = `
     top: -26px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.8rem;
-    font-weight: bold;
+    font-size: 0.85rem;  /* Slightly larger */
+    font-weight: 600;  /* Slightly lighter */
     color: var(--text-primary);
-    opacity: 0.9;
+    opacity: 1;  /* Full opacity */
+    white-space: nowrap;
   }
 
   .simple-chart .label {
     position: absolute;
-    bottom: -26px;
+    bottom: -32px;  /* Adjust for more padding */
     left: 50%;
     transform: translateX(-50%) rotate(-45deg);
+    transform-origin: center;
     font-size: 0.75rem;
     color: var(--text-secondary);
     white-space: nowrap;
-    origin: center;
+  }
+
+  /* Responsive chart sizing */
+  @media (max-width: 768px) {
+    .simple-chart {
+      height: 200px;
+      padding: 15px 8px 50px;
+    }
+    
+    .simple-chart .label {
+      font-size: 0.7rem;
+      bottom: -36px;
+    }
   }
 
   /* Chart Section Wrapper */
@@ -632,27 +750,6 @@ const adminStyles = `
     font-size: 0.8rem;
     color: var(--text-secondary);
     opacity: 0.9;
-  }
-
-  /* Submit button */
-  .auth-container button,
-  .auth-container .button {
-    margin-top: 0.8rem;
-    padding: 0.95rem 1.6rem;
-    background: var(--button-secondary-bg);
-    color: white;
-    font-weight: 600;
-    font-size: 1.05rem;
-    border: none;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: var(--transition);
-  }
-
-  .auth-container button:hover,
-  .auth-container .button:hover {
-    background: var(--button-secondary-hover);
-    transform: translateY(-2px);
   }
 
   /* Error messages */
@@ -966,33 +1063,82 @@ const adminStyles = `
 const themes = {
   dark: `
     :root[data-theme="dark"] {
-      --bg-primary: #000; --bg-secondary: #222;
-      --text-primary: #fff; --text-secondary: #888;
-      --border-color: #444; --border-hover: #666;
-      --link-color: #8ba3c7; --link-hover: #adc3e7;
-      --nav-hover-bg: #333; --nav-hover-color: #fff;
+      --bg-primary: #000;
+      --bg-secondary: #222;
+      --text-primary: #fff;
+      --text-secondary: #888;
+      --border-color: #444;
+      --border-hover: #666;
+      --link-color: #8ba3c7;
+      --link-hover: #adc3e7;
+      --nav-hover-bg: #333;
+      --nav-hover-color: #fff;
 
-      --button-secondary-bg: #444; --button-secondary-text: #fff; --button-secondary-hover: #666;
-      --button-danger-bg: #440000; --button-danger-text: #ff6b6b; --button-danger-hover: #660000;
+      /* Primary buttons - use accent color */
+      --button-primary-bg: var(--link-color);
+      --button-primary-text: #fff;
+      --button-primary-hover: var(--link-hover);
+      --button-primary-shadow: rgba(139, 163, 199, 0.3);
 
-      --input-bg: #121212; --input-border: #333;
-      --card-bg: #1a1a1a; --card-border: #333;
+      /* Secondary buttons - use analogous color or muted accent */
+      --button-secondary-bg: rgba(139, 163, 199, 0.15);
+      --button-secondary-text: var(--link-color);
+      --button-secondary-border: rgba(139, 163, 199, 0.3);
+      --button-secondary-hover: rgba(139, 163, 199, 0.25);
+      --button-secondary-border-hover: var(--link-color);
+
+      /* Danger buttons */
+      --button-danger-bg: #440000;
+      --button-danger-text: #ff6b6b;
+      --button-danger-border: #880000;
+      --button-danger-hover: #660000;
+      --button-danger-border-hover: #ff6b6b;
+
+      --input-bg: #121212;
+      --input-border: #333;
+      --card-bg: #1a1a1a;
+      --card-border: #333;
       --code-bg: #1a1a1a;
     }
   `,
+  
   light: `
     :root[data-theme="light"] {
-      --bg-primary: #fff; --bg-secondary: #f5f5f5;
-      --text-primary: #333; --text-secondary: #666;
-      --border-color: #ddd; --border-hover: #999;
-      --link-color: #0066cc; --link-hover: #0052a3;
-      --nav-hover-bg: #f0f0f0; --nav-hover-color: #333;
+      --bg-primary: #fff;
+      --bg-secondary: #f5f5f5;
+      --text-primary: #333;
+      --text-secondary: #666;
+      --border-color: #ddd;
+      --border-hover: #999;
+      --link-color: #0066cc;
+      --link-hover: #0052a3;
+      --nav-hover-bg: #f0f0f0;
+      --nav-hover-color: #333;
 
-      --button-secondary-bg: #666; --button-secondary-text: #fff; --button-secondary-hover: #888;
-      --button-danger-bg: #f5f5f5; --button-danger-text: #dc3545; --button-danger-hover: #e8e8e8;
+      /* Primary buttons - use accent color */
+      --button-primary-bg: var(--link-color);
+      --button-primary-text: #fff;
+      --button-primary-hover: var(--link-hover);
+      --button-primary-shadow: rgba(0, 102, 204, 0.3);
 
-      --input-bg: #fff; --input-border: #ccc;
-      --card-bg: #f5f5f5; --card-border: #ddd;
+      /* Secondary buttons - lighter treatment in light mode */
+      --button-secondary-bg: rgba(0, 102, 204, 0.08);
+      --button-secondary-text: var(--link-color);
+      --button-secondary-border: rgba(0, 102, 204, 0.2);
+      --button-secondary-hover: rgba(0, 102, 204, 0.15);
+      --button-secondary-border-hover: var(--link-color);
+
+      /* Danger buttons */
+      --button-danger-bg: #fff5f5;
+      --button-danger-text: #dc3545;
+      --button-danger-border: #dc3545;
+      --button-danger-hover: #ffe5e7;
+      --button-danger-border-hover: #c82333;
+
+      --input-bg: #fff;
+      --input-border: #ccc;
+      --card-bg: #f5f5f5;
+      --card-border: #ddd;
       --code-bg: #f4f4f4;
     }
   `
@@ -1004,12 +1150,27 @@ const themes = {
 function applyAccent(css, accent) {
   if (!accent) return css;
   
-  const hover = lightenDarkenColor(accent, css.includes('dark') ? 40 : -40);
+  const palette = generateColorPalette(accent);
+  const isDark = css.includes('data-theme="dark"');
+  const hover = lightenDarkenColor(accent, isDark ? 40 : -40);
   
-  // Just handle the CSS variables, gradient is handled in the routes
+  // Create shadow color with transparency
+  const shadowColor = accent.replace('#', '');
+  const r = parseInt(shadowColor.substring(0, 2), 16);
+  const g = parseInt(shadowColor.substring(2, 4), 16);
+  const b = parseInt(shadowColor.substring(4, 6), 16);
+  const shadow = `rgba(${r}, ${g}, ${b}, 0.3)`;
+  
   return css
     .replace(/--link-color:[^;]+;/g, `--link-color: ${accent};`)
-    .replace(/--link-hover:[^;]+;/g, `--link-hover: ${hover};`);
+    .replace(/--link-hover:[^;]+;/g, `--link-hover: ${hover};`)
+    // Apply to primary buttons
+    .replace(/--button-primary-bg:[^;]+;/g, `--button-primary-bg: ${accent};`)
+    .replace(/--button-primary-hover:[^;]+;/g, `--button-primary-hover: ${hover};`)
+    .replace(/--button-primary-shadow:[^;]+;/g, `--button-primary-shadow: ${shadow};`)
+    // Apply to secondary buttons (lighter/desaturated)
+    .replace(/--button-secondary-text:[^;]+;/g, `--button-secondary-text: ${accent};`)
+    .replace(/--button-secondary-border-hover:[^;]+;/g, `--button-secondary-border-hover: ${accent};`);
 }
 
 // =============================
