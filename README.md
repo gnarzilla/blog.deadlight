@@ -98,44 +98,47 @@ npx wrangler deploy
 
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux)
 
-![Termux Install & Deploy](src/assets/termux_remote_deployment.png)
-
-Wrangler's local D1 emulator fails on ARM due to TCMalloc issues. Skip it entirely and bootstrap remotely:
+Wrangler's local D1 emulator fails on ARM due to TCMalloc issues. Skip it entirely and bootstrap remotely.
 
 ```bash
-# 1. Install prerequisites
-# Raspberry Pi OS / Debian / Ubuntu:
-sudo apt update && sudo apt install nodejs npm git jq openssl
+# 1. Install Termux + proot
+pkg update && pkg install proot-distro git jq openssl-tool
 
-# Android (Termux):
-pkg update && pkg install nodejs git jq openssl-tool
+# 2. Bootstrap Debian inside Termux
+proot-distro install debian
+proot-distro login debian
 
-# 2. Clone repo
+# 3. Install prerequisites inside Debian
+apt update && apt install nodejs npm git jq openssl -y
+
+# 4. Clone blog + lib
 git clone https://github.com/gnarzilla/blog.deadlight
-cd blog.deadlight
-npm install
-cd lib.deadlight && npm install && cd ..
+git clone https://github.com/gnarzilla/lib.deadlight
+cd blog.deadlight && npm install
+cd ../lib.deadlight && npm install && cd ../blog.deadlight
 
-# 3. Authenticate
+# 5. Authenticate with Cloudflare
 npx wrangler login
 
-# 4. Create & bootstrap remote database (skip local entirely)
-npx wrangler d1 create my-blog
-npx wrangler d1 execute my-blog --remote --file=migrations/20250911_schema.sql
+# 6. Create & bootstrap remote database
+npx wrangler d1 create mobile-deadlight
+npx wrangler d1 execute mobile-deadlight --remote --file=migrations/20250911_schema.sql
 
-# 5. Create admin user (remote-only)
-./scripts/gen-admin/seed-dev.sh -v -r
+# 7. Seed admin user (remote-only)
+./scripts/gen-admin/seed-termux.sh
 
-# 6. Set secrets
+# 8. Set secrets
 openssl rand -base64 32 | npx wrangler secret put JWT_SECRET
-echo "https://your-domain.tld" | npx wrangler secret put SITE_URL
+echo "https://mobile.deadlight.boo" | npx wrangler secret put SITE_URL
 
-# 7. Fix assets path in wrangler.toml if needed
-# Change: directory = "src/static" → directory = "src/assets"
-
-# 8. Deploy from your phone
+# 9. Deploy
 npx wrangler deploy
+
+
 ```
+
+![Termux Install & Deploy](src/assets/termux_remote_deployment.png)
+
 
 ---
 
