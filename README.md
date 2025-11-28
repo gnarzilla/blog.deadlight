@@ -40,12 +40,13 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
 - **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
 - **[meshtastic.deadlight.boo](https://meshtastic.deadlight.boo)** – Blog published over LoRa mesh
+- **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
 - **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
 
 ### Tested On
 
 - Raspberry Pi 4
-- Android (Termux) IN PROGRESS
+- Android (Termux)
 - Standard x86_64 Linux/macOS/Windows
 
 ### Proof Points
@@ -96,6 +97,8 @@ npx wrangler deploy
 **Your blog is now global, costs pennies, and survives apocalypse-level connectivity.**
 
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux)
+
+![Termux Install & Deploy](src/assets/termux_remote_deployment.png)
 
 Wrangler's local D1 emulator fails on ARM due to TCMalloc issues. Skip it entirely and bootstrap remotely:
 
@@ -542,3 +545,6 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
+
+
