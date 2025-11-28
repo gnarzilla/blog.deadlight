@@ -29,9 +29,7 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 **Deadlight isn't trying to be the coolest blog platform.**  
 **It's trying to be the last one that still works when everything else is on fire.**
 
----
-
-![termux deployment](src/assets/termux_deploy.gif)
+![termux deployment](src/assets/termux-deploy.gif)
 
 ## It actually works
 
@@ -550,6 +548,8 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
+
 
 
 
