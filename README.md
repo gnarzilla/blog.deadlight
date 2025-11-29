@@ -193,22 +193,8 @@ deadlight/
 4. **Protocol-agnostic administration** – Manage via browser, curl, or SMTP. Your choice.
 5. **Zero external dependencies at runtime** – No CDN requests, no tracking pixels, no font servers.
 
-### Security
-
-All responses include hardened headers:
-- `X-Content-Type-Options: nosniff`
-- `X-Frame-Options: DENY`
-- `X-XSS-Protection: 1; mode=block`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- Configurable Content-Security-Policy
-
-All mutable actions protected by:
-- CSRF tokens (per-session + per-request)
-- Rate limiting (configurable per endpoint)
-- Input validation and sanitization
-- Role-based authorization checks
-
 ---
+
 
 ## The Deadlight Ecosystem
 
