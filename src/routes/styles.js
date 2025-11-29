@@ -173,8 +173,6 @@ const baseStyles = `
     transform: translateY(-1px);
   }
 
-  /* ... rest of baseStyles ... */
-
   /* Forms */
   input, textarea, select {
     width: 100%; padding: 10px; margin: 8px 0; background: var(--input-bg); border: 1px solid var(--input-border);
@@ -218,81 +216,6 @@ const baseStyles = `
     font-size: 0.9rem;
     cursor: pointer;
     min-width: 120px;
-  }
-
-  /* Karma button and score in post meta */
-  .post-meta form {
-    display: inline-block;
-    margin: 0;
-    vertical-align: middle;
-  }
-
-  .karma-button {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    padding: 2px 8px !important;
-    margin: 0;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1.1rem;
-    line-height: 1;
-    transition: all 0.2s ease;
-    vertical-align: middle;
-  }
-
-  .karma-button:hover {
-    background: var(--link-color);
-    color: white;
-    border-color: var(--link-color);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  }
-
-  .karma-button:active {
-    transform: translateY(0);
-    box-shadow: none;
-    font-weight: bold;
-  }
-
-  /* Karma score */
-  .karma-score {
-    display: inline-block;
-    margin-left: 6px;
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.95rem;
-    vertical-align: middle;
-  }
-
-  /* Visual separator between karma and other meta */
-  .post-meta > span:has(.karma-button) {
-    position: relative;
-    padding-right: 1rem;
-    margin-right: 0.5rem;
-  }
-
-  .post-meta > span:has(.karma-button)::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 16px;
-    width: 1px;
-    background: var(--border-color);
-  }
-
-  /* For single post view with both up/down votes */
-  .post-voting-single {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin: 1rem 0;
-    padding: 0.5rem;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
   }
 
   /* For single post view - minimal voting */
