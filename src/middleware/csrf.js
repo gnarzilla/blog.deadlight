@@ -45,14 +45,34 @@ export async function csrfValidateMiddleware(request, env, ctx, next) {
     return next();
   }
   
-  const valid = await CSRFProtection.validate(request, env);
+  // Get token from cookie
+  const cookieToken = CSRFProtection.getTokenFromCookie(request);
+  
+  // Get token from form
+  let submittedToken;
+  const contentType = request.headers.get('Content-Type') || '';
+  
+  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+    const formData = await request.clone().formData();
+    submittedToken = formData.get('csrf_token');
+  } else if (contentType.includes('application/json')) {
+    const body = await request.clone().json();
+    submittedToken = body.csrf_token;
+  } else {
+    submittedToken = request.headers.get('X-CSRF-Token');
+  }
+  
+  
+  const valid = cookieToken && submittedToken && cookieToken === submittedToken;
   
   if (!valid) {
+    console.log('CSRF validation failed');
     return new Response('Invalid CSRF token. Please refresh and try again.', { 
       status: 403,
       headers: { 'Content-Type': 'text/plain' }
     });
   }
   
+  console.log('CSRF validation passed');
   return next();
 }

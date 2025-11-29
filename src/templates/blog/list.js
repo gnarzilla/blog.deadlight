@@ -13,8 +13,7 @@ const pagination = new Pagination({
   baseUrl: '/'
 });
 
-export function renderPostList(posts = [], user = null, paginationData = null, config = null) {
-  // Add sort controls HTML
+export function renderPostList(posts = [], user = null, paginationData = null, config = null, csrfToken = null) {
   const currentSort = paginationData?.currentSort || 'newest';
   const sortControls = `
     <div class="sort-controls">
@@ -28,10 +27,8 @@ export function renderPostList(posts = [], user = null, paginationData = null, c
     </div>
   `;
 
-  // Use existing render method with proper options
-  const postsHtml = postList.render(posts, { user, baseUrl: '' });
+  const postsHtml = postList.render(posts, { user, baseUrl: '', csrfToken });
   
-  // Update pagination to preserve sort parameter
   const paginationHtml = pagination.render({
     ...paginationData,
     extraParams: `sort=${currentSort}`

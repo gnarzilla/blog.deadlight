@@ -48,7 +48,7 @@ export function renderAnalyticsTemplate({ summary = {}, topPaths = [], hourlyTra
             <div class="simple-chart">
               ${hourlyTraffic.map(hour => `
                 <div class="chart-bar">
-                  <div class="bar" style="--height: ${(data.requests / maxRequests) * 100}%"></div>
+                  <div class="bar" style="--height: ${(hour.requests / maxRequests) * 100}%"></div>
                   <div class="value">${hour.requests || 0}</div>
                   <div class="label">${hour.hour}:00</div>
                 </div>

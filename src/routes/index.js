@@ -37,10 +37,7 @@ export class Router {
   async handle(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
-    
-    console.log('Handling request for path:', pathname);
-    console.log('Available routes:', Array.from(this.routes.keys()));
-
+  
     // Find matching route
     let matchedRoute = null;
     let routeMiddleware = [];
@@ -66,6 +63,7 @@ export class Router {
     // Enhance request with route info
     request.params = params;
     request.query = Object.fromEntries(url.searchParams);
+    ctx.params = params;
 
     // Combine global and route-specific middleware
     const allMiddleware = [...this.middlewares, ...routeMiddleware];

@@ -429,7 +429,7 @@ export const apiRoutes = {
         return new Response('Vote failed', { status: 500 });
       }
     }
-}
+  }
 
 
 };

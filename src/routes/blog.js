@@ -3,6 +3,7 @@ import { renderSinglePost } from '../templates/blog/single.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { FederationService } from '../services/federation.js';
 import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
+import { getAnalyticsSummary, getHourlyTraffic, getTopPaths, getCountryStats } from '../middleware/analytics.js';
 
 export const blogRoutes = {
   '/': {
@@ -238,115 +239,32 @@ export const blogRoutes = {
     }
   },
 
-  
+
   '/analytics': {
     GET: async (request, env, ctx) => {
-      const config = await env.services.config.getConfig();
-      const timeRange = request.query.range || '7d'; // Get from query param
-
-      let timeClause;
-      switch(timeRange) {
-        case '24h':
-          timeClause = "datetime('now', '-24 hours')";
-          break;
-        case '7d':
-          timeClause = "datetime('now', '-7 days')";
-          break;
-        case '30d':
-          timeClause = "datetime('now', '-30 days')";
-          break;
-        default:
-          timeClause = "datetime('now', '-7 days')";
-      }
-
-      // Then use in your queries:
-      // WHERE timestamp >= ${timeClause}
-      
       try {
-        // Get analytics summary (last 7 days)
-        const summary = await env.DB.prepare(`
-          SELECT 
-            COUNT(*) as total_requests,
-            COUNT(DISTINCT ip) as unique_visitors,
-            AVG(duration) as avg_duration,
-            MAX(duration) as max_duration,
-            SUM(CASE WHEN status >= 400 THEN 1 ELSE 0 END) as error_count
-          FROM analytics
-          WHERE timestamp >= datetime('now', '-7 days')
-        `).first();
+        const config = await env.services.config.getConfig();
+        const url = new URL(request.url);
+        const timeRange = url.searchParams.get('range') || '7d';
         
-        // Get hourly traffic (last 24 hours)
-        const hourlyTraffic = await env.DB.prepare(`
-          SELECT 
-            hour_bucket as hour,
-            COUNT(*) as requests,
-            COUNT(DISTINCT ip) as unique_visitors
-          FROM analytics
-          WHERE timestamp >= datetime('now', '-24 hours')
-          GROUP BY hour_bucket
-          ORDER BY hour_bucket
-        `).all();
+        // Convert timeRange to days
+        const days = timeRange === '24h' ? 1 : timeRange === '30d' ? 30 : 7;
         
-        // Get top paths (last 7 days)
-        const topPaths = await env.DB.prepare(`
-          SELECT 
-            path,
-            COUNT(*) as hit_count,
-            AVG(duration) as avg_duration,
-            COUNT(DISTINCT ip) as unique_visitors
-          FROM analytics
-          WHERE timestamp >= datetime('now', '-7 days')
-          GROUP BY path
-          ORDER BY hit_count DESC
-          LIMIT 10
-        `).all();
-        
-        // Get country stats (last 7 days)
-        const countryStats = await env.DB.prepare(`
-          SELECT 
-            country,
-            COUNT(*) as requests,
-            COUNT(DISTINCT ip) as unique_visitors
-          FROM analytics
-          WHERE timestamp >= datetime('now', '-7 days') 
-            AND country IS NOT NULL 
-            AND country != 'unknown'
-          GROUP BY country
-          ORDER BY requests DESC
-          LIMIT 20
-        `).all();
-        
-        // Ensure we have arrays even if queries return no results
-        const analyticsData = {
-          summary: summary || { 
-            total_requests: 0, 
-            unique_visitors: 0, 
-            avg_duration: 0, 
-            error_count: 0 
-          },
-          topPaths: topPaths?.results || [],
-          hourlyTraffic: hourlyTraffic?.results || [],
-          countryStats: countryStats?.results || []
-        };
-        
-        // Fill in missing hours for the chart
-        const hoursData = new Map();
-        for (let i = 0; i < 24; i++) {
-          hoursData.set(i, { hour: i, requests: 0, unique_visitors: 0 });
-        }
-        
-        // Update with actual data
-        analyticsData.hourlyTraffic.forEach(hour => {
-          hoursData.set(hour.hour, hour);
-        });
-        
-        // Convert back to sorted array
-        analyticsData.hourlyTraffic = Array.from(hoursData.values()).sort((a, b) => a.hour - b.hour);
+        // Use the middleware helper functions
+        const [summary, hourlyTraffic, topPaths, countryStats] = await Promise.all([
+          getAnalyticsSummary(env, days),
+          getHourlyTraffic(env, days),
+          getTopPaths(env, days, 10),
+          getCountryStats(env, days)
+        ]);
         
         return new Response(
           renderAnalyticsTemplate({
-            ...analyticsData,
-            user: request.user,
+            summary,
+            topPaths,
+            hourlyTraffic,
+            countryStats,
+            user: await checkAuth(request, env),
             config
           }),
           { headers: { 'Content-Type': 'text/html' } }
@@ -362,7 +280,7 @@ export const blogRoutes = {
             topPaths: [],
             hourlyTraffic: [],
             countryStats: [],
-            user: request.user,
+            user: await checkAuth(request, env),
             config
           }),
           { headers: { 'Content-Type': 'text/html' } }

@@ -1490,25 +1490,6 @@ export const adminRoutes = {
   '/admin/analytics': {
     GET: async (request, env, ctx) => {
       const config = await env.services.config.getConfig();
-      const timeRange = request.query.range || '7d'; // Get from query param
-
-      let timeClause;
-      switch(timeRange) {
-        case '24h':
-          timeClause = "datetime('now', '-24 hours')";
-          break;
-        case '7d':
-          timeClause = "datetime('now', '-7 days')";
-          break;
-        case '30d':
-          timeClause = "datetime('now', '-30 days')";
-          break;
-        default:
-          timeClause = "datetime('now', '-7 days')";
-      }
-
-      // Then use in your queries:
-      // WHERE timestamp >= ${timeClause}
       
       try {
         // Get analytics summary (last 7 days)
@@ -1520,17 +1501,17 @@ export const adminRoutes = {
             MAX(duration) as max_duration,
             SUM(CASE WHEN status >= 400 THEN 1 ELSE 0 END) as error_count
           FROM analytics
-          WHERE timestamp >= datetime('now', '-7 days')
+          WHERE date(timestamp) >= date('now', '-7 days')
         `).first();
         
-        // Get hourly traffic (last 24 hours)
+        // Get hourly traffic (last 24 hours) - use hour_bucket
         const hourlyTraffic = await env.DB.prepare(`
           SELECT 
             hour_bucket as hour,
             COUNT(*) as requests,
             COUNT(DISTINCT ip) as unique_visitors
           FROM analytics
-          WHERE timestamp >= datetime('now', '-24 hours')
+          WHERE date(timestamp) >= date('now', '-1 day')
           GROUP BY hour_bucket
           ORDER BY hour_bucket
         `).all();
@@ -1543,7 +1524,7 @@ export const adminRoutes = {
             AVG(duration) as avg_duration,
             COUNT(DISTINCT ip) as unique_visitors
           FROM analytics
-          WHERE timestamp >= datetime('now', '-7 days')
+          WHERE date(timestamp) >= date('now', '-7 days')
           GROUP BY path
           ORDER BY hit_count DESC
           LIMIT 10
@@ -1556,7 +1537,7 @@ export const adminRoutes = {
             COUNT(*) as requests,
             COUNT(DISTINCT ip) as unique_visitors
           FROM analytics
-          WHERE timestamp >= datetime('now', '-7 days') 
+          WHERE date(timestamp) >= date('now', '-7 days')
             AND country IS NOT NULL 
             AND country != 'unknown'
           GROUP BY country
@@ -1577,7 +1558,7 @@ export const adminRoutes = {
           countryStats: countryStats?.results || []
         };
         
-        // Fill in missing hours for the chart
+        // Fill in missing hours for the chart (0-23)
         const hoursData = new Map();
         for (let i = 0; i < 24; i++) {
           hoursData.set(i, { hour: i, requests: 0, unique_visitors: 0 });

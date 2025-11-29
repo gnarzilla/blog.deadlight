@@ -3,40 +3,44 @@ import { parseCookies } from '../utils/utils.js';
 import { verifyJWT } from '../../../lib.deadlight/core/src/auth/jwt.js';
 
 export async function checkAuth(request, env) {
-  // Check API authentication first (for API routes)
+  // 1. Try cookie/header JWT first (for user sessions)
+  const cookies = parseCookies(request);
+  const token = cookies.token || getTokenFromHeader(request);
+  
+  if (token) {
+    if (env.USE_PROXY_AUTH) {
+      try {
+        const verification = await env.services.proxy.verify(token);
+        if (verification.valid) {
+          return {
+            id: verification.userId,
+            username: verification.username,
+            userId: verification.userId,
+            isAdmin: verification.isAdmin || false,
+            role: verification.role || 'user' 
+          };
+        }
+      } catch (error) {
+        console.error('Proxy auth failed, falling back to local:', error);
+      }
+    }
+
+    // Fallback to local JWT
+    try {
+      const user = await verifyJWT(token, env.JWT_SECRET);
+      return user;
+    } catch (error) {
+      console.error('JWT verification failed:', error);
+      // Don't return yet - fall through to API key check
+    }
+  }
+
+  // 2. For API routes without cookies, try API key auth
   if (request.url.includes('/api/')) {
     return checkApiAuth(request, env);
   }
   
-  const cookies = parseCookies(request);
-  const token = cookies.token || getTokenFromHeader(request);
-  
-  if (!token) return null;
-
-  if (env.USE_PROXY_AUTH) {
-    try {
-     
-      const verification = await env.services.proxy.verify(token);
-      if (verification.valid) {
-        return {
-          id: verification.userId,
-          username: verification.username,
-          userId: verification.userId,
-          isAdmin: verification.isAdmin || false
-        };
-      }
-    } catch (error) {
-      console.error('Proxy auth failed, falling back to local:', error);
-    }
-  }
-
-  // Fallback to local JWT
-  try {
-    const user = await verifyJWT(token, env.JWT_SECRET);
-    return user;
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 async function checkApiAuth(request, env) {
@@ -73,13 +77,6 @@ export async function authMiddleware(request, env, ctx, next) {
   console.log('Cookies received:', cookies);
   
   const user = await checkAuth(request, env);
-  
-  console.log('authMiddleware debug:', {
-    hasUser: !!user,
-    username: user?.username,
-    role: user?.role,
-    isAdmin: user?.isAdmin
-  });
   
   if (!user) {
     if (request.url.includes('/api/')) {
@@ -126,7 +123,7 @@ export async function apiAuthMiddleware(request, env, ctx, next) {
   }
   
   request.user = { id: 'api', username: 'api', isAdmin: true };
-  ctx.user = apiUser
+  ctx.user = request.user;
   return next();
 }
 
