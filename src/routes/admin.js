@@ -25,7 +25,7 @@ import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
 export const adminRoutes = {
   '/admin': {
     GET: async (request, env, ctx) => {
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
@@ -137,9 +137,9 @@ export const adminRoutes = {
   },
 
   '/admin/edit/:id': {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       const postModel = new PostModel(env.DB);
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
@@ -165,10 +165,10 @@ export const adminRoutes = {
     },
 
     // Combined POST handler for /admin/edit/:id
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const postModel = new PostModel(env.DB);
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
@@ -233,8 +233,8 @@ export const adminRoutes = {
   },
 
   '/admin/settings': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
@@ -253,8 +253,8 @@ export const adminRoutes = {
       }
     },
 
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
+    POST: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
@@ -290,8 +290,8 @@ export const adminRoutes = {
 
   // Add Post Handler
   '/admin/add': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
@@ -303,10 +303,10 @@ export const adminRoutes = {
       });
     },
 
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const postModel = new PostModel(env.DB);
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
@@ -365,26 +365,41 @@ export const adminRoutes = {
   },
 
   '/admin/delete/:id': {
-    POST: async (request, env) => {
+    GET: async (request, env, ctx) => {
+      const postModel = new PostModel(env.DB);
+      const postId = request.params?.id || ctx.params?.id;
+      
+      const post = await postModel.getById(postId);
+      if (!post) {
+        return new Response('Post not found', { status: 404 });
+      }
+      
+      const config = await env.services.config.getConfig();
+      const csrfToken = ctx.csrfToken; 
+      
+      return new Response(
+        renderDeleteConfirmation(post, ctx.user, config, csrfToken), 
+        { headers: { 'Content-Type': 'text/html' } }
+      );
+    },
+    
+    POST: async (request, env, ctx) => { 
       const postModel = new PostModel(env.DB);
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
       
-      if (!user) {
-        return Response.redirect(`${new URL(request.url).origin}/login`);
-      }
+      const user = ctx.user;
 
       try {
-        const postId = request.params.id;
+        const postId = request.params?.id || ctx.params?.id;
         
         // Delete post using model
         await postModel.delete(postId);
 
-        logger.info('Post deleted successfully', { postId });
+        logger.info('Post deleted successfully', { postId, userId: user.id });
 
-        return Response.redirect(`${new URL(request.url).origin}/`);
+        return Response.redirect(`${new URL(request.url).origin}/`, 303); 
       } catch (error) {
-        logger.error('Error deleting post', { postId: request.params.id, error: error.message });
+        logger.error('Error deleting post', { postId: ctx.params.id, error: error.message });
         
         if (error instanceof DatabaseError && error.code === 'NOT_FOUND') {
           return new Response('Post not found', { status: 404 });
@@ -396,8 +411,8 @@ export const adminRoutes = {
   },
 
   '/admin/comments/:postId': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const postId = request.params.postId;
       const fedSvc = new FederationService(env);
@@ -411,8 +426,8 @@ export const adminRoutes = {
   },
 
   '/admin/add-comment/:postId': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const postId = request.params.postId;
       const { renderAddCommentForm } = await import('../templates/admin/comments.js');
@@ -420,8 +435,8 @@ export const adminRoutes = {
         headers: { 'Content-Type': 'text/html' }
       });
     },
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
+    POST: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const postId = request.params.postId;
 
@@ -474,8 +489,8 @@ export const adminRoutes = {
   },
 
   '/admin/comments/reply/:id': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const commentId = request.params.id;
       const comment = await env.DB.prepare(`
@@ -490,8 +505,8 @@ export const adminRoutes = {
         headers: { 'Content-Type': 'text/html' }
       });
     },
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
+    POST: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const commentId = request.params.id;
 
@@ -555,8 +570,8 @@ export const adminRoutes = {
   },
 
   '/admin/comments/delete/:id': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const commentId = request.params.id;
 
@@ -580,9 +595,9 @@ export const adminRoutes = {
   },
 
   '/admin/users': {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       const userModel = new UserModel(env.DB);
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
@@ -610,8 +625,8 @@ export const adminRoutes = {
   },
 
   '/admin/users/add': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
@@ -624,10 +639,10 @@ export const adminRoutes = {
       });
     },
 
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const userModel = new UserModel(env.DB);
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
@@ -662,10 +677,10 @@ export const adminRoutes = {
   },
 
   '/admin/users/delete/:id': {
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const userModel = new UserModel(env.DB);
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
@@ -694,8 +709,8 @@ export const adminRoutes = {
 
   // Proxy Dashboard
   '/admin/proxy': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
@@ -705,64 +720,64 @@ export const adminRoutes = {
   },
 
   '/admin/proxy/discover-domain': {
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
+    POST: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
 
-      return await handleProxyTests.discoverDomain(request, env);
+      return await handleProxyTests.discoverDomain(request, env, ctx);
     }
   },
 
   // Proxy API Test Endpoints
   '/admin/proxy/test-blog-api': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
 
-      return await handleProxyTests.testBlogApi(request, env);
+      return await handleProxyTests.testBlogApi(request, env, ctx);
     }
   },
 
   '/admin/proxy/test-email-api': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
 
-      return await handleProxyTests.testEmailApi(request, env);
+      return await handleProxyTests.testEmailApi(request, env, ctx);
     }
   },
 
   '/admin/proxy/test-federation': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
 
-      return await handleProxyTests.testFederation(request, env);
+      return await handleProxyTests.testFederation(request, env, ctx);
     }
   },
 
   '/admin/proxy/send-test-email': {
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
+    POST: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
 
-      return await handleProxyTests.sendTestEmail(request, env);
+      return await handleProxyTests.sendTestEmail(request, env, ctx);
     }
   },
   
   '/admin/process-queue': {
-      POST: async (request, env) => {
-          const user = await checkAuth(request, env);
+      POST: async (request, env, ctx) => {
+          const user = await checkAuth(request, env, ctx);
           if (!user) {
               return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
           }
@@ -818,7 +833,7 @@ export const adminRoutes = {
   },
 
   '/federation/queue' : {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       const url = new URL(request.url);
       const limit = parseInt(url.searchParams.get('limit') || '50');
       const since = url.searchParams.get('since'); // ISO8601 string
@@ -875,9 +890,9 @@ export const adminRoutes = {
 
   '/admin/federate-post/(?<id>[^/]+)': {
   //'/admin/federate-post/:id': {
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       // Keep just the POST implementation
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       if (!user) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       
       const postId = request.params.id;
@@ -905,8 +920,8 @@ export const adminRoutes = {
 
 
   '/admin/inject-emails': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user || user.role !== 'admin') {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
@@ -928,9 +943,9 @@ export const adminRoutes = {
       });
     },
 
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       if (!user || user.role !== 'admin') {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }
@@ -1018,9 +1033,9 @@ export const adminRoutes = {
   },
 
   '/admin/fetch-emails': {
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       if (!user || user.role !== 'admin') {
         // Also allow API key authentication for automation
         const apiKey = request.headers.get('X-API-Key');
@@ -1089,8 +1104,8 @@ export const adminRoutes = {
   },
 
   '/admin/notifications': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const notifications = await env.DB.prepare(`
         SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50
@@ -1130,8 +1145,8 @@ export const adminRoutes = {
   },
 
   '/admin/moderation' : {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         const origin = new URL(request.url).origin;
         return Response.redirect(`${origin}/login`, 302);
@@ -1197,9 +1212,9 @@ export const adminRoutes = {
   },
 
   '/admin/pending-replies': {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       const apiKey = request.headers.get('X-API-Key');
       const expectedKey = env.X_API_KEY || 'YOUR_API_KEY';
       
@@ -1250,9 +1265,9 @@ export const adminRoutes = {
       }
     },
 
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const logger = new Logger({ context: 'admin' });
-      const user = await checkAuth(request, env);
+      const user = await checkAuth(request, env, ctx);
       const apiKey = request.headers.get('X-API-Key');
       const expectedKey = env.X_API_KEY || 'YOUR_API_KEY';
       
@@ -1315,19 +1330,19 @@ export const adminRoutes = {
   },
 
   '/admin/proxy/status-stream': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
 
-      return await handleProxyTests.statusStream(request, env);
+      return await handleProxyTests.statusStream(request, env, ctx);
     }
   },
 
   '/admin/proxy/status': {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
@@ -1436,8 +1451,8 @@ export const adminRoutes = {
   },
 
   '/admin/federation' : {
-    GET: async (request, env) => {
-      const user = await checkAuth(request, env);
+    GET: async (request, env, ctx) => {
+      const user = await checkAuth(request, env, ctx);
       if (!user) {
         return Response.redirect(`${new URL(request.url).origin}/login`);
       }

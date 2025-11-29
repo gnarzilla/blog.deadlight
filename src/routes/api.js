@@ -394,20 +394,13 @@ export const apiRoutes = {
   },
 
   '/api/posts/:id/upvote': {
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
+    POST: async (request, env, ctx) => {
+      //  Auth middleware guarantees ctx.user exists
+      //  Rate limit middleware already checked
+      //  CSRF middleware already validated
       
-      // If not authenticated, redirect to auth prompt
-      if (!user) {
-        const origin = new URL(request.url).origin;
-        const returnUrl = request.headers.get('Referer') || '/';
-        return Response.redirect(
-          `${origin}/auth/prompt?return=${encodeURIComponent(returnUrl)}&action=vote`, 
-          302
-        );
-      }
-      
-      const postId = request.params.id;
+      const user = ctx.user;
+      const postId = ctx.params.id;
       const postModel = new PostModel(env.DB);
       
       try {
@@ -416,26 +409,15 @@ export const apiRoutes = {
         return Response.redirect(referer, 302);
       } catch (error) {
         console.error('Upvote error:', error);
-        const referer = request.headers.get('Referer') || '/';
-        return Response.redirect(referer, 302);
+        return new Response('Vote failed', { status: 500 });
       }
     }
   },
 
   '/api/posts/:id/downvote': {
-    POST: async (request, env) => {
-      const user = await checkAuth(request, env);
-      
-      if (!user) {
-        const origin = new URL(request.url).origin;
-        const returnUrl = request.headers.get('Referer') || '/';
-        return Response.redirect(
-          `${origin}/auth/prompt?return=${encodeURIComponent(returnUrl)}&action=vote`, 
-          302
-        );
-      }
-      
-      const postId = request.params.id;
+    POST: async (request, env, ctx) => {
+      const user = ctx.user;
+      const postId = ctx.params.id;
       const postModel = new PostModel(env.DB);
       
       try {
@@ -444,11 +426,10 @@ export const apiRoutes = {
         return Response.redirect(referer, 302);
       } catch (error) {
         console.error('Downvote error:', error);
-        const referer = request.headers.get('Referer') || '/';
-        return Response.redirect(referer, 302);
+        return new Response('Vote failed', { status: 500 });
       }
     }
-  }
+}
 
 
 };

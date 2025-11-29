@@ -11,62 +11,49 @@ import { renderTemplate } from '../templates/base.js'
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { renderRegistrationForm } from '../templates/auth/register.js';
 
+// src/routes/auth.js - SIMPLIFIED
+
 export const authRoutes = {
   '/login': {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       // Check if already logged in
       const existingToken = request.headers.get('Cookie')?.match(/token=([^;]+)/)?.[1];
       if (existingToken) {
         try {
-          // Verify with proxy if enabled
           if (env.USE_PROXY_AUTH) {
             const verification = await ProxyService.verify(existingToken);
             if (verification.valid) {
-              return new Response(null, {
-                status: 302,
-                headers: { 'Location': '/' }
-              });
+              return Response.redirect('/', 302);
             }
           } else {
-            // Fallback to local verification
             const user = await verifyJWT(existingToken, env.JWT_SECRET);
             if (user) {
-              return new Response(null, {
-                status: 302,
-                headers: { 'Location': '/' }
-              });
+              return Response.redirect('/', 302);
             }
           }
         } catch (error) {
           // Invalid token, continue to login page
         }
       }
-      
-      // Generate CSRF token as before
-      const csrfToken = CSRFProtection.generateToken();
-      
-      const headers = new Headers({
-        'Content-Type': 'text/html',
-        'Set-Cookie': `csrf_token=${csrfToken}; HttpOnly; SameSite=Strict; Path=/`
-      });
-      
+
       return new Response(renderLoginForm({ 
-        csrfToken,
+        csrfToken: ctx.csrfToken,  // ← From middleware
         useProxyAuth: env.USE_PROXY_AUTH 
-      }), { headers });
+      }), { 
+        headers: { 'Content-Type': 'text/html' }
+      });
     },
 
-    POST: async (request, env) => {
+    POST: async (request, env, ctx) => {
       const userModel = new UserModel(env.DB);
       const logger = new Logger({ context: 'auth' });
       
-      // Add debug logging BEFORE formData usage
       logger.info('Login POST request', { 
         useProxyAuth: env.USE_PROXY_AUTH,
         hasBody: request.body !== null
       });
       
-      // For proxy auth, rate limiting is handled by the proxy
+      // Rate limiting (if not using proxy)
       if (!env.USE_PROXY_AUTH) {
         const rateLimitResult = await authLimiter.isAllowed(request, env);
         if (!rateLimitResult.allowed) {
@@ -74,7 +61,8 @@ export const authRoutes = {
           logger.warn('Login rate limit exceeded');
           
           return new Response(renderLoginForm({ 
-            error: `Too many login attempts. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`
+            error: `Too many login attempts. Please try again in ${Math.ceil(retryAfter / 60)} minutes.`,
+            csrfToken: ctx.csrfToken  // ← From middleware
           }), {
             status: 429,
             headers: { 
@@ -86,43 +74,14 @@ export const authRoutes = {
       }
       
       try {
-        const formDataRequest = new Request(request.url, {
-          method: request.method,
-          headers: request.headers,
-          body: request.body
-        });
-
-        const formData = await formDataRequest.formData();
+        const formData = await request.formData();
         
-        // NOW we can log formData info
         logger.info('Login form data received', { 
           hasUsername: !!formData.get('username'),
           hasPassword: !!formData.get('password')
         });
         
-        // CSRF validation...
-        const cookieToken = CSRFProtection.getTokenFromCookie(request);
-        const formToken = formData.get('csrf_token');
-        
-        if (!cookieToken || !formToken || cookieToken !== formToken) {
-          logger.warn('Invalid CSRF token in login attempt');
-          
-          const newToken = CSRFProtection.generateToken();
-          const headers = new Headers({
-            'Content-Type': 'text/html',
-            'Set-Cookie': `csrf_token=${newToken}; HttpOnly; SameSite=Strict; Path=/`
-          });
-          
-          return new Response(renderLoginForm({ 
-            error: 'Session expired. Please try again.',
-            csrfToken: newToken
-          }), {
-            status: 400,
-            headers
-          });
-        }
-        
-        // Now fix the validation to work with your Validator class
+        // Validation
         const usernameValidation = Validator.username(formData.get('username'));
         const passwordValidation = Validator.password(formData.get('password'));
         
@@ -141,7 +100,7 @@ export const authRoutes = {
             error: 'Please correct the following errors',
             validationErrors: errors,
             username: Validator.escapeHTML(formData.get('username') || ''),
-            csrfToken: cookieToken
+            csrfToken: ctx.csrfToken  // ← From middleware
           }), {
             status: 400,
             headers: { 'Content-Type': 'text/html' }
@@ -162,14 +121,14 @@ export const authRoutes = {
           return new Response(renderLoginForm({
             error: 'Invalid username or password',
             username: Validator.escapeHTML(username),
-            csrfToken: cookieToken
+            csrfToken: ctx.csrfToken  // ← From middleware
           }), {
             status: 401,
             headers: { 'Content-Type': 'text/html' }
           });
         }
 
-        // SUCCESS - rest of your code...
+        // SUCCESS - clear rate limit
         const identifier = request.headers.get('CF-Connecting-IP') || 
                           request.headers.get('X-Forwarded-For') || 
                           'unknown';
@@ -191,35 +150,24 @@ export const authRoutes = {
         const url = new URL(request.url);
         const isSecure = url.protocol === 'https:';
         
-        const headers = new Headers({
-          'Location': user.role === 'admin' ? '/admin' : '/'
-        });
+        const headers = new Headers({ 'Location': user.role === 'admin' ? '/admin' : '/' });
         
         headers.append('Set-Cookie', `token=${token}; HttpOnly; ${isSecure ? 'Secure; ' : ''}SameSite=Strict; Path=/`);
-        headers.append('Set-Cookie', `csrf_token=; Path=/; Max-Age=0`);
+        headers.append('Set-Cookie', `csrf_token=; Path=/; Max-Age=0`);  // Clear CSRF after login
 
-        logger.info('Successful login', { 
-          userId: user.id, 
-          username: user.username
-        });
+        logger.info('Successful login', { userId: user.id, username: user.username });
 
         return new Response(null, { status: 303, headers });
         
       } catch (error) {
         logger.error('Login error', { error: error.message, stack: error.stack });
         
-        const newToken = CSRFProtection.generateToken();
-        const headers = new Headers({
-          'Content-Type': 'text/html',
-          'Set-Cookie': `csrf_token=${newToken}; HttpOnly; SameSite=Strict; Path=/`
-        });
-        
         return new Response(renderLoginForm({
           error: 'An error occurred. Please try again.',
-          csrfToken: newToken
+          csrfToken: ctx.csrfToken  // ← From middleware
         }), {
           status: 500,
-          headers
+          headers: { 'Content-Type': 'text/html' }
         });
       }
     }

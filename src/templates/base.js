@@ -1,6 +1,4 @@
 // src/templates/base.js
-import { siteConfig } from '../config.js';
-
 export function renderTemplate(title, bodyContent, user = null, config = null) {
   const siteTitle = config?.title || 'D E A D L I G H T';
   const pageTitle = title === 'home' ? siteTitle : `${title} | ${siteTitle}`;
@@ -41,8 +39,8 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
     `;
   }
 
-  const accentColor = config?.accent_color || '#8ba3c7';  // Add this line
-
+  const accentColor = config?.accent_color || '#8ba3c7';
+  
   return `
     <!DOCTYPE html>
     <html lang="en" data-theme="dark">

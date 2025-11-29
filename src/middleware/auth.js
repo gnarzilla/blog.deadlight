@@ -1,4 +1,4 @@
-// src/middleware/auth.js - Fixed import and added apiAuthMiddleware
+// src/middleware/auth.js
 import { parseCookies } from '../utils/utils.js';
 import { verifyJWT } from '../../../lib.deadlight/core/src/auth/jwt.js';
 
@@ -15,7 +15,7 @@ export async function checkAuth(request, env) {
 
   if (env.USE_PROXY_AUTH) {
     try {
-      // CORRECT: Use env.services.proxy
+     
       const verification = await env.services.proxy.verify(token);
       if (verification.valid) {
         return {
@@ -65,9 +65,21 @@ async function checkApiAuth(request, env) {
   return null;
 }
 
-// Updated middleware with ctx support
 export async function authMiddleware(request, env, ctx, next) {
+  console.log('authMiddleware CALLED for:', request.url);
+  
+  // Check if cookie exists
+  const cookies = request.headers.get('Cookie') || '';
+  console.log('Cookies received:', cookies);
+  
   const user = await checkAuth(request, env);
+  
+  console.log('authMiddleware debug:', {
+    hasUser: !!user,
+    username: user?.username,
+    role: user?.role,
+    isAdmin: user?.isAdmin
+  });
   
   if (!user) {
     if (request.url.includes('/api/')) {
@@ -80,13 +92,15 @@ export async function authMiddleware(request, env, ctx, next) {
   }
   
   request.user = user;
-  return next();
+  ctx.user = user;      
+  
+  return next();       
 }
-
 export async function optionalAuthMiddleware(request, env, ctx, next) {
   const user = await checkAuth(request, env);
   if (user) {
     request.user = user;
+    ctx.user = user;
   }
   return next();
 }
@@ -112,6 +126,7 @@ export async function apiAuthMiddleware(request, env, ctx, next) {
   }
   
   request.user = { id: 'api', username: 'api', isAdmin: true };
+  ctx.user = apiUser
   return next();
 }
 
@@ -123,6 +138,7 @@ export const requireAuth = (handler) => async (request, env, ctx) => {
       : Response.redirect(new URL('/login', request.url).toString(), 302);
   }
   request.user = user;
+  ctx.user = user;
   return handler(request, env, ctx);
 };
 

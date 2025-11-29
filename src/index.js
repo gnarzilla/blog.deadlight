@@ -13,7 +13,8 @@ import { errorMiddleware, loggingMiddleware } from './middleware/index.js';
 import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './middleware/index.js';
 import { rateLimitMiddleware, securityHeadersMiddleware } from '../../lib.deadlight/core/src/security/middleware.js';
 import { analyticsMiddleware } from './middleware/analytics.js';
-import { handleProxyTests } from './routes/proxy.js';
+import { csrfTokenMiddleware, csrfValidateMiddleware } from './middleware/csrf.js';
+import { voteRateLimitMiddleware, commentRateLimitMiddleware } from './middleware/rateLimit.js';
 import { initServices } from './services/index.js';
 
 const router = new Router();
@@ -26,63 +27,61 @@ router.use(loggingMiddleware);
 router.use(analyticsMiddleware);
 
 /* ==============================================================
-   PUBLIC ROUTES
+   PUBLIC ROUTES (with CSRF token generation for forms)
    ============================================================== */
-router.group([], (r) => {
-  // Blog
+router.group([csrfTokenMiddleware], (r) => {
+  // Blog routes (need CSRF token for vote forms)
   Object.entries(blogRoutes).forEach(([p, h]) => r.register(p, h));
-  // Styles
   Object.entries(styleRoutes).forEach(([p, h]) => r.register(p, h));
-  // Static assets
   Object.entries(staticRoutes).forEach(([p, h]) => r.register(p, h));
-  // Auth (login / logout)
-  Object.entries(authRoutes).forEach(([p, h]) => r.register(p, h));
 
-  // Public API
+  // Public API (no CSRF needed - read-only)
   r.register('/api/health', apiRoutes['/api/health']);
   r.register('/api/status', apiRoutes['/api/status']);
   r.register('/api/blog/status', apiRoutes['/api/blog/status']);
   r.register('/api/blog/posts', apiRoutes['/api/blog/posts']);
   r.register('/api/metrics', apiRoutes['/api/metrics']);
-  r.register('/api/posts/:id/upvote', apiRoutes['/api/posts/:id/upvote']);
-  r.register('/api/posts/:id/downvote', apiRoutes['/api/posts/:id/downvote']);
 
-  // Public federation discovery
+  // Public federation
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
   r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
-
-  // Proxy-based federation helpers 
-  r.register('/api/federation/connect', {
-    POST: async (req, env) => {
-      try {
-        return await handleProxyTests.addFederationDomain(req, env);
-      } catch (e) {
-        console.error('Federation connect error:', e);
-        return new Response(JSON.stringify({ success: false, error: e.message }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-    },
-  });
   r.register('/api/federation/test/*', federationRoutes['/api/federation/test/*']);
-  r.register('/api/federation/remove', {
-    POST: (req, env) => handleProxyTests.removeFederationDomain(req, env),
-  });
 });
 
 /* ==============================================================
-   AUTHENTICATED USER ROUTES
+   VOTE ENDPOINTS (auth + vote rate limit + CSRF validation)
    ============================================================== */
-router.group([authMiddleware], (r) => {
+router.group([authMiddleware, voteRateLimitMiddleware, csrfValidateMiddleware], (r) => {
+  r.register('/api/posts/:id/upvote', apiRoutes['/api/posts/:id/upvote']);
+  r.register('/api/posts/:id/downvote', apiRoutes['/api/posts/:id/downvote']);
+});
+
+/* ==============================================================
+   COMMENT ENDPOINT (auth + comment rate limit + CSRF validation)
+   ============================================================== */
+router.group([authMiddleware, commentRateLimitMiddleware, csrfValidateMiddleware], (r) => {
+  r.register('/post/:slug/comment', blogRoutes['/post/:slug/comment']);
+});
+
+/* ==============================================================
+   AUTHENTICATED USER ROUTES (with CSRF token)
+   ============================================================== */
+router.group([authMiddleware, csrfTokenMiddleware], (r) => {
   Object.entries(userRoutes).forEach(([p, h]) => r.register(p, h));
   Object.entries(inboxRoutes).forEach(([p, h]) => r.register(p, h));
 });
 
 /* ==============================================================
-   ADMIN ROUTES
+   AUTH ROUTES (with CSRF token generation + validation)
    ============================================================== */
-router.group([authMiddleware, requireAdminMiddleware], (r) => {
+router.group([csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
+  Object.entries(authRoutes).forEach(([p, h]) => r.register(p, h));
+});
+
+/* ==============================================================
+   ADMIN ROUTES (with CSRF token)
+   ============================================================== */
+router.group([authMiddleware, requireAdminMiddleware, csrfTokenMiddleware], (r) => {
   Object.entries(adminRoutes).forEach(([p, h]) => r.register(p, h));
 });
 

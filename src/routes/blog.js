@@ -2,12 +2,11 @@ import { renderPostList } from '../templates/blog/list.js';
 import { renderSinglePost } from '../templates/blog/single.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { FederationService } from '../services/federation.js';
-import { ConfigService } from '../services/config.js';
 import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
 
 export const blogRoutes = {
   '/': {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       try {
         const user = await checkAuth(request, env);
         const config = await env.services.config.getConfig();
@@ -15,7 +14,7 @@ export const blogRoutes = {
         const postsPerPage = parseInt(config.postsPerPage) || 10;
         const url = new URL(request.url);
         const page = parseInt(url.searchParams.get('page') || '1');
-        const sort = url.searchParams.get('sort') || 'newest'; // Add sort parameter
+        const sort = url.searchParams.get('sort') || 'newest';
         const offset = (page - 1) * postsPerPage;
 
         // Build ORDER BY based on sort parameter
@@ -79,11 +78,13 @@ export const blogRoutes = {
           nextPage: page + 1,
           currentSort: sort 
         };
-
+        const csrfToken = ctx.csrfToken;
+    
         return new Response(
-          renderPostList(result.results, user, paginationData, config),
+          renderPostList(result.results, user, paginationData, config, csrfToken),
           { headers: { 'Content-Type': 'text/html' } }
         );
+ 
       } catch (error) {
         console.error('Blog route error:', error);
         return new Response('Internal server error', { status: 500 });
@@ -92,7 +93,7 @@ export const blogRoutes = {
   },
 
   '/post/:slug': {
-    GET: async (request, env) => {
+    GET: async (request, env, ctx) => {
       try {
         const user = await checkAuth(request, env);
         const config = await env.services.config.getConfig();

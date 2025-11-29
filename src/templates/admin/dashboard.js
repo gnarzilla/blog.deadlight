@@ -81,8 +81,8 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
             <h2>Requests (Last 7 Days)</h2>
             <div class="simple-chart">
               ${chartData.map(data => `
-                <div class="chart-bar" style="--height: ${(data.requests / maxRequests) * 100}%">
-                  <div class="bar"></div>
+                <div class="chart-bar">
+                  <div class="bar" style="--height: ${(data.requests / maxRequests) * 100}%"></div>
                   <div class="label">${data.day}</div>
                   <div class="value">${data.requests}</div>
                 </div>

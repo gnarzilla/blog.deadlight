@@ -122,8 +122,8 @@ const baseStyles = `
 
   h1, h2, h3, h4, h5, h6 { margin-top: 0; color: var(--text-primary); }
 
-    /* ===== BUTTON SYSTEM ===== */
-    button, .button, .edit-button, .delete-button, .delete-link button, [type="submit"] {
+  /* ===== BUTTON SYSTEM ===== */
+  button, .button, .edit-button, .delete-button, .delete-link button, [type="submit"] {
     padding: 0.45rem 0.9rem !important;
     border-radius: var(--border-radius) !important;
     font-size: 0.875rem;
@@ -252,6 +252,7 @@ const baseStyles = `
   .karma-button:active {
     transform: translateY(0);
     box-shadow: none;
+    font-weight: bold;
   }
 
   /* Karma score */
