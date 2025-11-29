@@ -73,9 +73,11 @@ lynx -dump https://thatch-dt.deadlight.boo/post/use-cases | head -20
 ### Standard Deployment (any platform)
 
 ```bash
+# Clone blog + lib
 git clone https://github.com/gnarzilla/blog.deadlight
-cd blog.deadlight
-npm install
+git clone https://github.com/gnarzilla/lib.deadlight
+cd blog.deadlight && npm install
+cd ../lib.deadlight && npm install && cd ../blog.deadlight
 
 # Authenticate with Cloudflare
 npx wrangler login
