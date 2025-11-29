@@ -1,4 +1,5 @@
 # Deadlight Blog | Edge-Native Publishing for Resilient Networks
+![Works on LoRa](https://img.shields.io/badge/works%20on-LoRa-brightgreen)
 
 [Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [Architecture](#architecture) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Roadmap](#roadmap) · [License](#license)
 
