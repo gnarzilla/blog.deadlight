@@ -291,6 +291,9 @@ The blog is one component of a larger resilience stack:
 - **Global distribution** – Instant worldwide availability
 - **Private analytics** – Per-instance, no external beacons
 - **Role-based access** – Admin/editor/viewer permissions
+- **CSRF-protected forms** – All mutating actions secured with tokens
+- **Rate-limited voting** – Anti-spam protection (10 votes/hour)
+- **Comment moderation** – Rate-limited to 5 comments/hour per user
 
 ### For Operators
 - **Zero always-on costs** – Workers sleep when idle
@@ -300,6 +303,103 @@ The blog is one component of a larger resilience stack:
 - **Audit-friendly** – ~8 npm dependencies, readable in an afternoon
 
 ---
+
+## Security
+
+Deadlight implements multiple layers of protection while maintaining its zero-JS, low-bandwidth philosophy:
+
+### **CSRF Protection**
+All forms include anti-CSRF tokens validated server-side:
+- Login/registration forms
+- Post creation/editing
+- Vote buttons (upvote/downvote)
+- Comment submissions
+- Admin actions (delete, user management)
+
+### **Rate Limiting**
+Configurable per-endpoint limits prevent abuse:
+- **Authentication**: 5 login attempts per 15 minutes
+- **Voting**: 10 votes per hour per user
+- **Comments**: 5 comments per hour per user
+- **API calls**: 60 requests per minute (configurable)
+
+Rate limiting can be **disabled** when running behind `proxy.deadlight`, which handles rate limiting at the gateway level.
+
+### **Access Control**
+- **Role-based permissions**: Admin, Editor, Viewer
+- **Private posts**: Visibility controls per-post
+- **JWT authentication**: Secure, stateless sessions
+- **Admin-only routes**: Protected via middleware
+
+### **Security Headers**
+All responses include hardened headers:
+```toml
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: strict-origin-when-cross-origin
+Content-Security-Policy: default-src 'self'
+```
+
+### **Input Validation**
+Server-side validation for all user input:
+- **Markdown sanitization (XSS prevention)**
+- **SQL Injection pretection via prepared statements**
+- **Username/passsword strength requirements**
+- **Slug format validation**
+
+## Middleware Architecture
+
+Deadlight uses a layered middleware approach for security and functionality:
+Request
+↓
+Global Middleware (all routes)
+├─ Error handling
+├─ Logging
+├─ Analytics
+└─ Rate limiting (optional)
+↓
+Route-Specific Middleware
+├─ Authentication (sets ctx.user)
+├─ Authorization (admin check)
+├─ CSRF token generation
+└─ CSRF validation (POST/PUT/DELETE only)
+↓
+Route Handler
+↓
+Response
+
+### Middleware Order
+
+Order matters! Middleware executes in **reverse array order**:
+
+```javascript
+// src/index.js
+router.group([
+  authMiddleware,           // Runs FIRST (sets ctx.user)
+  requireAdminMiddleware,   // Runs SECOND (checks role)
+  csrfTokenMiddleware      // Runs THIRD (generates token)
+], (r) => {
+  // Admin routes
+});
+```
+
+### Custom Middleware
+Create your own middleware following this pattern:
+```javascript
+export async function myMiddleware(request, env, ctx, next) {
+  // Pre-processing
+  console.log('Before handler');
+  
+  // Call next middleware/handler
+  const response = await next();
+  
+  // Post-processing
+  console.log('After handler');
+  
+  return response;
+}
+```
 
 ## Configuration
 
@@ -313,8 +413,13 @@ export const CONFIG = {
   siteDescription: 'Publishing from the edge of connectivity',
   postsPerPage: 10,
   theme: 'minimal', // or 'default'
-  enableComments: false, // coming soon
-  enableFederation: false // alpha
+  enableComments: true,
+  enableFederation: false, // alpha
+  
+  // Security settings
+  enableRegistration: false,  // Public signups
+  requireLoginToRead: false,  // Private blog mode
+  maintenanceMode: false
 };
 ```
 
@@ -397,26 +502,28 @@ See [docs/API.md](docs/API.md) for full endpoint documentation.
 
 ## Roadmap
 
-### Production-Ready 
+### Production-Ready
 - Core blogging (posts, pages, archives)
 - Markdown rendering with XSS protection
 - User authentication & role-based access
 - Admin dashboard
 - Private analytics
-- Rate limiting & CSRF protection
+- **CSRF protection on all forms**
+- **Rate limiting (votes, comments, auth)**
+- **Middleware security layer**
 - ARM64 deployment support
 
-### Alpha / Testing 
+### Alpha / Testing
 - Post-by-email (SMTP inbox processing)
 - Blog-to-blog federation via email protocols
 - Full proxy.deadlight dashboard integration
-- Comment system
+- Comment system (with rate limiting)
 
 ### Planned 
-- **2025 Q4** – Stable post-by-email + comments
-- **2026 Q1** – Full proxy dashboard integration
-- **2026 Q2** – Meshtastic-native posting client and Visual Edge Network Topology integration.
-- **Eventually** – ActivityPub federation, plugin architecture
+- **2025 Q1** – Stable post-by-email + comments
+- **2025 Q2** – Full proxy dashboard integration
+- **2025 Q3** – Meshtastic-native posting client and Visual Edge Network Topology integration.
+- **2026** – ActivityPub federation, plugin architecture
 
 ### Help Wanted
 Open to contributions via issues or PRs. Priority areas:
@@ -551,3 +658,4 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
