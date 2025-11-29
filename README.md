@@ -28,7 +28,7 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 | **You might post over email, SMS, or LoRa** | Normal dashboards require browser + stable link | Admin dashboard works over SMTP/IMAP. Post from a burner address if needed |
 
 **Deadlight isn't trying to be the coolest blog platform.**  
-**It's trying to be the last one that still works when everything else is on fire.**
+**It's trying to be the last one that still works after the plug gets pulled. Break the chains.**
 
 ![termux deployment](src/assets/termux-deploy.gif)
 
