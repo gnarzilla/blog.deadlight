@@ -99,6 +99,7 @@ export const blogRoutes = {
         const user = await checkAuth(request, env);
         const config = await env.services.config.getConfig();
         const slug = request.params.slug;
+        const csrfToken = ctx.csrfToken; 
 
         // Build the visibility condition based on authentication
         let visibilityCondition = "posts.visibility = 'public'";
@@ -189,9 +190,10 @@ export const blogRoutes = {
         const fedSvc = new FederationService(env);
         const comments = await fedSvc.getThreadedComments(post.id);
 
-        return new Response(renderSinglePost(post, user, navigation, config, comments), {
-          headers: { 'Content-Type': 'text/html' }
-        });
+        return new Response(
+          renderSinglePost(post, user, navigation, config, comments, csrfToken),
+          { headers: { 'Content-Type': 'text/html' } }
+        );
       } catch (error) {
         console.error('Post page error:', error);
         return new Response('Internal server error', { status: 500 });

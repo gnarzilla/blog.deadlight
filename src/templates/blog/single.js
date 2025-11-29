@@ -1,9 +1,8 @@
-// src/templates/blog/single.js
 import { renderTemplate } from '../base.js';
 import { renderMarkdown } from '../../../../lib.deadlight/core/src/markdown/processor.js';
 import { renderAuthorLink } from '../../../../lib.deadlight/core/src/utils/templates.js'
 
-export function renderSinglePost(post, user, navigation, config, comments = []) {
+export function renderSinglePost(post, user, navigation, config, comments = [], csrfToken = null) {
   if (!post) throw new Error('Post is undefined');
 
   if (post.post_type === 'comment') {
@@ -53,15 +52,21 @@ export function renderSinglePost(post, user, navigation, config, comments = []) 
       <span>| ${new Date(post.created_at).toLocaleDateString()}</span>
     </div>
     
-    <!-- Voting section with both up and down votes -->
+    <!-- Voting section with CSRF tokens -->
     <div class="post-voting-single">
-      <form method="POST" action="/api/posts/${post.id}/upvote">
-        <button type="submit" class="vote-button upvote" title="Upvote">▲</button>
-      </form>
+      ${user && csrfToken ? `
+        <form method="POST" action="/api/posts/${post.id}/upvote">
+          <input type="hidden" name="csrf_token" value="${csrfToken}">
+          <button type="submit" class="vote-button upvote" title="Upvote">▲</button>
+        </form>
+      ` : ''}
       <span class="karma-score" title="Score: ${karma}">${karma}</span>
-      <form method="POST" action="/api/posts/${post.id}/downvote">
-        <button type="submit" class="vote-button downvote" title="Downvote">▼</button>
-      </form>
+      ${user && csrfToken ? `
+        <form method="POST" action="/api/posts/${post.id}/downvote">
+          <input type="hidden" name="csrf_token" value="${csrfToken}">
+          <button type="submit" class="vote-button downvote" title="Downvote">▼</button>
+        </form>
+      ` : ''}
     </div>
     
     <div class="post-content">${renderMarkdown(fullContent)}</div>
@@ -75,8 +80,9 @@ export function renderSinglePost(post, user, navigation, config, comments = []) 
     
     ${user ? `<a href="/admin/add-comment/${post.id}" class="button">Add Comment</a>` : ''}
     ${user ? `<a href="/admin/edit/${post.id}" class="button">Edit</a>` : ''}
-    ${user ? `
+    ${user && csrfToken ? `
       <form method="POST" action="/admin/federate-post/${post.id}" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="${csrfToken}">
         <button type="submit" class="button">Federate Post</button>
       </form>
     ` : ''}
