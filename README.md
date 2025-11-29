@@ -1,7 +1,7 @@
 # Deadlight Blog | Edge-Native Publishing for Resilient Networks
 ![Works on LoRa](https://img.shields.io/badge/works%20on-LoRa-brightgreen)
 
-[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [Architecture](#architecture) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Roadmap](#roadmap) · [License](#license)
+[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [Architecture](#architecture) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Middleware](#middleware-architecture) · [Roadmap](#roadmap) · [Security](#security) · [License](#license)
 
 > Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Minimal JS Required · Deployable from a Raspberry Pi**
 
@@ -351,6 +351,7 @@ Server-side validation for all user input:
 ## Middleware Architecture
 
 Deadlight uses a layered middleware approach for security and functionality:
+```
 Request
 ↓
 Global Middleware (all routes)
@@ -368,6 +369,7 @@ Route-Specific Middleware
 Route Handler
 ↓
 Response
+```
 
 ### Middleware Order
 
@@ -658,4 +660,5 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
