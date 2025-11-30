@@ -1,11 +1,11 @@
-// src/templates/auth/register.js
 import { renderAuthTemplate } from './base.js';
 
-export function renderRegistrationForm(config, error = null) {
+export function renderRegistrationForm(config, csrfToken = null, error = null) {
   // Generate simple math captcha
   const num1 = Math.floor(Math.random() * 10) + 1;
   const num2 = Math.floor(Math.random() * 10) + 1;
   const captchaAnswer = num1 + num2;
+  
   return `
     <!DOCTYPE html>
     <html>
@@ -20,6 +20,8 @@ export function renderRegistrationForm(config, error = null) {
         ${error ? `<div class="error-message">${error}</div>` : ''}
         
         <form method="POST" action="/register">
+          ${csrfToken ? `<input type="hidden" name="csrf_token" value="${csrfToken}">` : ''}
+          
           <div class="form-group">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" required 
@@ -61,5 +63,4 @@ export function renderRegistrationForm(config, error = null) {
     </body>
     </html>
   `;
-  return renderAuthTemplate('Register', content);
 }

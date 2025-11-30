@@ -177,6 +177,7 @@ export const authRoutes = {
     GET: async (request, env, ctx) => {
       // Check if registration is enabled
       const config = await env.services.config.getConfig();
+      const csrfToken = ctx.csrfToken;  // ← From middleware
       if (!config.enableRegistration) {
         return new Response('Registration is currently disabled', { status: 403 });
       }
@@ -193,7 +194,7 @@ export const authRoutes = {
         });
       }
       
-      return new Response(renderRegistrationForm(config), {
+      return new Response(renderRegistrationForm(config, csrfToken), {
         headers: { 'Content-Type': 'text/html' }
       });
     },
