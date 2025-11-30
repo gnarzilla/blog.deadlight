@@ -16,6 +16,7 @@ import { analyticsMiddleware } from './middleware/analytics.js';
 import { csrfTokenMiddleware, csrfValidateMiddleware } from './middleware/csrf.js';
 import { voteRateLimitMiddleware, commentRateLimitMiddleware } from './middleware/rateLimit.js';
 import { initServices } from './services/index.js';
+import { proxyOrchestrationMiddleware } from './middleware/proxy-orchestration.js';
 
 const router = new Router();
 
@@ -25,6 +26,7 @@ const router = new Router();
 router.use(errorMiddleware);
 router.use(loggingMiddleware);
 router.use(analyticsMiddleware);
+router.use(proxyOrchestrationMiddleware);
 
 /* ==============================================================
    PUBLIC ROUTES (with CSRF token generation for forms)
@@ -151,9 +153,41 @@ export default {
     );
   },
 
-  /** Cron entry point (optional – Cloudflare cron) */
-  async scheduled(controller, env, ctx) {
-    const services = initServices(env);
-    await services.queue.processAll();
-  },
+  /** Cron entry point Cloudflare cron) */
+  async scheduled(event, env, ctx) {
+    console.log('Cron job started:', new Date().toISOString());
+    
+    try {
+      // Initialize services
+      const services = initServices(env);
+      env.services = services;
+      
+      // Process queue
+      const result = await services.queue.processAll();
+      
+      console.log('Queue processing completed:', {
+        processed: result.processed,
+        status: result.status,
+        errors: result.errors || [],
+        timestamp: new Date().toISOString()
+      });
+      
+      // If items were processed, log details
+      if (result.processed > 0) {
+        console.log(`Successfully processed ${result.processed} queued items`);
+      }
+      
+      return result;
+      
+    } catch (error) {
+      console.error('Cron job failed:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Don't throw - let the job complete
+      return { processed: 0, status: 'error', error: error.message };
+    }
+  }
 };

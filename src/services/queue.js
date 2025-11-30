@@ -12,7 +12,6 @@ export class QueueService {
     this.federation = federationService;
     this.config = configService;
 
-    // Models – use the ones from lib.deadlight
     this.postModel = new PostModel(this.db);
     this.settingsModel = new SettingsModel(this.db);
   }
@@ -30,6 +29,8 @@ export class QueueService {
           return await this._queueNotification(type, payload);
         case 'federation':
           return await this._queueFederation(payload);
+        case 'proxy_action': 
+          return await this._queueProxyAction(payload);
         default:
           throw new Error(`Unknown queue type: ${type}`);
       }
@@ -51,6 +52,7 @@ export class QueueService {
       this._processEmailReplies(),
       this._processNotifications(),
       this._processFederation(),
+      this._processProxyActions(),
     ]);
 
     return this._summarize(results);
@@ -101,6 +103,77 @@ export class QueueService {
 
     this.logger.info('Queued federation item');
     return { success: true };
+  }
+  async _queueProxyAction(payload) {
+  await this.db.prepare(`
+    INSERT INTO notifications
+      (user_id, type, message_type, content, created_at)
+    VALUES (?, 'system', 'email', ?, ?)
+  `).bind(
+    payload.userId ?? null,
+    JSON.stringify({ ...payload, proxy_action: true }),  // Flag it as proxy action in JSON
+    new Date().toISOString()
+  ).run();
+
+  this.logger.info(`Queued proxy action: ${payload.actionType}`, { payload });
+  return { success: true, queued: true };
+}
+
+// Update _processProxyActions() to detect proxy actions by JSON flag
+async _processProxyActions() {
+  const pending = await this.db.prepare(`
+    SELECT id, content
+    FROM notifications
+    WHERE type = 'system'
+      AND message_type = 'email'
+      AND is_read = FALSE
+      AND (retry_count IS NULL OR retry_count < 3)
+    LIMIT 20
+  `).all();
+
+  let processed = 0;
+  for (const row of (pending.results ?? [])) {
+    const data = JSON.parse(row.content);
+    
+    // Skip if not a proxy action
+    if (!data.proxy_action) continue;
+    
+    const actionType = data.actionType;
+    
+    try {
+      let result;
+      
+      switch (actionType) {
+        case 'send_email':
+          result = await this.proxy.sendEmail(data);
+          break;
+        case 'send_sms':
+          result = await this.proxy.sendSms(data);
+          break;
+        default:
+          this.logger.warn(`Unknown proxy action type: ${actionType}`);
+          result = { skipped: true, reason: 'unknown_action_type' };
+      }
+      
+      await this.db.prepare(`
+        UPDATE notifications 
+        SET is_read = TRUE, 
+            content = JSON_SET(content, '$.result', ?)
+        WHERE id = ?
+      `).bind(JSON.stringify(result), row.id).run();
+      
+      processed++;
+      this.logger.info(`Processed proxy action: ${actionType}`, { id: row.id });
+      
+      } catch (e) {
+        await this._incrementRetry(row.id, e.message, 'notifications');
+        this.logger.error(`Proxy action failed: ${actionType}`, { 
+          id: row.id, 
+          error: e.message 
+        });
+      }
+    }
+    return processed;
   }
 
   // ---- processing helpers -------------------------------------------
@@ -225,28 +298,41 @@ export class QueueService {
 
   // ---- reporting ----------------------------------------------------
   async _queuedCounts() {
-    const [replies, notifs, fed] = await Promise.all([
+    const [replies, notifs, fed, proxyActions] = await Promise.all([
       this.db.prepare(`
         SELECT COUNT(*) AS c FROM posts
         WHERE is_reply_draft = 1 AND email_metadata LIKE '%"sent":false%'
       `).first(),
+      // ✅ Exclude proxy actions from regular notifications
       this.db.prepare(`
         SELECT COUNT(*) AS c FROM notifications
-        WHERE message_type IN ('email','sms') AND is_read = FALSE
+        WHERE message_type IN ('sms') 
+          AND is_read = FALSE
+          AND (content NOT LIKE '%"proxy_action":true%' OR content IS NULL)
       `).first(),
       this.db.prepare(`
         SELECT COUNT(*) AS c FROM posts
         WHERE post_type = 'federated' AND federation_pending = 1
       `).first(),
+      // ✅ Count proxy actions correctly
+      this.db.prepare(`
+        SELECT COUNT(*) AS c FROM notifications
+        WHERE type = 'system' 
+          AND message_type = 'email'
+          AND content LIKE '%"proxy_action":true%'
+          AND is_read = FALSE
+      `).first(),
     ]);
 
     return {
-      total: (replies?.c||0) + (notifs?.c||0) + (fed?.c||0),
+      total: (replies?.c||0) + (notifs?.c||0) + (fed?.c||0) + (proxyActions?.c||0),
       email_replies: replies?.c||0,
       notifications: notifs?.c||0,
       federation: fed?.c||0,
+      proxy_actions: proxyActions?.c||0,
     };
   }
+
 
   _summarize(settled) {
     const processed = settled

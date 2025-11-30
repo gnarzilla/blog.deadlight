@@ -774,42 +774,77 @@ export const adminRoutes = {
       return await handleProxyTests.sendTestEmail(request, env, ctx);
     }
   },
+
+  '/admin/send-notification': {
+    POST: async (request, env, ctx) => {
+      const { to, subject, body } = await request.json();
+      
+      // ✅ Smart send: tries direct, queues on failure
+      const result = await ctx.proxy.send('send_email', {
+        to,
+        from: 'noreply@deadlight.boo',
+        subject,
+        body
+      });
+      
+      if (result.queued) {
+        return Response.json({ 
+          message: 'Email queued - proxy is offline',
+          queued: true 
+        }, { status: 202 });
+      }
+      
+      return Response.json({ 
+        message: 'Email sent successfully',
+        sent: true,
+        result: result.result 
+      });
+    }
+  },
+
+  '/admin/queue-status': {
+    GET: async (request, env, ctx) => {
+      const user = ctx.user;
+      if (!user || user.role !== 'admin') {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      try {
+        const status = await env.services.queue.getStatus();
+        return Response.json(status);
+      } catch (error) {
+        console.error('Queue status error:', error);
+        return Response.json({ 
+          error: 'Failed to get queue status',
+          details: error.message 
+        }, { status: 500 });
+      }
+    }
+  },
   
   '/admin/process-queue': {
-      POST: async (request, env, ctx) => {
-          const user = await checkAuth(request, env, ctx);
-          if (!user) {
-              return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-          }
-
-          try {
-              const { QueueService } = await import('../services/outbox.js');
-              const outbox = new QueueService(env);
-              const result = await outbox.processQueue();
-
-              if (result.error) {
-                  return Response.json({ 
-                      success: false, 
-                      error: result.error,
-                      message: `Failed to process queue: ${result.error}`
-                  });
-              }
-
-              return Response.json({ 
-                  success: true, 
-                  processed: result.processed || 0,
-                  queued: result.queued || 0,
-                  message: `✅ Processed ${result.processed || 0} operations. ${result.queued || 0} remaining in queue.`
-              });
-          } catch (error) {
-              console.error('Queue processing error:', error);
-              return Response.json({ 
-                  success: false, 
-                  error: error.message,
-                  message: `Failed to process queue: ${error.message}`
-              });
-          }
+    POST: async (request, env, ctx) => {
+      const user = ctx.user;  // Already set by authMiddleware
+      if (!user || user.role !== 'admin') {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
       }
+
+      try {
+        const result = await env.services.queue.processAll();
+        
+        return Response.json({ 
+          success: true, 
+          ...result,
+          message: `Processed ${result.processed} items. Status: ${result.status}`
+        });
+      } catch (error) {
+        console.error('Queue processing error:', error);
+        return Response.json({ 
+          success: false, 
+          error: error.message
+        }, { status: 500 });
+      }
+    }
   },
 
   '/admin/federation/sync' : {

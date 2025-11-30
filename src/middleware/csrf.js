@@ -40,28 +40,21 @@ export async function csrfTokenMiddleware(request, env, ctx, next) {
  * Use this on POST/PUT/DELETE/PATCH endpoints
  */
 export async function csrfValidateMiddleware(request, env, ctx, next) {
-  // Only validate mutating methods
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
     return next();
   }
   
-  // Get token from cookie
   const cookieToken = CSRFProtection.getTokenFromCookie(request);
   
-  // Get token from form
   let submittedToken;
-  const contentType = request.headers.get('Content-Type') || '';
-  
-  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
-    const formData = await request.clone().formData();
+  try {
+    // ✅ Clone the request so body can be read again
+    const clonedRequest = request.clone();
+    const formData = await clonedRequest.formData();
     submittedToken = formData.get('csrf_token');
-  } else if (contentType.includes('application/json')) {
-    const body = await request.clone().json();
-    submittedToken = body.csrf_token;
-  } else {
-    submittedToken = request.headers.get('X-CSRF-Token');
+  } catch (e) {
+    console.error('Failed to read form data:', e);
   }
-  
   
   const valid = cookieToken && submittedToken && cookieToken === submittedToken;
   
