@@ -330,8 +330,8 @@ Content-Security-Policy: default-src 'self'
 ### **Input Validation**
 Server-side validation for all user input:
 - **Markdown sanitization (XSS prevention)**
-- **SQL Injection pretection via prepared statements**
-- **Username/passsword strength requirements**
+- **SQL Injection protection via prepared statements**
+- **Username/password strength requirements**
 - **Slug format validation**
 
 ## Middleware Architecture
