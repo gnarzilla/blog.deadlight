@@ -47,6 +47,8 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="mobile-web-app-capable" content="yes">
+      <meta name="apple-mobile-web-app-capable" content="yes">
       <title>${pageTitle}</title>
       <link rel="icon" type="image/x-icon" href="/favicon.ico">
       <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
