@@ -117,7 +117,10 @@ CREATE TABLE IF NOT EXISTS notifications (
     related_post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    message_type TEXT CHECK (message_type IN ('email', 'sms', 'system', 'federated')) DEFAULT 'system'
+    message_type TEXT CHECK (message_type IN ('email', 'sms', 'system', 'federated')) DEFAULT 'system',
+    retry_count INTEGER DEFAULT 0,
+    last_error TEXT,
+    last_attempt TEXT
 );
 
 -- TAGS

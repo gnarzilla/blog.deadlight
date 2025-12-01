@@ -44,6 +44,33 @@ router.group([csrfTokenMiddleware], (r) => {
   r.register('/api/blog/posts', apiRoutes['/api/blog/posts']);
   r.register('/api/metrics', apiRoutes['/api/metrics']);
 
+  // temporary
+  r.register('/test-proxy', {
+    GET: async (request, env, ctx) => {
+      try {
+        const response = await fetch('http://127.0.0.1:8080/api/health');
+        const text = await response.text();
+        
+        return new Response(JSON.stringify({
+          status: response.status,
+          statusText: response.statusText,
+          body: text,
+          headers: Object.fromEntries(response.headers.entries())
+        }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({
+          error: error.message,
+          stack: error.stack
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+  });
+
   // Public federation
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
   r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);

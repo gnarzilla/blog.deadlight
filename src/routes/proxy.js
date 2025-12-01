@@ -7,6 +7,16 @@ import { renderTemplate } from '../templates/base.js';
 import { proxyDashboardTemplate } from '../templates/admin/proxyDashboard.js';
 
 export async function handleProxyRoutes(request, env, user) {
+  let body = {};
+  try {
+    if (request.headers.get('Content-Type')?.includes('application/json')) {
+      body = await request.json();
+    } else {
+      const formData = await request.clone().formData();
+      body = Object.fromEntries(formData);
+    }
+  } catch {}
+
   if (request.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
   
    try {
@@ -43,7 +53,7 @@ export async function handleProxyRoutes(request, env, user) {
      };
 
     const config = cfg;   // reuse the already-fetched config
-    //const body = proxyDashboardTemplate(data, user, config);
+    const body = proxyDashboardTemplate(data, user, config);
 
      return new Response(
        renderTemplate('Proxy Dashboard', body, user, config),
@@ -246,35 +256,58 @@ export const handleProxyTests = {
         }
     },
 
-    async healthCheck(request, env) {
+    async healthCheck() {
         try {
-            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-            const queueService = new QueueService(env);
-            const federationService = new FederationService(env);
-            
-            const [proxyHealth, queueStatus, federationStatus] = await Promise.allSettled([
-                proxyService.healthCheck(),
-                queueService.getStatus(),
-                federationService.getConnectedDomains()
-            ]);
-            
-            return Response.json({
-                success: true,
-                data: {
-                    proxy: proxyHealth.status === 'fulfilled' ? proxyHealth.value : { error: proxyHealth.reason?.message },
-                    queue: queueStatus.status === 'fulfilled' ? queueStatus.value : { error: queueStatus.reason?.message },
-                    federation: federationStatus.status === 'fulfilled' ? 
-                        { connected_domains: federationStatus.value.length, status: 'healthy' } : 
-                        { error: federationStatus.reason?.message },
-                    timestamp: new Date().toISOString()
-                }
-            });
+            console.log('Attempting proxy health check...');
+            const data = await this._req('/api/health');
+            console.log('Proxy health check succeeded:', data);
+            return { proxy_connected: true, ...data };
         } catch (error) {
-            console.error('Health check error:', error);
-            return Response.json({
-                success: false,
-                error: error.message
+            console.error('Proxy health check failed:', error.message);
+            return { proxy_connected: false };
+        }
+    },
+
+    async _req(endpoint, opts = {}, retries = 2) {
+        const base = (await this.config.getConfig()).proxyUrl;
+        if (this.isCircuitOpen()) throw new Error('Circuit breaker is OPEN');
+
+        const url = `${base}${endpoint}`;
+        console.log('Proxy request:', url);  
+
+        for (let i = 0; i <= retries; i++) {
+            try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 8000);
+            const res = await fetch(url, {
+                signal: ctrl.signal,
+                headers: { 'Content-Type': 'application/json', 'User-Agent': 'Deadlight/4.0' },
+                ...opts,
             });
+            clearTimeout(tid);
+
+            console.log('📥 Proxy response:', res.status, res.statusText);
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('Proxy returned error:', text); 
+                throw new Error(`${res.status} ${text}`);
+            }
+
+            const body = await res.text();  
+            console.log('Proxy response body:', body);  
+            
+            const json = JSON.parse(body); 
+            this.recordSuccess();
+            return json;
+            
+            } catch (e) {
+            console.error(`Proxy request attempt ${i + 1} failed:`, e.message); 
+            if (i === retries) {
+                this.recordFailure();
+                throw e;
+            }
+            await new Promise(r => setTimeout(r, 2 ** i * 1000));
+            }
         }
     },
 
