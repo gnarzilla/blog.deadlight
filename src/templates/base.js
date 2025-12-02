@@ -56,7 +56,6 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
       <link rel="stylesheet" href="/styles/theme.css?v=${cacheBust}">
       <link rel="stylesheet" href="/styles/dark_min.css?v=${cacheBust}" id="theme-stylesheet">
 
-      <!-- Add this inline style block -->
       <style>
         :root {
           --accent-color: ${accentColor};
@@ -65,7 +64,7 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
     </head>
     <body>
       <header>
-        <h1><a href="/">${siteTitle}</a></h1>
+        <h1><a href="/">${pageTitle}</a></h1>
         <nav>
           ${authLinks}
           <div class="theme-toggle-container">

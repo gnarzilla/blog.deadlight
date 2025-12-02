@@ -7,7 +7,6 @@ export function federationDashboard(federatedPosts, domains, user, config) {
 
   const html = `
     <div class="container">
-      <h1>Federation Control Panel</h1>
       
       <div class="grid-3">
         <div class="card">

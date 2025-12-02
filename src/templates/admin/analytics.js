@@ -13,9 +13,6 @@ export function renderAnalyticsTemplate({ summary = {}, topPaths = [], hourlyTra
     </head>
     <body>
       <div class="admin-dashboard">
-        <div class="page-header">
-          <h1>Analytics Dashboard</h1>
-        </div>
 
         <!-- Summary Section -->
         <div class="analytics-summary">
