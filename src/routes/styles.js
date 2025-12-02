@@ -423,19 +423,19 @@ const adminStyles = `
     font-weight: 500;
   }
 
-  /* SIMPLE CHART */
+  /* SIMPLE CHART STYLES */
   .simple-chart {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    height: 240px;  /* Increased from 180px */
-    padding: 20px 10px 40px;  /* More bottom padding for rotated labels */
+    height: 240px;
+    padding: 20px 10px 40px;
     gap: 6px;
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: var(--border-radius);
     overflow: hidden;
-    position: relative;  /* For absolute positioned labels */
+    position: relative;
   }
 
   .simple-chart .chart-bar {
@@ -443,19 +443,22 @@ const adminStyles = `
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
+    align-items: stretch;  /* NEW: ensures bar fills width */
     position: relative;
     min-width: 28px;
-    max-width: 80px;  /* Prevent bars from getting too wide */
+    max-width: 80px;
+    height: 100%;  /* NEW: bar container takes full height */
   }
 
   .simple-chart .bar {
     width: 100%;
-    height: var(--height, 0%);
-    min-height: 4px;
-    background: var(--link-color);  /* Use accent color instead of hardcoded pink */
+    height: var(--height, 5%);  /* Changed from 0% to 5% minimum */
+    min-height: 8px;  /* Increased from 4px for better visibility */
+    background: var(--link-color);
     border-radius: 4px 4px 0 0;
     transition: all 0.4s ease;
-    box-shadow: 0 2px 6px var(--button-primary-shadow);  /* Match accent shadow */
+    box-shadow: 0 2px 6px var(--button-primary-shadow);
+    flex-shrink: 0;  /* NEW: prevents flex from shrinking the bar */
   }
 
   .simple-chart .chart-bar:hover .bar {
@@ -469,22 +472,24 @@ const adminStyles = `
     top: -26px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.85rem;  /* Slightly larger */
-    font-weight: 600;  /* Slightly lighter */
+    font-size: 0.85rem;
+    font-weight: 600;
     color: var(--text-primary);
-    opacity: 1;  /* Full opacity */
+    opacity: 1;
     white-space: nowrap;
+    pointer-events: none;  /* NEW: prevents hover interference */
   }
 
   .simple-chart .label {
     position: absolute;
-    bottom: -32px;  /* Adjust for more padding */
+    bottom: -32px;
     left: 50%;
     transform: translateX(-50%) rotate(-45deg);
     transform-origin: center;
     font-size: 0.75rem;
     color: var(--text-secondary);
     white-space: nowrap;
+    pointer-events: none;  /* NEW: prevents hover interference */
   }
 
   /* Responsive chart sizing */
