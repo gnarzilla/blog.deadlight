@@ -7,7 +7,7 @@
 
 ### Live Demos
 
-|  [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo)  [deadlight.boo](https://deadlight.boo)  |  [![zero-JS](https://thatch-dt.deadlight.boo/favicon.ico)](https://thatch-dt.deadlight.boo) [zero-JS instance](https://thatch-dt.deadlight.boo)  |  [![Mesh](https://meshtastic.deadlight.boo/favicon.ico)](https://meshtastic.deadlight.boo) [LoRa gateway blog](https://meshtastic.deadlight.boo)  |
+|  [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo)  [deadlight.boo](https://deadlight.boo)  |  [![zero-JS](https://threat-level-midnight.deadlight.boo/favicon.ico)](https://threat-level-midnight.deadlight.boo) [zero-JS instance](https://threat-level-midnight.deadlight.boo)  |  [![Mesh](https://meshtastic.deadlight.boo/favicon.ico)](https://meshtastic.deadlight.boo) [LoRa gateway blog](https://meshtastic.deadlight.boo)  |
 |----------------------------------------|--------------------------------------|--------------------------|
 
 ![Quad-instance landing](src/assets/quad-instance-landing.gif)
@@ -646,5 +646,6 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
