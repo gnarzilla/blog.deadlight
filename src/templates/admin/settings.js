@@ -38,10 +38,10 @@ export function renderSettings(settings, user, config = null) {
             <div class="setting-item">
               <label for="date_format">Date Format</label>
               <select id="date_format" name="date_format">
-                <option value="M/D/YYYY" ${settings.date_format === 'M/D/YYYY' ? 'selected' : ''}>M/D/YYYY (12/25/2024)</option>
-                <option value="D/M/YYYY" ${settings.date_format === 'D/M/YYYY' ? 'selected' : ''}>D/M/YYYY (25/12/2024)</option>
-                <option value="YYYY-MM-DD" ${settings.date_format === 'YYYY-MM-DD' ? 'selected' : ''}>YYYY-MM-DD (2024-12-25)</option>
-                <option value="MMM D, YYYY" ${settings.date_format === 'MMM D, YYYY' ? 'selected' : ''}>MMM D, YYYY (Dec 25, 2024)</option>
+                <option value="M/D/YYYY" ${settings.date_format === 'M/D/YYYY' ? 'selected' : ''}>M/D/YYYY (12/25/2025)</option>
+                <option value="D/M/YYYY" ${settings.date_format === 'D/M/YYYY' ? 'selected' : ''}>D/M/YYYY (25/12/2025)</option>
+                <option value="YYYY-MM-DD" ${settings.date_format === 'YYYY-MM-DD' ? 'selected' : ''}>YYYY-MM-DD (2025-12-25)</option>
+                <option value="MMM D, YYYY" ${settings.date_format === 'MMM D, YYYY' ? 'selected' : ''}>MMM D, YYYY (Dec 25, 2025)</option>
               </select>
             </div>
             
@@ -59,7 +59,7 @@ export function renderSettings(settings, user, config = null) {
                        value="${settings.accent_color || '#8ba3c7'}">
                 <small>Preview: <a href="#" style="color: ${settings.accent_color || '#8ba3c7'};">Link color</a></small>
               </div>
-              <small>Changes the color of links and accents (restart or clear cache to see changes)</small>
+              <small>Changes the color of links and accents</small>
             </div>
           </div>
 
@@ -71,7 +71,6 @@ export function renderSettings(settings, user, config = null) {
                 <input type="checkbox" name="enable_registration" ${settings.enable_registration ? 'checked' : ''}>
                 <span>Enable User Registration</span>
               </label>
-              <small>Allow visitors to create new accounts (currently placeholder)</small>
             </div>
             
             <div class="checkbox-group">
