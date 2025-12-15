@@ -1,9 +1,10 @@
 # Deadlight Blog | Edge-Native Publishing for Resilient Networks
 ![Works on LoRa](https://img.shields.io/badge/works%20on-LoRa-brightgreen)
 ![blog.deadlight](https://img.shields.io/badge/blog-production-success)
-   ![proxy.deadlight](https://img.shields.io/badge/proxy-stable-blue)
-   ![meshtastic.deadlight](https://img.shields.io/badge/mesh-alpha-yellow)
-   ![edge.deadlight](https://img.shields.io/badge/platform-active-success)
+![proxy.deadlight](https://img.shields.io/badge/proxy-stable-blue)
+![meshtastic.deadlight](https://img.shields.io/badge/mesh-alpha-yellow)
+![edge.deadlight](https://img.shields.io/badge/platform-active-success)
+![npm](https://img.shields.io/npm/v/create-deadlight-blog)
 
 [Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Middleware](#middleware-architecture) · [Roadmap](#roadmap) · [Security](#security) · [License](#license)
 
@@ -69,6 +70,29 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 **It's trying to be the last one that still works after the lights go out.**
 
 ![termux deployment](src/assets/termux-deploy.gif)
+
+---
+
+## Quick Start
+
+Deploy a fully functional, production-ready instance in under 2 minutes using our interactive launcher.
+
+```bash
+npx create-deadlight-blog my-blog
+```
+
+*This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
+
+![One Click Deploy Terminal Demo](src/assets/one-click-demo.gif)
+
+### Post-Deployment
+Your blog is now live on the edge.
+1. Go to `https://your-project.pages.dev/admin`
+2. Log in with the credentials you set during setup
+3. Write your first post
+
+---
+
 
 ## It actually works
 
@@ -490,6 +514,23 @@ deadlight/
 - **Audit-friendly** – ~8 npm dependencies, readable in an afternoon
 
 ---
+
+## Data Sovereignty (The Eject Button)
+
+Deadlight uses Cloudflare for anonymity and global distribution ("The Cloak"), but we refuse to let it become a dependency cage.
+
+**You can take your data and leave at any time.**
+
+We include an "Eject" script that downloads your remote D1 database, converts it to standard SQLite, and generates a Docker configuration to run your blog locally or on a VPS.
+
+```bash
+# Downloads production DB -> local SQLite -> Docker container
+./scripts/eject.sh
+```
+
+**Result:** A folder containing your entire blog history and a `docker-compose.yml` file. You can run `docker compose up` immediately to have a pixel-perfect copy of your site running offline on localhost, with zero Cloudflare dependencies.
+
+*Useful for: Local archiving, moving to a physical server, or emergency backups.*
 
 ## Security
 
@@ -925,5 +966,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
+
 
 
