@@ -21,14 +21,6 @@ It works standalone, but unlocks its full potential when combined with:
 - **lib.deadlight** – Shared libraries (auth, queuing, federation)
 
 
-Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
-
-**Standalone mode:** Zero-dependency blogging on Cloudflare's edge  
-**Connected mode:** Post via email/LoRa, federate with other instances  
-**Full platform:** [edge.deadlight](https://github.com/gnarzilla/edge.deadlight) orchestrates everything
-
-[Jump to ecosystem details ↓](#the-deadlight-ecosystem)
-
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   Deadlight Ecosystem                   │
@@ -51,6 +43,13 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 
 Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 ```
+
+**Standalone mode:** Zero-dependency blogging on Cloudflare's edge  
+**Connected mode:** Post via email/LoRa, federate with other instances  
+**Full platform:** [edge.deadlight](https://github.com/gnarzilla/edge.deadlight) orchestrates everything
+
+[Jump to ecosystem details ↓](#the-deadlight-ecosystem)
+
 ---
 
 ## Why this exists
@@ -918,6 +917,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
