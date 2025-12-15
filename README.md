@@ -1,9 +1,10 @@
 # Deadlight Blog | Edge-Native Publishing for Resilient Networks
 ![Works on LoRa](https://img.shields.io/badge/works%20on-LoRa-brightgreen)
 ![blog.deadlight](https://img.shields.io/badge/blog-production-success)
-   ![proxy.deadlight](https://img.shields.io/badge/proxy-stable-blue)
-   ![meshtastic.deadlight](https://img.shields.io/badge/mesh-alpha-yellow)
-   ![edge.deadlight](https://img.shields.io/badge/platform-active-success)
+![proxy.deadlight](https://img.shields.io/badge/proxy-stable-blue)
+![meshtastic.deadlight](https://img.shields.io/badge/mesh-alpha-yellow)
+![edge.deadlight](https://img.shields.io/badge/platform-active-success)
+![npm](https://img.shields.io/npm/v/create-deadlight-blog)
 
 [Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Middleware](#middleware-architecture) · [Roadmap](#roadmap) · [Security](#security) · [License](#license)
 
@@ -69,6 +70,29 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 **It's trying to be the last one that still works after the lights go out.**
 
 ![termux deployment](src/assets/termux-deploy.gif)
+
+---
+
+## Quick Start
+
+Deploy a fully functional, production-ready instance in under 2 minutes using our interactive launcher.
+
+```bash
+npx create-deadlight-blog my-blog
+```
+
+*This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
+
+![One Click Deploy Terminal Demo](src/assets/one-click-demo.gif)
+
+### Post-Deployment
+Your blog is now live on the edge.
+1. Go to `https://your-project.pages.dev/admin`
+2. Log in with the credentials you set during setup
+3. Write your first post
+
+---
+
 
 ## It actually works
 
@@ -942,6 +966,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
