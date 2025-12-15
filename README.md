@@ -5,11 +5,6 @@
 
 > Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from a Raspberry Pi**
 
-### Live Demos
-
-|  [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo)  [deadlight.boo](https://deadlight.boo)  |  [![zero-JS](https://threat-level-midnight.deadlight.boo/favicon.ico)](https://threat-level-midnight.deadlight.boo) [zero-JS instance](https://threat-level-midnight.deadlight.boo)  |  [![Mesh](https://meshtastic.deadlight.boo/favicon.ico)](https://meshtastic.deadlight.boo) [LoRa gateway blog](https://meshtastic.deadlight.boo)  |
-|----------------------------------------|--------------------------------------|--------------------------|
-
 ![Quad-instance landing](src/assets/quad-instance-landing.gif)
 
 ---
@@ -36,6 +31,12 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 
 [This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**.]: # 
 
+### Live Demos
+
+|  [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo)  [deadlight.boo](https://deadlight.boo)  |  [![zero-JS](https://threat-level-midnight.deadlight.boo/favicon.ico)](https://threat-level-midnight.deadlight.boo) [zero-JS instance](https://threat-level-midnight.deadlight.boo)  |  [![Mesh](https://meshtastic.deadlight.boo/favicon.ico)](https://meshtastic.deadlight.boo) [LoRa gateway blog](https://meshtastic.deadlight.boo)  |
+|----------------------------------------|--------------------------------------|--------------------------|
+
+
 ### Live Deployments
 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
@@ -43,6 +44,46 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 - **[meshtastic.deadlight.boo](https://meshtastic.deadlight.boo)** – Blog published over LoRa mesh
 - **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
 - **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
+
+## Use Cases
+
+### Disaster Response (Standalone Blog)
+- Deploy blog in 5 minutes
+- Post updates via admin dashboard
+- Public reads over degraded networks
+- **No additional components needed**
+
+### Field Updates (Blog + Proxy)
+- Team posts via satellite email
+- Proxy bridges SMTP → blog queue
+- Updates appear when connectivity restored
+- **Requires: blog.deadlight + proxy.deadlight**
+
+### Mesh Network Publishing (Blog + Proxy + LoRa Gateway)
+- Post from Meshtastic node
+- Gateway bridges LoRa → Internet
+- Content federates to other Deadlight instances
+- **Requires: Full stack**
+
+### Off-Grid Operations
+- Solar-powered Raspberry Pi as local admin interface
+- Sync posts when satellite uplink available
+- Zero ongoing power consumption (Workers sleep when idle)
+- Works with intermittent connectivity
+
+### Privacy-Focused Publishing
+- No third-party trackers or analytics
+- Optional Tor/I2P access via proxy.deadlight
+- Self-hosted email via SMTP bridge
+- Federation without corporate platforms
+
+### Activists in Hostile Networks
+- Post via burner email addresses
+- No always-on server to raid or subpoena
+- Cloudflare's DDoS protection included
+- Can operate behind VPN/proxy
+
+---
 
 ### Tested On
 
@@ -564,40 +605,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 ---
 
-## Use Cases
-
-### Disaster Response Teams
-- Deploy once, access globally
-- Post updates via satellite email when web is down
-- Public reads over intermittent 2G/3G
-- Zero on-site server infrastructure
-
-### Mesh Network Communities
-- Run blog over LoRa using meshtastic.deadlight gateway
-- Post from phone over Meshtastic mesh
-- Content caches at edge for fast local access
-- Optional internet gateway for wider distribution
-
-### Off-Grid Operations
-- Solar-powered Raspberry Pi as local admin interface
-- Sync posts when satellite uplink available
-- Zero ongoing power consumption (Workers sleep when idle)
-- Works with intermittent connectivity
-
-### Privacy-Focused Publishing
-- No third-party trackers or analytics
-- Optional Tor/I2P access via proxy.deadlight
-- Self-hosted email via SMTP bridge
-- Federation without corporate platforms
-
-### Activists in Hostile Networks
-- Post via burner email addresses
-- No always-on server to raid or subpoena
-- Cloudflare's DDoS protection included
-- Can operate behind VPN/proxy
-
----
-
 ## Why You Might Choose Deadlight
 
 **Choose Deadlight if you:**
@@ -646,6 +653,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
