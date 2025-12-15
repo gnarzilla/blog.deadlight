@@ -426,6 +426,8 @@ sequenceDiagram
 | **The Bunker** (Local) | `workerd` + SQLite (Local Hardware) | **Variable** (Depends on your net) | **High** (You own the hardware) | Archives, Offline LANs |
 | **The Hybrid** (Full Stack) | CF Frontend + Local Proxy | **High** | **Maximum** (Best of both) | Mesh Networks, NGOs |
 
+---
+
 ### Project Structure
 
 ```
@@ -461,8 +463,6 @@ deadlight/
 3. **Offline-first reading** – After first load, posts are readable without connectivity.
 4. **Protocol-agnostic administration** – Manage via browser, curl, or SMTP. Your choice.
 5. **Zero external dependencies at runtime** – No CDN requests, no tracking pixels, no font servers.
-
----
 
 ## Key Features
 ### For Readers
@@ -925,4 +925,5 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
