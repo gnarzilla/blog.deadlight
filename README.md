@@ -613,8 +613,8 @@ Edit `src/config.js` after deployment:
 
 ```javascript
 export const CONFIG = {
-  siteName: 'My Resilient Blog',
-  siteDescription: 'Publishing from the edge of connectivity',
+  siteName: 'your site name here',
+  siteDescription: 'Letters from Mars',
   postsPerPage: 10,
   theme: 'minimal', // or 'default'
   enableComments: true,
@@ -917,6 +917,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
