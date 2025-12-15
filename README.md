@@ -83,7 +83,7 @@ npx create-deadlight-blog my-blog
 
 *This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
 
-![One Click Deploy Terminal Demo](src/assets/one-click-demo.gif)
+![One Click Deploy Terminal Demo](src/assets/click2launch.gif)
 
 ### Post-Deployment
 Your blog is now live on the edge.
@@ -966,6 +966,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
