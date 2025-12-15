@@ -50,6 +50,7 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
                          └─────────────────────┘
 
 Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
+```
 ---
 
 ## Why this exists
@@ -917,6 +918,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
