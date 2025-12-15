@@ -862,6 +862,8 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 **See Also:** [edge.deadlight README](https://github.com/gnarzilla/edge.deadlight)
 
+---
+
 ## Support
 
 **[Support on Ko-fi](https://ko-fi.com/gnarzilla)**
@@ -890,6 +892,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
