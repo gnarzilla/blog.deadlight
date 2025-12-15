@@ -563,12 +563,12 @@ export async function myMiddleware(request, env, ctx, next) {
 blog.deadlight adapts based on available components:
 
 **Standalone Mode** (default)
-- ✅ Web-based posting
-- ✅ Admin dashboard
-- ✅ Federation (via HTTP)
-- ❌ Email posting
-- ❌ Email notifications
-- ❌ LoRa publishing
+- Web-based posting
+- Admin dashboard
+- Federation (via HTTP)
+- ~Email posting~
+- ~Email notifications~
+- ~LoRa publishing~
 
 **Connected Mode** (with proxy.deadlight)
 - ✅ Everything in standalone
@@ -581,25 +581,6 @@ blog.deadlight adapts based on available components:
 - ✅ Everything above
 - ✅ LoRa publishing (via mesh gateway)
 - ✅ Multi-protocol federation
-
-### Detecting Components
-
-The blog auto-detects available services:
-```javascript
-// In src/config.js
-export const CONFIG = {
-  // ... other config
-  
-  // Auto-detected at runtime
-  proxyAvailable: false,  // Set by /api/health check
-  meshAvailable: false,   // Set by /api/mesh/status check
-  
-  // Feature flags (enable based on available components)
-  enableEmailPosting: false,    // Requires proxy
-  enableEmailNotifications: false,  // Requires proxy
-  enableLoRaPosting: false,     // Requires mesh gateway
-};
-```
 
 ### Basic Setup
 
@@ -622,6 +603,25 @@ export const CONFIG = {
 ```
 
 Or configure dynamically at `your-blog.tld/admin/settings` after authentication.
+
+### Detecting Components
+
+The blog auto-detects available services:
+```javascript
+// In src/config.js
+export const CONFIG = {
+  // ... other config
+  
+  // Auto-detected at runtime
+  proxyAvailable: false,  // Set by /api/health check
+  meshAvailable: false,   // Set by /api/mesh/status check
+  
+  // Feature flags (enable based on available components)
+  enableEmailPosting: false,    // Requires proxy
+  enableEmailNotifications: false,  // Requires proxy
+  enableLoRaPosting: false,     // Requires mesh gateway
+};
+```
 
 ### Advanced Configuration
 
@@ -890,6 +890,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
