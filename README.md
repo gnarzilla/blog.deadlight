@@ -69,8 +69,6 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 **Deadlight isn't trying to be the coolest blog platform.**  
 **It's trying to be the last one that still works after the lights go out.**
 
-![termux deployment](src/assets/termux-deploy.gif)
-
 ---
 
 ## Quick Start
@@ -170,7 +168,7 @@ lynx -dump https://thatch-dt.deadlight.boo/post/use-cases | head -20
 
 ---
 
-## Quick Start
+## Getting Started
 
 <Choose based on your needs>
 
@@ -191,30 +189,15 @@ graph TD
 **Start simple, add components as needed.** Everything works standalone.
 
 **Option 1: Standalone Blog (5 minutes)**
+
+Deploy a fully functional, production-ready instance in under 2 minutes using our interactive launcher.
+
 ```bash
-# Clone blog + lib
-git clone https://github.com/gnarzilla/blog.deadlight
-git clone https://github.com/gnarzilla/lib.deadlight
-cd blog.deadlight && npm install
-cd ../lib.deadlight && npm install && cd ../blog.deadlight
-
-# Authenticate with Cloudflare
-npx wrangler login
-
-# Create database
-npx wrangler d1 create my-blog
-npx wrangler d1 execute my-blog --remote --file=migrations/20250911_schema.sql
-
-# Create admin user
-./scripts/gen-admin/seed-dev.sh -r
-
-# Set secrets
-openssl rand -base64 32 | npx wrangler secret put JWT_SECRET
-echo "https://your-domain.pages.dev" | npx wrangler secret put SITE_URL
-
-# Deploy
-npx wrangler deploy
+npx create-deadlight-blog my-blog
 ```
+
+*This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
+
 Use when: You just want a fast, resilient blog
 
 **Option 2: Blog + Proxy (15 minutes)**
@@ -237,6 +220,8 @@ Use when: You need LoRa, full federation, multi-protocol bridging
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux)
 
 Deadlight can be deployed entirely from a phone, but on ARM64 Android you’ll need to run a Debian userland inside Termux using proot. This bypasses Android’s memory layout limitations that break workerd.
+
+![termux deployment](src/assets/termux-deploy.gif)
 
 ```bash
 # 1. Install Termux + proot
@@ -966,6 +951,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
