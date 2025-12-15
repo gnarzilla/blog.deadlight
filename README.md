@@ -20,90 +20,33 @@ It works standalone, but unlocks its full potential when combined with:
 - **meshtastic.deadlight** – LoRa gateway (post from mesh networks)
 - **lib.deadlight** – Shared libraries (auth, queuing, federation)
 
-<svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <style>
-      .box { fill: #1a1a1a; stroke: #4a9eff; stroke-width: 2; }
-      .core-box { fill: #2d4a2d; stroke: #5fb85f; stroke-width: 3; }
-      .text { fill: #e0e0e0; font-family: 'Courier New', monospace; font-size: 14px; }
-      .label { fill: #4a9eff; font-family: 'Courier New', monospace; font-size: 12px; }
-      .small-text { fill: #a0a0a0; font-family: 'Courier New', monospace; font-size: 11px; }
-      .arrow { stroke: #4a9eff; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
-      .bi-arrow { stroke: #4a9eff; stroke-width: 2; fill: none; marker-start: url(#arrowback); marker-end: url(#arrowhead); }
-    </style>
-    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-      <polygon points="0 0, 10 3, 0 6" fill="#4a9eff" />
-    </marker>
-    <marker id="arrowback" markerWidth="10" markerHeight="10" refX="1" refY="3" orient="auto">
-      <polygon points="10 0, 0 3, 10 6" fill="#4a9eff" />
-    </marker>
-  </defs>
-  
-  <!-- Title -->
-  <text x="400" y="25" class="text" text-anchor="middle" font-weight="bold" font-size="16">Deadlight Ecosystem Architecture</text>
-  
-  <!-- blog.deadlight (center, core) -->
-  <rect x="300" y="150" width="200" height="100" rx="5" class="core-box"/>
-  <text x="400" y="180" class="text" text-anchor="middle" font-weight="bold">blog.deadlight</text>
-  <text x="400" y="200" class="label" text-anchor="middle">Content & Federation</text>
-  <text x="400" y="220" class="small-text" text-anchor="middle">Cloudflare Workers + D1</text>
-  <text x="400" y="235" class="small-text" text-anchor="middle" font-style="italic">(this repo)</text>
-  
-  <!-- proxy.deadlight (left) -->
-  <rect x="50" y="160" width="180" height="80" rx="5" class="box"/>
-  <text x="140" y="185" class="text" text-anchor="middle" font-weight="bold">proxy.deadlight</text>
-  <text x="140" y="205" class="label" text-anchor="middle">Protocol Bridge</text>
-  <text x="140" y="225" class="small-text" text-anchor="middle">SMTP/IMAP/SOCKS/VPN</text>
-  
-  <!-- meshtastic.deadlight (right) -->
-  <rect x="570" y="160" width="180" height="80" rx="5" class="box"/>
-  <text x="660" y="185" class="text" text-anchor="middle" font-weight="bold">meshtastic.deadlight</text>
-  <text x="660" y="205" class="label" text-anchor="middle">LoRa Gateway</text>
-  <text x="660" y="225" class="small-text" text-anchor="middle">LoRa ↔ Internet</text>
-  
-  <!-- lib.deadlight (bottom) -->
-  <rect x="275" y="300" width="250" height="70" rx="5" class="box"/>
-  <text x="400" y="325" class="text" text-anchor="middle" font-weight="bold">lib.deadlight</text>
-  <text x="400" y="345" class="small-text" text-anchor="middle">Shared: Auth · DB Models · Security · Queue</text>
-  
-  <!-- Arrows -->
-  <!-- blog <-> proxy -->
-  <path d="M 300 200 L 230 200" class="bi-arrow"/>
-  <text x="265" y="195" class="small-text" text-anchor="middle">queue/health</text>
-  
-  <!-- blog <-> mesh -->
-  <path d="M 500 200 L 570 200" class="bi-arrow"/>
-  <text x="535" y="195" class="small-text" text-anchor="middle">gateway</text>
-  
-  <!-- blog -> lib -->
-  <path d="M 400 250 L 400 300" class="arrow"/>
-  
-  <!-- proxy -> lib -->
-  <path d="M 200 240 L 300 300" class="arrow"/>
-  
-  <!-- mesh -> lib -->
-  <path d="M 600 240 L 500 300" class="arrow"/>
-  
-  <!-- Mode indicators -->
-  <rect x="50" y="50" width="200" height="70" rx="3" fill="#1a1a1a" stroke="#666" stroke-width="1" stroke-dasharray="5,5"/>
-  <text x="150" y="70" class="label" text-anchor="middle" font-weight="bold">Standalone Mode</text>
-  <text x="150" y="90" class="small-text" text-anchor="middle">blog.deadlight only</text>
-  <text x="150" y="105" class="small-text" text-anchor="middle">Web posting · Federation</text>
-  
-  <rect x="275" y="50" width="250" height="70" rx="3" fill="#1a1a1a" stroke="#4a9eff" stroke-width="1" stroke-dasharray="5,5"/>
-  <text x="400" y="70" class="label" text-anchor="middle" font-weight="bold">Connected Mode</text>
-  <text x="400" y="90" class="small-text" text-anchor="middle">blog + proxy</text>
-  <text x="400" y="105" class="small-text" text-anchor="middle">+ Email posting · Notifications</text>
-  
-  <rect x="550" y="50" width="200" height="70" rx="3" fill="#1a1a1a" stroke="#5fb85f" stroke-width="1" stroke-dasharray="5,5"/>
-  <text x="650" y="70" class="label" text-anchor="middle" font-weight="bold">Full Stack</text>
-  <text x="650" y="90" class="small-text" text-anchor="middle">all components</text>
-  <text x="650" y="105" class="small-text" text-anchor="middle">+ LoRa · Multi-protocol</text>
-</svg>
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Deadlight Ecosystem                   │
+└─────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+    │    proxy     │◄───────►│     blog     │◄───────►│  meshtastic  │
+    │  .deadlight  │  queue  │  .deadlight  │ gateway │  .deadlight  │
+    │              │         │   (CORE)     │         │              │
+    │ SMTP/IMAP/   │         │ Content &    │         │  LoRa ↔ Net  │
+    │ SOCKS/VPN    │         │ Federation   │         │              │
+    └──────────────┘         └──────────────┘         └──────────────┘
+           │                        │                        │
+           └────────────────────────┼────────────────────────┘
+                                    │
+                         ┌──────────▼──────────┐
+                         │   lib.deadlight     │
+                         │  Shared Libraries   │
+                         └─────────────────────┘
+
+Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
+```
 
 **Standalone mode:** Zero-dependency blogging on Cloudflare's edge  
 **Connected mode:** Post via email/LoRa, federate with other instances  
-**Full platform:** [edge.deadlight](link) orchestrates everything
+**Full platform:** [edge.deadlight](https://github.com/gnarzilla/edge.deadlight) orchestrates everything
 
 [Jump to ecosystem details ↓](#the-deadlight-ecosystem)
 
@@ -123,7 +66,7 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 | **You might post over email, SMS, or LoRa** | Normal dashboards require browser + stable link | Admin dashboard works over SMTP/IMAP. Post from a burner address if needed |
 
 **Deadlight isn't trying to be the coolest blog platform.**  
-**It's trying to be the last one that still works after the plug gets pulled. Break the chains.**
+**It's trying to be the last one that still works after the lights go out.**
 
 ![termux deployment](src/assets/termux-deploy.gif)
 
@@ -475,6 +418,16 @@ sequenceDiagram
 - **JWT auth** – Role-based access control (admin/editor/viewer)
 - **Zero third-party requests** – No analytics beacons, no fingerprinting
 
+### Deployment Topologies
+
+| Topology | Infrastructure | Anonymity | Resilience | Best For |
+| :--- | :--- | :--- | :--- | :--- |
+| **The Ghost** (Standalone) | Cloudflare Workers + D1 | **High** (Hidden origin, shared IP) | **Medium** (Dependent on CF) | Whistleblowers, Public Blogs |
+| **The Bunker** (Local) | `workerd` + SQLite (Local Hardware) | **Variable** (Depends on your net) | **High** (You own the hardware) | Archives, Offline LANs |
+| **The Hybrid** (Full Stack) | CF Frontend + Local Proxy | **High** | **Maximum** (Best of both) | Mesh Networks, NGOs |
+
+---
+
 ### Project Structure
 
 ```
@@ -510,8 +463,6 @@ deadlight/
 3. **Offline-first reading** – After first load, posts are readable without connectivity.
 4. **Protocol-agnostic administration** – Manage via browser, curl, or SMTP. Your choice.
 5. **Zero external dependencies at runtime** – No CDN requests, no tracking pixels, no font servers.
-
----
 
 ## Key Features
 ### For Readers
@@ -670,8 +621,8 @@ Edit `src/config.js` after deployment:
 
 ```javascript
 export const CONFIG = {
-  siteName: 'My Resilient Blog',
-  siteDescription: 'Publishing from the edge of connectivity',
+  siteName: 'your site name here',
+  siteDescription: 'Letters from Mars',
   postsPerPage: 10,
   theme: 'minimal', // or 'default'
   enableComments: true,
@@ -974,18 +925,5 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
