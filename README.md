@@ -29,6 +29,27 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 
 [Jump to ecosystem details ↓](#the-deadlight-ecosystem)
 
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Deadlight Ecosystem                   │
+└─────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+    │    proxy     │◄───────►│     blog     │◄───────►│  meshtastic  │
+    │  .deadlight  │  queue  │  .deadlight  │ gateway │  .deadlight  │
+    │              │         │   (CORE)     │         │              │
+    │ SMTP/IMAP/   │         │ Content &    │         │  LoRa ↔ Net  │
+    │ SOCKS/VPN    │         │ Federation   │         │              │
+    └──────────────┘         └──────────────┘         └──────────────┘
+           │                        │                        │
+           └────────────────────────┼────────────────────────┘
+                                    │
+                         ┌──────────▼──────────┐
+                         │   lib.deadlight     │
+                         │  Shared Libraries   │
+                         └─────────────────────┘
+
+Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 ---
 
 ## Why this exists
@@ -45,7 +66,7 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 | **You might post over email, SMS, or LoRa** | Normal dashboards require browser + stable link | Admin dashboard works over SMTP/IMAP. Post from a burner address if needed |
 
 **Deadlight isn't trying to be the coolest blog platform.**  
-**It's trying to be the last one that still works after the plug gets pulled. Break the chains.**
+**It's trying to be the last one that still works after the lights go out.**
 
 ![termux deployment](src/assets/termux-deploy.gif)
 
@@ -896,6 +917,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
