@@ -25,7 +25,7 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 
 **Standalone mode:** Zero-dependency blogging on Cloudflare's edge  
 **Connected mode:** Post via email/LoRa, federate with other instances  
-**Full platform:** [edge.deadlight](gnarzilla/edge.deadlight.git) orchestrates everything
+**Full platform:** [edge.deadlight](github.com/gnarzilla/edge.deadlight) orchestrates everything
 
 [Jump to ecosystem details ↓](#the-deadlight-ecosystem)
 
@@ -896,6 +896,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
