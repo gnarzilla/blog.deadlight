@@ -48,25 +48,6 @@ It works standalone, but unlocks its full potential when combined with:
 - **lib.deadlight** – Shared libraries (auth, queuing, federation)
 
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   Deadlight Ecosystem                   │
-└─────────────────────────────────────────────────────────┘
-
-    ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-    │    proxy     │◄───────►│     blog     │◄───────►│  meshtastic  │
-    │  .deadlight  │  queue  │  .deadlight  │ gateway │  .deadlight  │
-    │              │         │   (CORE)     │         │              │
-    │ SMTP/IMAP/   │         │ Content &    │         │  LoRa ↔ Net  │
-    │ SOCKS/VPN    │         │ Federation   │         │              │
-    └──────────────┘         └──────────────┘         └──────────────┘
-           │                        │                        │
-           └────────────────────────┼────────────────────────┘
-                                    │
-                         ┌──────────▼──────────┐
-                         │   lib.deadlight     │
-                         │  Shared Libraries   │
-                         └─────────────────────┘
 
 Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 ```
