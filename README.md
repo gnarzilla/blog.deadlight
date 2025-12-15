@@ -556,8 +556,51 @@ export async function myMiddleware(request, env, ctx, next) {
   return response;
 }
 ```
-
 ## Configuration
+
+### Deployment Modes
+
+blog.deadlight adapts based on available components:
+
+**Standalone Mode** (default)
+- ✅ Web-based posting
+- ✅ Admin dashboard
+- ✅ Federation (via HTTP)
+- ❌ Email posting
+- ❌ Email notifications
+- ❌ LoRa publishing
+
+**Connected Mode** (with proxy.deadlight)
+- ✅ Everything in standalone
+- ✅ Email posting (via SMTP bridge)
+- ✅ Email notifications (via queue)
+- ✅ Federation (via HTTP + email fallback)
+- ❌ LoRa publishing
+
+**Full Stack Mode** (with proxy + meshtastic)
+- ✅ Everything above
+- ✅ LoRa publishing (via mesh gateway)
+- ✅ Multi-protocol federation
+
+### Detecting Components
+
+The blog auto-detects available services:
+```javascript
+// In src/config.js
+export const CONFIG = {
+  // ... other config
+  
+  // Auto-detected at runtime
+  proxyAvailable: false,  // Set by /api/health check
+  meshAvailable: false,   // Set by /api/mesh/status check
+  
+  // Feature flags (enable based on available components)
+  enableEmailPosting: false,    // Requires proxy
+  enableEmailNotifications: false,  // Requires proxy
+  enableLoRaPosting: false,     // Requires mesh gateway
+};
+```
+
 ### Basic Setup
 
 Edit `src/config.js` after deployment:
@@ -847,6 +890,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
