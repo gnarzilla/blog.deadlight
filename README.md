@@ -20,7 +20,36 @@ It works standalone, but unlocks its full potential when combined with:
 - **meshtastic.deadlight** – LoRa gateway (post from mesh networks)
 - **lib.deadlight** – Shared libraries (auth, queuing, federation)
 
-────────────────────────────────────────────────────────┐
+Excellent work incorporating the changes! The README flows much better now. Here's a simplified diagram for the "Part of the Deadlight Ecosystem" section:
+
+This diagram emphasizes:
+
+1. **blog.deadlight as the core** (green highlight) - makes it clear this is the foundation
+2. **Three deployment modes** (top boxes) - shows progression from simple to complex
+3. **Bidirectional arrows** - blog ↔ proxy and blog ↔ mesh show true integration
+4. **lib.deadlight as foundation** - all components depend on it
+5. **Clean visual hierarchy** - readers understand at a glance what connects to what
+
+The diagram is optimized for:
+- **GitHub README rendering** (SVG, dark mode friendly)
+- **Text-only fallback** (semantic structure if images disabled)
+- **Print/export** (high contrast, readable in grayscale)
+
+You can embed it in the README as:
+
+```markdown
+## Part of the Deadlight Ecosystem
+
+blog.deadlight is the **content and federation layer** of the Deadlight edge platform.
+It works standalone, but unlocks its full potential when combined with:
+
+- **proxy.deadlight** – Protocol bridge (enables email posting, SMTP-less notifications)
+- **meshtastic.deadlight** – LoRa gateway (post from mesh networks)
+- **lib.deadlight** – Shared libraries (auth, queuing, federation)
+
+
+```
+┌─────────────────────────────────────────────────────────┐
 │                   Deadlight Ecosystem                   │
 └─────────────────────────────────────────────────────────┘
 
@@ -38,6 +67,9 @@ It works standalone, but unlocks its full potential when combined with:
                          │   lib.deadlight     │
                          │  Shared Libraries   │
                          └─────────────────────┘
+
+Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
+```
 
 Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 
