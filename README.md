@@ -260,9 +260,6 @@ npx wrangler deploy
 
 ```
 
-![Termux Install & Deploy](src/assets/termux_remote_deployment.png)
-
-
 ---
 
 ## The Deadlight Ecosystem
@@ -951,6 +948,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
