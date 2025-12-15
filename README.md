@@ -7,6 +7,24 @@
 
 ![Quad-instance landing](src/assets/quad-instance-landing.gif)
 
+## Part of the Deadlight Ecosystem
+
+blog.deadlight is the **content and federation layer** of the Deadlight edge platform.
+It works standalone, but unlocks its full potential when combined with:
+
+- **proxy.deadlight** – Protocol bridge (enables email posting, SMTP-less notifications)
+- **meshtastic.deadlight** – LoRa gateway (post from mesh networks)
+- **lib.deadlight** – Shared libraries (auth, queuing, federation)
+```
+[Simplified diagram showing blog + proxy + mesh]
+```
+
+**Standalone mode:** Zero-dependency blogging on Cloudflare's edge  
+**Connected mode:** Post via email/LoRa, federate with other instances  
+**Full platform:** [edge.deadlight](link) orchestrates everything
+
+[Jump to ecosystem details ↓](#the-deadlight-ecosystem)
+
 ---
 
 ## Why this exists
@@ -32,12 +50,6 @@ Most blogging platforms assume you have reliable connectivity, cheap power, and 
 [This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**.]: # 
 
 ### Live Demos
-
-|  [![LIVE](https://deadlight.boo/favicon.ico)](https://deadlight.boo)  [deadlight.boo](https://deadlight.boo)  |  [![zero-JS](https://threat-level-midnight.deadlight.boo/favicon.ico)](https://threat-level-midnight.deadlight.boo) [zero-JS instance](https://threat-level-midnight.deadlight.boo)  |  [![Mesh](https://meshtastic.deadlight.boo/favicon.ico)](https://meshtastic.deadlight.boo) [LoRa gateway blog](https://meshtastic.deadlight.boo)  |
-|----------------------------------------|--------------------------------------|--------------------------|
-
-
-### Live Deployments
 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
 - **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
@@ -110,9 +122,11 @@ lynx -dump https://thatch-dt.deadlight.boo/post/use-cases | head -20
 ---
 
 ## Quick Start
+### Deployment Options
 
-### Standard Deployment (any platform)
+<Choose based on your needs>
 
+**Option 1: Standalone Blog (5 minutes)**
 ```bash
 # Clone blog + lib
 git clone https://github.com/gnarzilla/blog.deadlight
@@ -137,6 +151,22 @@ echo "https://your-domain.pages.dev" | npx wrangler secret put SITE_URL
 # Deploy
 npx wrangler deploy
 ```
+Use when: You just want a fast, resilient blog
+
+**Option 2: Blog + Proxy (15 minutes)**
+```bash
+# Deploy blog (as above)
+# Then add proxy:
+git clone https://github.com/gnarzilla/proxy.deadlight
+cd proxy.deadlight && docker compose up -d
+```
+Use when: You want email posting, federation, self-hosted SMTP
+
+**Option 3: Full Stack (30 minutes)**
+See [edge.deadlight docs](gnarzilla/edge.deadlight.git) for orchestrated deployment
+Use when: You need LoRa, full federation, multi-protocol bridging
+
+---
 
 **Your blog is now global, costs pennies, and survives apocalypse-level connectivity.**
 
@@ -653,6 +683,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
