@@ -3,7 +3,7 @@
 
 [Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [Architecture](#architecture) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Middleware](#middleware-architecture) · [Roadmap](#roadmap) · [Security](#security) · [License](#license)
 
-> Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from a Raspberry Pi**
+> Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
 
 ![Quad-instance landing](src/assets/quad-instance-landing.gif)
 
@@ -216,7 +216,119 @@ npx wrangler deploy
 
 ---
 
-## Architecture
+## The Deadlight Ecosystem
+
+### Architecture Overview
+
+The blog is one component of a larger resilience stack:
+
+```
+┌─────────────────────────────────────────────┐
+│           edge.deadlight                    │  ← Umbrella platform
+│  (orchestrates everything below)            │
+└─────────────────────────────────────────────┘
+           │
+           ├──────────────────┬──────────────────┬─────────────────
+           ▼                  ▼                  ▼
+   ┌───────────────┐  ┌───────────────┐  ┌──────────────────┐
+   │blog.deadlight │  │proxy.deadlight│  │meshtastic        │
+   │               │  │               │  │  .deadlight      │
+   │ Content layer │  │Protocol bridge│  │                  │
+   │ (this repo)   │  │SMTP/IMAP/SOCKS│  │LoRa ↔ Internet   │
+   │               │  │VPN gateway    │  │bridge            │
+   │ JavaScript    │  │ C             │  │ C (proxy fork)   │
+   └───────────────┘  └───────────────┘  └──────────────────┘
+           │                  │                  │
+           └──────────────────┴──────────────────┘
+                              │
+                              ▼
+                   ┌─────────────────────┐
+                   │   lib.deadlight     │
+                   │                     │
+                   │ Shared libraries:   │
+                   │ • Auth & JWT        │
+                   │ • DB models (D1)    │
+                   │ • Security utils    │
+                   │ • UI components     │
+                   └─────────────────────┘
+```
+
+### Component Roles
+
+| Component | Purpose | When You Need It |
+|-----------|---------|------------------|
+| **blog.deadlight** | Content storage & delivery | Always (core component) |
+| **lib.deadlight** | Shared code (auth, queuing, DB) | Always (dependency) |
+| **proxy.deadlight** | Protocol bridging | Email posting, federation, self-hosted SMTP |
+| **meshtastic.deadlight** | LoRa ↔ Internet gateway | Mesh network publishing |
+| **edge.deadlight** | Orchestration layer | Multi-instance deployments |
+
+### Integration Patterns
+
+#### Why the Blog Needs Queuing
+
+Cloudflare Workers are **stateless** (no persistent connections). The proxy is **stateful** (maintains SMTP sessions, VPN tunnels). They can't directly communicate.
+
+**Solution:** Queue-based resilience
+```
+User clicks "Send notification"
+         ↓
+Blog queues in D1 database (always succeeds)
+         ↓
+Cron job (every 5 min) checks queue
+         ↓
+IF proxy reachable → flush queue
+IF proxy offline → keep queued (retry later)
+```
+
+**This is why blog.deadlight has a QueueService** - it enables federation and email features without requiring the proxy to be always-on.
+
+#### Why the Blog Needs Federation Endpoints
+
+The `/federation/*` routes aren't just for ActivityPub wannabes - they enable:
+
+1. **Tag-based discovery:** Instances auto-discover peers via hashtags
+2. **Pull-based content:** Spam-resistant (instances request what they want)
+3. **Multi-protocol delivery:** HTTP primary, email fallback, LoRa future
+4. **Subdomain communities:** `politics.deadlight.boo` aggregates all #politics posts
+
+**This is why blog.deadlight has a federation layer** - it enables decentralized community organization.
+
+#### Why the Proxy Uses Port 443 (Not 25)
+
+Residential ISPs block port 25 (SMTP). Traditional email delivery fails.
+
+**Solution:** HTTP-to-Email bridge via transactional APIs
+```
+blog.deadlight → Queue notification
+     ↓
+proxy.deadlight → HTTP POST to MailChannels (port 443)
+     ↓
+MailChannels → Recipient's inbox (proper SPF/DKIM)
+```
+
+**This is why email posting works** - the proxy translates between protocols so the blog never needs port 25.
+
+### Working Together: Real Scenarios
+
+**Scenario 1: Blogging over LoRa**
+1. Write post on phone connected to Meshtastic node
+2. Send via SMTP (could be over LoRa → meshtastic.deadlight gateway)
+3. Gateway forwards to blog.deadlight inbox endpoint
+4. Post published globally via Cloudflare Workers
+
+**Scenario 2: Self-hosted email + edge blog**
+1. Run proxy.deadlight locally (bridges SMTP/IMAP)
+2. Configure blog.deadlight to use your proxy for outbound email
+3. Receive replies to blog posts in your self-hosted inbox
+4. Respond via normal email client
+5. Blog federates with other Deadlight instances
+
+**Scenario 3: Disaster response team**
+1. Deploy blog.deadlight for team updates
+2. Team members post via satellite email when web is down
+3. Public reads blog over intermittent 2G/3G
+4. Zero server infrastructure required on-site
 
 Deadlight is designed for maximum resilience with minimum complexity.
 
@@ -263,73 +375,6 @@ deadlight/
 3. **Offline-first reading** – After first load, posts are readable without connectivity.
 4. **Protocol-agnostic administration** – Manage via browser, curl, or SMTP. Your choice.
 5. **Zero external dependencies at runtime** – No CDN requests, no tracking pixels, no font servers.
-
----
-
-
-## The Deadlight Ecosystem
-
-The blog is one component of a larger resilience stack:
-
-```
-┌─────────────────────────────────────────────┐
-│           edge.deadlight                    │  ← Umbrella platform
-│  (orchestrates everything below)            │
-└─────────────────────────────────────────────┘
-           │
-           ├──────────────────┬──────────────────┬─────────────────
-           ▼                  ▼                  ▼
-   ┌───────────────┐  ┌───────────────┐  ┌──────────────────┐
-   │blog.deadlight │  │proxy.deadlight│  │meshtastic        │
-   │               │  │               │  │  .deadlight      │
-   │ Content layer │  │Protocol bridge│  │                  │
-   │ (this repo)   │  │SMTP/IMAP/SOCKS│  │LoRa ↔ Internet   │
-   │               │  │VPN gateway    │  │bridge            │
-   │ JavaScript    │  │ C             │  │ C (proxy fork)   │
-   └───────────────┘  └───────────────┘  └──────────────────┘
-           │                  │                  │
-           └──────────────────┴──────────────────┘
-                              │
-                              ▼
-                   ┌─────────────────────┐
-                   │   lib.deadlight     │
-                   │                     │
-                   │ Shared libraries:   │
-                   │ • Auth & JWT        │
-                   │ • DB models (D1)    │
-                   │ • Security utils    │
-                   │ • UI components     │
-                   └─────────────────────┘
-```
-
-### How They Work Together
-
-**Scenario 1: Blogging over LoRa**
-1. Write post on phone connected to Meshtastic node
-2. Send via SMTP (could be over LoRa → meshtastic.deadlight gateway)
-3. Gateway forwards to blog.deadlight inbox endpoint
-4. Post published globally via Cloudflare Workers
-
-**Scenario 2: Self-hosted email + edge blog**
-1. Run proxy.deadlight locally (bridges SMTP/IMAP)
-2. Configure blog.deadlight to use your proxy for outbound email
-3. Receive replies to blog posts in your self-hosted inbox
-4. Respond via normal email client
-5. Blog federates with other Deadlight instances
-
-**Scenario 3: Disaster response team**
-1. Deploy blog.deadlight for team updates
-2. Team members post via satellite email when web is down
-3. Public reads blog over intermittent 2G/3G
-4. Zero server infrastructure required on-site
-
-### Repository Links
-
-- **[blog.deadlight](https://github.com/gnarzilla/blog.deadlight)** (you are here)
-- **[proxy.deadlight](https://github.com/gnarzilla/proxy.deadlight)** – Protocol bridge & VPN gateway
-- **[meshtastic.deadlight](https://github.com/gnarzilla/meshtastic.deadlight)** – LoRa ↔ Internet gateway
-- **[lib.deadlight](https://github.com/gnarzilla/lib.deadlight)** – Shared edge-native libraries
-- **[edge.deadlight](https://github.com/gnarzilla/edge.deadlight)** – Umbrella platform
 
 ---
 
@@ -683,6 +728,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
