@@ -491,6 +491,23 @@ deadlight/
 
 ---
 
+## Data Sovereignty (The Eject Button)
+
+Deadlight uses Cloudflare for anonymity and global distribution ("The Cloak"), but we refuse to let it become a dependency cage.
+
+**You can take your data and leave at any time.**
+
+We include an "Eject" script that downloads your remote D1 database, converts it to standard SQLite, and generates a Docker configuration to run your blog locally or on a VPS.
+
+```bash
+# Downloads production DB -> local SQLite -> Docker container
+./scripts/eject.sh
+```
+
+**Result:** A folder containing your entire blog history and a `docker-compose.yml` file. You can run `docker compose up` immediately to have a pixel-perfect copy of your site running offline on localhost, with zero Cloudflare dependencies.
+
+*Useful for: Local archiving, moving to a physical server, or emergency backups.*
+
 ## Security
 
 Deadlight implements multiple layers of protection while maintaining its zero-JS, low-bandwidth philosophy:
@@ -925,5 +942,6 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
