@@ -571,16 +571,16 @@ blog.deadlight adapts based on available components:
 - ~LoRa publishing~
 
 **Connected Mode** (with proxy.deadlight)
-- ✅ Everything in standalone
-- ✅ Email posting (via SMTP bridge)
-- ✅ Email notifications (via queue)
-- ✅ Federation (via HTTP + email fallback)
-- ❌ LoRa publishing
+- Everything in standalone
+- Email posting (via SMTP bridge)
+- Email notifications (via queue)
+- Federation (via HTTP + email fallback)
+- ~LoRa publishing~
 
 **Full Stack Mode** (with proxy + meshtastic)
-- ✅ Everything above
-- ✅ LoRa publishing (via mesh gateway)
-- ✅ Multi-protocol federation
+-  Everything above
+-  LoRa publishing (via mesh gateway)
+-  Multi-protocol federation
 
 ### Basic Setup
 
@@ -890,6 +890,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
