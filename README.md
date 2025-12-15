@@ -122,7 +122,6 @@ lynx -dump https://thatch-dt.deadlight.boo/post/use-cases | head -20
 ---
 
 ## Quick Start
-### Deployment Options
 
 <Choose based on your needs>
 
@@ -810,6 +809,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
