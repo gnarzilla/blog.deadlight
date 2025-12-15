@@ -418,6 +418,14 @@ sequenceDiagram
 - **JWT auth** – Role-based access control (admin/editor/viewer)
 - **Zero third-party requests** – No analytics beacons, no fingerprinting
 
+### Deployment Topologies
+
+| Topology | Infrastructure | Anonymity | Resilience | Best For |
+| :--- | :--- | :--- | :--- | :--- |
+| **The Ghost** (Standalone) | Cloudflare Workers + D1 | **High** (Hidden origin, shared IP) | **Medium** (Dependent on CF) | Whistleblowers, Public Blogs |
+| **The Bunker** (Local) | `workerd` + SQLite (Local Hardware) | **Variable** (Depends on your net) | **High** (You own the hardware) | Archives, Offline LANs |
+| **The Hybrid** (Full Stack) | CF Frontend + Local Proxy | **High** | **Maximum** (Best of both) | Mesh Networks, NGOs |
+
 ### Project Structure
 
 ```
@@ -917,3 +925,4 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
