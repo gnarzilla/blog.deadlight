@@ -441,6 +441,7 @@ export const adminRoutes = {
         headers: { 'Content-Type': 'text/html' }
       });
     },
+
     POST: async (request, env, ctx) => {
       const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
@@ -454,13 +455,7 @@ export const adminRoutes = {
         return new Response('Content is required', { status: 400 });
       }
 
-      const fedSvc = new FederationService(
-        env,
-        env.services.config,    // ConfigService
-        env.services.proxy,     // ProxyService
-        env.services.queue      // QueueService
-      );
-
+      // Get parent post
       const post = await env.DB.prepare('SELECT id, federation_metadata FROM posts WHERE id = ?')
         .bind(postId).first();
       if (!post) {
@@ -469,34 +464,61 @@ export const adminRoutes = {
 
       const meta = post.federation_metadata ? JSON.parse(post.federation_metadata) : {};
       const sourceUrl = meta.source_url || `${env.SITE_URL}/post/${postId}`;
-      const comment = {
-        id: Date.now(),
-        content,
-        author: user.username,
-        published_at: new Date().toISOString(),
-        parent_url: sourceUrl
-      };
-
+      
+      // Generate comment metadata
+      const commentMeta = JSON.stringify({
+        author: user.username,  // Include author in metadata
+        source_domain: new URL(env.SITE_URL || 'https://deadlight.boo').hostname,
+        created_at: new Date().toISOString()
+      });
+      
+      const slug = `comment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      
+      // Create local comment WITH metadata
       const insertResult = await env.DB.prepare(`
-        INSERT INTO posts (title, content, slug, author_id, created_at, published, post_type, parent_id, thread_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO posts (
+          title, content, slug, author_id, 
+          created_at, published, post_type, 
+          parent_id, thread_id, federation_metadata
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         `Comment on ${sourceUrl}`,
         content,
-        `comment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        slug,
         user.id,
         new Date().toISOString(),
         1,
         'comment',
         postId,
-        postId
+        postId,
+        commentMeta  // Include metadata so author shows up
       ).run();
 
-      const domains = await fedSvc.getConnectedDomains();
-      const targetDomains = domains.map(d => d.domain);
-      await fedSvc.publishComment(comment, targetDomains);
+      const commentId = insertResult.meta.last_row_id;
 
-      return Response.redirect(`${new URL(request.url).origin}/admin/comments/${postId}`);
+      // Only federate if there are connected domains
+      const fedSvc = new FederationService(env, env.services.config, env.services.proxy, env.services.queue);
+      const domains = await fedSvc.getConnectedDomains();
+      
+      if (domains.length > 0) {
+        const targetDomains = domains.map(d => d.domain);
+        
+        // Build comment object for federation (doesn't create locally)
+        const federatedComment = {
+          id: commentId,
+          content,
+          author: user.username,
+          published_at: new Date().toISOString(),
+          parent_url: sourceUrl,
+          source_url: `${env.SITE_URL}/post/${postId}#comment-${commentId}`
+        };
+        
+        // This only queues for SENDING to other instances, doesn't create locally
+        await fedSvc.publishComment(federatedComment, targetDomains);
+      }
+
+    return Response.redirect(`${new URL(request.url).origin}/admin/comments/${postId}`);
     }
   },
 
