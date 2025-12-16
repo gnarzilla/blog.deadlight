@@ -93,16 +93,49 @@ export class QueueService {
   }
 
   async _queueFederation(payload) {
-    const meta = JSON.stringify(payload);
-    await this.db.prepare(`
-      INSERT INTO posts
-        (title, content, author_id, post_type, federation_metadata,
-         federation_pending, created_at)
-      VALUES ('Federated Item', '', 1, 'federated', ?, 1, ?)
-    `).bind(meta, new Date().toISOString()).run();
+    try {
+      const meta = JSON.stringify(payload);
+      
+      // Generate unique slug for the queue item
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 9);
+      const slug = `fed-queue-${timestamp}-${random}`;
+      
+      await this.db.prepare(`
+        INSERT INTO posts (
+          title, 
+          slug, 
+          content, 
+          author_id, 
+          post_type, 
+          federation_metadata,
+          federation_pending, 
+          created_at,
+          published
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        'Federated Item',
+        slug,
+        '',
+        1, // System user
+        'federated',
+        meta,
+        1, // federation_pending = true
+        new Date().toISOString(),
+        0  // not published
+      ).run();
 
-    this.logger.info('Queued federation item');
-    return { success: true };
+      this.logger.info('Queued federation item', { slug, payloadSize: meta.length });
+      return { success: true, slug };
+      
+    } catch (error) {
+      this.logger.error('Failed to queue federation item', { 
+        error: error.message,
+        payload 
+      });
+      throw error;
+    }
   }
   async _queueProxyAction(payload) {
   await this.db.prepare(`
