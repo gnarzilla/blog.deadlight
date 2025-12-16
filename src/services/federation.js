@@ -377,19 +377,31 @@ export class FederationService {
 
   async getThreadedComments(postId, limit = 50) {
     const res = await this.db.prepare(`
-      SELECT id, content, author_id, created_at, federation_metadata
-      FROM posts
-      WHERE post_type = 'comment' AND (parent_id = ? OR thread_id = ?)
-      ORDER BY created_at ASC
+      SELECT 
+        p.id, 
+        p.content, 
+        p.author_id, 
+        p.created_at, 
+        p.federation_metadata,
+        u.username
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      WHERE p.post_type = 'comment' 
+        AND (p.parent_id = ? OR p.thread_id = ?)
+      ORDER BY p.created_at ASC
       LIMIT ?
     `).bind(postId, postId, limit).all();
 
     return (res.results || []).map(row => {
       const meta = row.federation_metadata ? JSON.parse(row.federation_metadata) : {};
+      
+      // ✅ Use username from join, fallback to metadata, then Unknown
+      const author = row.username || meta.author || 'Unknown';
+      
       return {
         id: row.id,
         content: row.content,
-        author: meta.author || 'Unknown',
+        author: author,
         source_domain: meta.source_domain,
         source_url: meta.source_url,
         published_at: row.created_at

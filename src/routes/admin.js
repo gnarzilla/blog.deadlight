@@ -611,32 +611,55 @@ export const adminRoutes = {
 
   '/admin/comments/delete/:id': {
     GET: async (request, env, ctx) => {
+      const logger = new Logger({ context: 'admin' });
       const user = await checkAuth(request, env, ctx);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
+      
+      if (!user) {
+        return Response.redirect(`${new URL(request.url).origin}/login`);
+      }
+      
       const commentId = request.params.id;
 
-      const comment = await env.DB.prepare(`
-        SELECT p.*, u.username as author_username, p.parent_id AS parent_post_id
-        FROM posts p
-        LEFT JOIN users u ON p.author_id = u.id
-        WHERE p.id = ? AND p.post_type = 'comment'
-      `).bind(commentId).first();
-      if (!comment) return new Response('Comment not found', { status: 404 });
+      try {
+        // Get comment details
+        const comment = await env.DB.prepare(`
+          SELECT p.*, u.username as author_username, p.parent_id AS parent_post_id
+          FROM posts p
+          LEFT JOIN users u ON p.author_id = u.id
+          WHERE p.id = ? AND p.post_type = 'comment'
+        `).bind(commentId).first();
+        
+        if (!comment) {
+          return new Response('Comment not found', { status: 404 });
+        }
 
-      await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
+        // Check permissions (only admin or comment author can delete)
+        if (user.role !== 'admin' && user.id !== comment.author_id) {
+          return new Response('Unauthorized', { status: 403 });
+        }
 
-      const fedSvc = new FederationService(
-        env,
-        env.services.config,    // ConfigService
-        env.services.proxy,     // ProxyService
-        env.services.queue      // QueueService
-      );
+        // Delete comment
+        await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
+        
+        logger.info('Comment deleted', { 
+          commentId, 
+          userId: user.id,
+          parentId: comment.parent_post_id 
+        });
 
-      const domains = await fedSvc.getConnectedDomains();
-      const targetDomains = domains.map(d => d.domain);
-      await fedSvc.sendDeleteComment(commentId, targetDomains);
-
-      return Response.redirect(`${new URL(request.url).origin}/admin/comments/${comment.parent_post_id || comment.thread_id}`);
+        // Redirect back to comment list
+        return Response.redirect(
+          `${new URL(request.url).origin}/admin/comments/${comment.parent_post_id || comment.thread_id}`,
+          303
+        );
+        
+      } catch (error) {
+        logger.error('Failed to delete comment', { 
+          commentId, 
+          error: error.message 
+        });
+        return new Response('Failed to delete comment', { status: 500 });
+      }
     }
   },
 
