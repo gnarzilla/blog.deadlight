@@ -604,14 +604,12 @@ export const adminRoutes = {
       }
 
       try {
-        // Get dynamic config
         const config = await env.services.config.getConfig();
         
-        // Get all users (paginated in the future if needed)
-        const users = await userModel.list({ limit: 50 });
+        // Updated: Include stats for post_count and last_post
+        const users = await userModel.list({ limit: 50, includeStats: true });
         const totalUsers = await userModel.count();
 
-        // Use the template instead of inline HTML
         const { renderUserManagement } = await import('../templates/admin/userManagement.js');
         
         return new Response(renderUserManagement(users, user, config), {
@@ -619,7 +617,11 @@ export const adminRoutes = {
         });
       } catch (error) {
         console.error('User management error:', error);
-        return new Response('Internal server error', { status: 500 });
+        // Fallback: Render with empty users to avoid crash, like in analytics
+        const { renderUserManagement } = await import('../templates/admin/userManagement.js');
+        return new Response(renderUserManagement([], user, config), {
+          headers: { 'Content-Type': 'text/html' }
+        });
       }
     }
   },
