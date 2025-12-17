@@ -3,7 +3,8 @@ import {
   renderAddPostForm, 
   renderEditPostForm, 
   renderAddUserForm, 
-  renderDeleteConfirmation
+  renderDeleteConfirmation,
+  renderAddCommentForm
 } from '../../../lib.deadlight/core/src/components/admin/index.js';
 import { federationDashboard } from '../templates/admin/federationDashboard.js';
 import { FederationService }     from '../services/federation.js';
@@ -417,11 +418,10 @@ export const adminRoutes = {
       const postId = request.params.postId;
       const fedSvc = new FederationService(
         env,
-        env.services.config,    // ConfigService
-        env.services.proxy,     // ProxyService
-        env.services.queue      // QueueService
+        env.services.config,
+        env.services.proxy,
+        env.services.queue
       );
-
       const comments = await fedSvc.getThreadedComments(postId);
       const config = await env.services.config.getConfig();
       const { renderCommentList } = await import('../templates/admin/comments.js');
@@ -436,12 +436,11 @@ export const adminRoutes = {
       const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const postId = request.params.postId;
-      const { renderAddCommentForm } = await import('../templates/admin/comments.js');
-      return new Response(renderAddCommentForm(postId, user), {
+      const config = await env.services.config.getConfig();
+      return new Response(renderAddCommentForm(postId, user, config), {
         headers: { 'Content-Type': 'text/html' }
       });
     },
-
     POST: async (request, env, ctx) => {
       const user = await checkAuth(request, env, ctx);
       if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
@@ -455,7 +454,7 @@ export const adminRoutes = {
         return new Response('Content is required', { status: 400 });
       }
 
-      // Get parent post
+      const fedSvc = new FederationService(env);
       const post = await env.DB.prepare('SELECT id, federation_metadata FROM posts WHERE id = ?')
         .bind(postId).first();
       if (!post) {
@@ -464,61 +463,34 @@ export const adminRoutes = {
 
       const meta = post.federation_metadata ? JSON.parse(post.federation_metadata) : {};
       const sourceUrl = meta.source_url || `${env.SITE_URL}/post/${postId}`;
-      
-      // Generate comment metadata
-      const commentMeta = JSON.stringify({
-        author: user.username,  // Include author in metadata
-        source_domain: new URL(env.SITE_URL || 'https://deadlight.boo').hostname,
-        created_at: new Date().toISOString()
-      });
-      
-      const slug = `comment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-      
-      // Create local comment WITH metadata
+      const comment = {
+        id: Date.now(),
+        content,
+        author: user.username,
+        published_at: new Date().toISOString(),
+        parent_url: sourceUrl
+      };
+
       const insertResult = await env.DB.prepare(`
-        INSERT INTO posts (
-          title, content, slug, author_id, 
-          created_at, published, post_type, 
-          parent_id, thread_id, federation_metadata
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO posts (title, content, slug, author_id, created_at, published, post_type, parent_id, thread_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         `Comment on ${sourceUrl}`,
         content,
-        slug,
+        `comment-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         user.id,
         new Date().toISOString(),
         1,
         'comment',
         postId,
-        postId,
-        commentMeta  // Include metadata so author shows up
+        postId
       ).run();
 
-      const commentId = insertResult.meta.last_row_id;
-
-      // Only federate if there are connected domains
-      const fedSvc = new FederationService(env, env.services.config, env.services.proxy, env.services.queue);
       const domains = await fedSvc.getConnectedDomains();
-      
-      if (domains.length > 0) {
-        const targetDomains = domains.map(d => d.domain);
-        
-        // Build comment object for federation (doesn't create locally)
-        const federatedComment = {
-          id: commentId,
-          content,
-          author: user.username,
-          published_at: new Date().toISOString(),
-          parent_url: sourceUrl,
-          source_url: `${env.SITE_URL}/post/${postId}#comment-${commentId}`
-        };
-        
-        // This only queues for SENDING to other instances, doesn't create locally
-        await fedSvc.publishComment(federatedComment, targetDomains);
-      }
+      const targetDomains = domains.map(d => d.domain);
+      await fedSvc.publishComment(comment, targetDomains);
 
-    return Response.redirect(`${new URL(request.url).origin}/admin/comments/${postId}`);
+      return Response.redirect(`${new URL(request.url).origin}/admin/comments/${postId}`);
     }
   },
 
@@ -562,13 +534,7 @@ export const adminRoutes = {
         return new Response('Parent comment not found', { status: 404 });
       }
 
-      const fedSvc = new FederationService(
-        env,
-        env.services.config,    // ConfigService
-        env.services.proxy,     // ProxyService
-        env.services.queue      // QueueService
-      );
-
+      const fedSvc = new FederationService(env);
       const post = await env.DB.prepare('SELECT id, federation_metadata FROM posts WHERE id = ?')
         .bind(parentComment.parent_id || parentComment.thread_id).first();
       if (!post) {
@@ -611,55 +577,26 @@ export const adminRoutes = {
 
   '/admin/comments/delete/:id': {
     GET: async (request, env, ctx) => {
-      const logger = new Logger({ context: 'admin' });
       const user = await checkAuth(request, env, ctx);
-      
-      if (!user) {
-        return Response.redirect(`${new URL(request.url).origin}/login`);
-      }
-      
+      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
       const commentId = request.params.id;
 
-      try {
-        // Get comment details
-        const comment = await env.DB.prepare(`
-          SELECT p.*, u.username as author_username, p.parent_id AS parent_post_id
-          FROM posts p
-          LEFT JOIN users u ON p.author_id = u.id
-          WHERE p.id = ? AND p.post_type = 'comment'
-        `).bind(commentId).first();
-        
-        if (!comment) {
-          return new Response('Comment not found', { status: 404 });
-        }
+      const comment = await env.DB.prepare(`
+        SELECT p.*, u.username as author_username, p.parent_id AS parent_post_id
+        FROM posts p
+        LEFT JOIN users u ON p.author_id = u.id
+        WHERE p.id = ? AND p.post_type = 'comment'
+      `).bind(commentId).first();
+      if (!comment) return new Response('Comment not found', { status: 404 });
 
-        // Check permissions (only admin or comment author can delete)
-        if (user.role !== 'admin' && user.id !== comment.author_id) {
-          return new Response('Unauthorized', { status: 403 });
-        }
+      await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
 
-        // Delete comment
-        await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
-        
-        logger.info('Comment deleted', { 
-          commentId, 
-          userId: user.id,
-          parentId: comment.parent_post_id 
-        });
+      const fedSvc = new FederationService(env);
+      const domains = await fedSvc.getConnectedDomains();
+      const targetDomains = domains.map(d => d.domain);
+      await fedSvc.sendDeleteComment(commentId, targetDomains);
 
-        // Redirect back to comment list
-        return Response.redirect(
-          `${new URL(request.url).origin}/admin/comments/${comment.parent_post_id || comment.thread_id}`,
-          303
-        );
-        
-      } catch (error) {
-        logger.error('Failed to delete comment', { 
-          commentId, 
-          error: error.message 
-        });
-        return new Response('Failed to delete comment', { status: 500 });
-      }
+      return Response.redirect(`${new URL(request.url).origin}/admin/comments/${comment.parent_post_id || comment.thread_id}`);
     }
   },
 
@@ -673,12 +610,14 @@ export const adminRoutes = {
       }
 
       try {
+        // Get dynamic config
         const config = await env.services.config.getConfig();
         
-        // Updated: Include stats for post_count and last_post
-        const users = await userModel.list({ limit: 50, includeStats: true });
+        // Get all users (paginated in the future if needed)
+        const users = await userModel.list({ limit: 50 });
         const totalUsers = await userModel.count();
 
+        // Use the template instead of inline HTML
         const { renderUserManagement } = await import('../templates/admin/userManagement.js');
         
         return new Response(renderUserManagement(users, user, config), {
@@ -686,11 +625,7 @@ export const adminRoutes = {
         });
       } catch (error) {
         console.error('User management error:', error);
-        // Fallback: Render with empty users to avoid crash, like in analytics
-        const { renderUserManagement } = await import('../templates/admin/userManagement.js');
-        return new Response(renderUserManagement([], user, config), {
-          headers: { 'Content-Type': 'text/html' }
-        });
+        return new Response('Internal server error', { status: 500 });
       }
     }
   },
@@ -925,13 +860,7 @@ export const adminRoutes = {
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      const fedSvc = new FederationService(
-        env,
-        env.services.config,    // ConfigService
-        env.services.proxy,     // ProxyService
-        env.services.queue      // QueueService
-      );
-
+      const fedSvc = new FederationService(env);
       // syncNetwork now returns { imported: Number, domains: Number }
       const result = await fedSvc.syncNetwork();
       return Response.json({

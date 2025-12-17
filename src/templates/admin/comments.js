@@ -1,5 +1,4 @@
-// src/views/comments.js - Updated with public commenting
-
+// src/templates/admin/comments.js
 import { renderTemplate } from '../base.js';
 
 export function renderCommentList(comments, postId, user, config) {
@@ -47,7 +46,7 @@ export function renderReplyForm(comment, user) {
   `, user);
 }
 
-// NEW: Public comment form for non-admin users
+// Public comment form for non-admin users
 export function renderPublicCommentForm(postId, postTitle, config) {
   const requireApproval = config?.comments?.requireApproval !== false;
   const allowAnonymous = config?.comments?.allowAnonymous !== false;
@@ -248,7 +247,7 @@ export function renderPublicCommentForm(postId, postTitle, config) {
   `;
 }
 
-// NEW: Render comments with public form on blog posts
+// Render comments with public form on blog posts
 export function renderPublicCommentsSection(comments, postId, postTitle, user, config) {
   const approvedComments = user ? comments : comments.filter(c => c.status === 'approved');
   
