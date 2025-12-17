@@ -3,6 +3,7 @@ import { renderTemplate } from '../base.js';
 
 export function proxyDashboardTemplate(data, user, config) {
   const { status, queue, federation } = data || {};
+  const PROXY_URL = config.proxyUrl;
 
   // Safe data extraction
   const connected = status?.proxy_connected ?? false;
@@ -22,6 +23,7 @@ export function proxyDashboardTemplate(data, user, config) {
   const statusHtml = `
     <div class="card">
       <h3>Proxy Status</h3>
+      <p>Configured Proxy URL: ${PROXY_URL ? `<a href="${PROXY_URL}" target="_blank">${PROXY_URL}</a>` : 'Not Configured'}</p>
       <p>Connected: <span style="color: ${connectedColor};">${connected ? 'Yes' : 'No'}</span></p>
       <p>Circuit Breaker: <span style="color: ${circuitColor};">${circuitState.state} (${circuitState.failures} failures)</span></p>
     </div>
@@ -65,7 +67,7 @@ export function proxyDashboardTemplate(data, user, config) {
         </table>
       ` : '<p>No connected domains.</p>'}
       <form id="add-domain-form" style="margin-top: 1rem;">
-        <input type="text" id="new-domain" placeholder="example.com" required />
+        <input type="text" id="new-domain" placeholder="deadlight.boo" required />
         <button type="submit">Add Domain</button>
       </form>
     </div>
@@ -98,11 +100,11 @@ export function proxyDashboardTemplate(data, user, config) {
   const content = `
     <div class="container">
       <h1>Proxy Dashboard</h1>
-      ${statusHtml}
-      ${queueHtml}
-      ${domainsHtml}
-      ${activityHtml}
-      ${recommendationsHtml}
+        ${statusHtml}
+        ${queueHtml}
+        ${domainsHtml}
+        ${activityHtml}
+        ${recommendationsHtml}
     </div>
 
     <script>
