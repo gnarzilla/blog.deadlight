@@ -230,9 +230,9 @@ Use when: You want email posting, federation, self-hosted SMTP
 See [edge.deadlight docs](gnarzilla/edge.deadlight.git) for orchestrated deployment
 Use when: You need LoRa, full federation, multi-protocol bridging
 
----
-
 **Your blog is now global, costs pennies, and survives apocalypse-level connectivity.**
+
+---
 
 ### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux)
 
@@ -965,6 +965,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
