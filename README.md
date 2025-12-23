@@ -155,14 +155,34 @@ Your blog is now live on the edge.
 ```bash
 # Total page weight for a typical post
 curl -s https://thatch-dt.deadlight.boo/post/use-cases | wc -c
-# → 7,432 bytes (including HTML structure)
+# → 10,347 bytes (including HTML structure)
 
 # Time to first byte over satellite internet (600ms RTT)
 curl -w "%{time_total}\n" -o /dev/null -s https://deadlight.boo
-# → 0.847s (compare to 8–15s for typical JS-heavy blogs)
+# → 3.182007s (compare to 8–15s for typical JS-heavy blogs)
 
 # Works in text-only browsers
 lynx -dump https://thatch-dt.deadlight.boo/post/use-cases | head -20
+                           [1]Use Cases | thatch pad
+
+   [2]Analytics | [3]Register | [4]Login
+
+   (BUTTON) ♤
+
+Use Cases
+
+   By [5]thatch | 9/16/2025
+   0
+
+Use Case 1: The Privacy-Conscious Blogger
+
+   Sarah wants to blog about digital privacy but doesn't trust traditional
+   platforms
+
+   Without Deadlight:
+
+   Pays $10-20/month for "privacy-focused" hosting
+   Still has to trust the hosting provider with her data
 # → Fully readable, zero layout breakage
 ```
 
@@ -948,6 +968,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
