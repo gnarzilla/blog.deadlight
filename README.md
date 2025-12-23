@@ -12,6 +12,56 @@
 
 ![Quad-instance landing](src/assets/quad-instance-landing.gif)
 
+---
+
+## Quick Start
+
+Deploy a fully functional, production-ready instance in under 2 minutes using the interactive launcher.
+
+```bash
+npx create-deadlight-blog my-blog
+```
+
+*This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
+
+![One Click Deploy Terminal Demo](src/assets/click2launch.gif)
+
+### Post-Deployment
+Your blog is now live on the edge.
+1. Go to `https://your-project.pages.dev/admin`
+2. Log in with the credentials you set during setup
+3. Write your first post
+
+---
+
+## It actually works
+
+[This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**.]: # 
+
+### Live Demos
+
+- **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
+- **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
+- **[meshtastic.deadlight.boo](https://meshtastic.deadlight.boo)** – Blog published over LoRa mesh
+- **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
+- **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
+
+## Why this exists
+
+Most blogging platforms assume you have reliable connectivity, cheap power, and modern browsers. **The rest of the planet doesn't.**
+
+| The internet most people actually have | Why Ghost/WordPress/Substack die here | How Deadlight just works |
+|----------------------------------------|--------------------------------------|--------------------------|
+| **300–3000 ms latency**<br>(Starlink, LoRa, HF, mesh) | 400 KB of JS + hydration before you see text | <10 KB semantic HTML + optional CSS. Loads before the first satellite ACK |
+| **Connectivity drops for hours** | Needs 30–60s of stable link to render a post | Fully readable offline after first visit. New posts need ~4 seconds of uplink |
+| **Text-only clients**<br>(Meshtastic, packet radio, lynx) | 99% of modern blogs are JavaScript-only | 100% functional in w3m, links, or a 300-baud terminal |
+| **Power is scarce**<br>(solar Pi, phone in the desert) | Always-on containers burn watts for nothing | Zero compute when idle. D1 + Workers sleep completely |
+| **Hostile networks**<br>(DPI, censorship, no DNS) | Third-party analytics + CDN beacons = instant fingerprint | Zero external requests by default. Prevents fingerprinting and bypasses DNS blackouts |
+| **You might post over email, SMS, or LoRa** | Normal dashboards require browser + stable link | Admin dashboard works over SMTP/IMAP. Post from a burner address if needed |
+
+**Deadlight isn't trying to be the coolest blog platform.**  
+**It's trying to be the last one on after the lights go out.**
+
 ## Part of the Deadlight Ecosystem
 
 blog.deadlight is the **content and federation layer** of the Deadlight edge platform.
@@ -52,57 +102,6 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 [Jump to ecosystem details ↓](#the-deadlight-ecosystem)
 
 ---
-
-## Why this exists
-
-Most blogging platforms assume you have reliable connectivity, cheap power, and modern browsers. **The rest of the planet doesn't.**
-
-| The internet most people actually have | Why Ghost/WordPress/Substack die here | How Deadlight just works |
-|----------------------------------------|--------------------------------------|--------------------------|
-| **300–3000 ms latency**<br>(Starlink, LoRa, HF, mesh) | 400 KB of JS + hydration before you see text | <10 KB semantic HTML + optional CSS. Loads before the first satellite ACK |
-| **Connectivity drops for hours** | Needs 30–60s of stable link to render a post | Fully readable offline after first visit. New posts need ~4 seconds of uplink |
-| **Text-only clients**<br>(Meshtastic, packet radio, lynx) | 99% of modern blogs are JavaScript-only | 100% functional in w3m, links, or a 300-baud terminal |
-| **Power is scarce**<br>(solar Pi, phone in the desert) | Always-on containers burn watts for nothing | Zero compute when idle. D1 + Workers sleep completely |
-| **Hostile networks**<br>(DPI, censorship, no DNS) | Third-party analytics + CDN beacons = instant fingerprint | Zero external requests by default. Prevents fingerprinting and bypasses DNS blackouts |
-| **You might post over email, SMS, or LoRa** | Normal dashboards require browser + stable link | Admin dashboard works over SMTP/IMAP. Post from a burner address if needed |
-
-**Deadlight isn't trying to be the coolest blog platform.**  
-**It's trying to be the last one on after the lights go out.**
-
----
-
-## Quick Start
-
-Deploy a fully functional, production-ready instance in under 2 minutes using the interactive launcher.
-
-```bash
-npx create-deadlight-blog my-blog
-```
-
-*This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
-
-![One Click Deploy Terminal Demo](src/assets/click2launch.gif)
-
-### Post-Deployment
-Your blog is now live on the edge.
-1. Go to `https://your-project.pages.dev/admin`
-2. Log in with the credentials you set during setup
-3. Write your first post
-
----
-
-
-## It actually works
-
-[This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**.]: # 
-
-### Live Demos
-
-- **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
-- **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
-- **[meshtastic.deadlight.boo](https://meshtastic.deadlight.boo)** – Blog published over LoRa mesh
-- **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
-- **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
 
 ## Use Cases
 
@@ -968,6 +967,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
