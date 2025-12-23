@@ -12,8 +12,6 @@
 
 ![Quad-instance landing](src/assets/quad-instance-landing.gif)
 
----
-
 ## Quick Start
 
 Deploy a fully functional, production-ready instance in under 2 minutes using the interactive launcher.
@@ -967,6 +965,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
 
