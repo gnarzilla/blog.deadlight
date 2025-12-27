@@ -1,7 +1,10 @@
 // src/templates/base.js
 export function renderTemplate(title, bodyContent, user = null, config = null) {
   const siteTitle = config?.title || 'D E A D L I G H T';
-  const pageTitle = title === 'home' ? siteTitle : `${title} | ${siteTitle}`;
+
+  // Truncate long titles for the browser tab
+  const truncatedTitle = title.length > 60 ? title.substring(0, 57) + '...' : title;
+  const pageTitle = title === 'home' ? siteTitle : `${truncatedTitle} | ${siteTitle}`;
   
   const cacheBust = Date.now();  // Cache bust for CSS
   
@@ -64,7 +67,7 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
     </head>
     <body>
       <header>
-        <h1><a href="/">${pageTitle}</a></h1>
+        <h1><a href="/">${siteTitle}</a></h1>
         <nav>
           ${authLinks}
           <div class="theme-toggle-container">
