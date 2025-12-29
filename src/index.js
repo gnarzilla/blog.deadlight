@@ -8,6 +8,7 @@ import { blogRoutes } from './routes/blog.js';
 import { inboxRoutes } from './routes/inbox.js';
 import { apiRoutes } from './routes/api.js';
 import { userRoutes } from './routes/user.js';
+import { commentRoutes } from './routes/comments.js';
 import { federationRoutes } from './routes/federation.js';
 import { errorMiddleware, loggingMiddleware } from './middleware/index.js';
 import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './middleware/index.js';
@@ -98,6 +99,13 @@ router.group([authMiddleware, commentRateLimitMiddleware, csrfValidateMiddleware
 router.group([authMiddleware, csrfTokenMiddleware], (r) => {
   Object.entries(userRoutes).forEach(([p, h]) => r.register(p, h));
   Object.entries(inboxRoutes).forEach(([p, h]) => r.register(p, h));
+});
+
+/* ==============================================================
+   COMMENT ROUTES (authenticated users, with rate limit + CSRF)
+   ============================================================== */
+router.group([authMiddleware, commentRateLimitMiddleware, csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
+  Object.entries(commentRoutes).forEach(([p, h]) => r.register(p, h));
 });
 
 /* ==============================================================

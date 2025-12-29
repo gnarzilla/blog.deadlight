@@ -1,4 +1,5 @@
-// src/templates/admin/comments.js
+// src/templates/admin/comments.js - Updated with public paths
+
 import { renderTemplate } from '../base.js';
 
 export function renderCommentList(comments, postId, user, config) {
@@ -8,9 +9,10 @@ export function renderCommentList(comments, postId, user, config) {
       <p class="post-meta">By ${comment.author} | ${new Date(comment.published_at).toLocaleDateString()}</p>
       ${user ? `
         <div class="comment-actions">
-          <a href="/admin/comments/edit/${comment.id}" class="button edit-button">Edit</a>
-          <a href="/admin/comments/delete/${comment.id}" class="button delete-button">Delete</a>
-          <a href="/admin/comments/reply/${comment.id}" class="button reply-button">Reply</a>
+          <a href="/comments/reply/${comment.id}" class="button reply-button">Reply</a>
+          ${user.role === 'admin' || user.id === comment.author_id ? `
+            <a href="/comments/delete/${comment.id}" class="button delete-button">Delete</a>
+          ` : ''}
         </div>
       ` : ''}
     </div>
@@ -19,34 +21,186 @@ export function renderCommentList(comments, postId, user, config) {
   return renderTemplate('Comments for Post ' + postId, `
     <h1>Comments</h1>
     ${commentHtml || '<p class="no-comments">No comments yet.</p>'}
-    ${user ? `<a href="/admin/add-comment/${postId}" class="button">Add Comment</a>` : ''}
+    ${user ? `<a href="/comments/add/${postId}" class="button">Add Comment</a>` : `
+      <p class="info-message">
+        <a href="/login">Log in</a> to leave a comment
+      </p>
+    `}
+    <div class="actions">
+      <a href="/post/${postId}" class="button secondary">Back to Post</a>
+    </div>
   `, user, config);
 }
 
-export function renderAddCommentForm(postId, user) {
+export function renderAddCommentForm(postId, user, config) {
   return renderTemplate('Add Comment', `
     <h1>Add Comment</h1>
-    <form action="/admin/add-comment/${postId}" method="POST">
-      <textarea name="content" required placeholder="Write your comment..."></textarea>
-      <button type="submit" class="button">Submit</button>
+    <form action="/comments/add/${postId}" method="POST">
+      <div class="form-group">
+        <label for="content">Your Comment</label>
+        <textarea 
+          id="content"
+          name="content" 
+          required 
+          placeholder="Write your comment..."
+          rows="5"
+          minlength="3"
+          maxlength="5000"></textarea>
+        <small class="char-count">Max 5000 characters</small>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="button primary">Submit Comment</button>
+        <a href="/comments/${postId}" class="button secondary">Cancel</a>
+      </div>
     </form>
-  `, user);
+    
+    <style>
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+      
+      .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 1rem;
+        resize: vertical;
+      }
+      
+      .char-count {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--text-muted, #666);
+        font-size: 0.85rem;
+      }
+      
+      .form-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+      
+      .button.primary {
+        background: var(--accent-color, #0066cc);
+        color: white;
+      }
+      
+      .button.secondary {
+        background: var(--bg-secondary, #f5f5f5);
+        color: var(--text-primary, #333);
+      }
+    </style>
+  `, user, config);
 }
 
-export function renderReplyForm(comment, user) {
-  const parentUrl = comment.federation_metadata ? JSON.parse(comment.federation_metadata).parent_url : null;
+export function renderReplyForm(comment, user, config) {
+  const meta = comment.federation_metadata ? JSON.parse(comment.federation_metadata) : {};
+  const parentUrl = meta.parent_url || `/post/${comment.parent_id || comment.thread_id}`;
+  
   return renderTemplate('Reply to Comment', `
     <h1>Reply to Comment</h1>
-    <p>Replying to: <a href="${parentUrl}">${comment.content.substring(0, 50)}${comment.content.length > 50 ? '...' : ''}</a></p>
-    <form action="/admin/comments/reply/${comment.id}" method="POST">
-      <textarea name="content" required placeholder="Write your reply..."></textarea>
-      <button type="submit" class="button">Submit Reply</button>
+    <div class="parent-comment">
+      <p class="parent-label">Replying to:</p>
+      <blockquote>
+        ${comment.content.substring(0, 200)}${comment.content.length > 200 ? '...' : ''}
+      </blockquote>
+      <p class="post-meta">By ${comment.author_username || 'Unknown'}</p>
+    </div>
+    
+    <form action="/comments/reply/${comment.id}" method="POST">
+      <div class="form-group">
+        <label for="content">Your Reply</label>
+        <textarea 
+          id="content"
+          name="content" 
+          required 
+          placeholder="Write your reply..."
+          rows="5"
+          minlength="3"
+          maxlength="5000"></textarea>
+        <small class="char-count">Max 5000 characters</small>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="button primary">Submit Reply</button>
+        <a href="/comments/${comment.parent_id || comment.thread_id}" class="button secondary">Cancel</a>
+      </div>
     </form>
-    <a href="/admin/comments/${comment.parent_id || comment.thread_id}" class="button">Back to Comments</a>
-  `, user);
+    
+    <style>
+      .parent-comment {
+        margin: 1.5rem 0;
+        padding: 1rem;
+        background: var(--bg-secondary, #f5f5f5);
+        border-left: 3px solid var(--accent-color, #0066cc);
+        border-radius: 4px;
+      }
+      
+      .parent-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-muted, #666);
+      }
+      
+      blockquote {
+        margin: 0.5rem 0;
+        padding: 0;
+        border: none;
+        font-style: italic;
+      }
+      
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+      
+      .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 1rem;
+        resize: vertical;
+      }
+      
+      .char-count {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--text-muted, #666);
+        font-size: 0.85rem;
+      }
+      
+      .form-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+      
+      .button.primary {
+        background: var(--accent-color, #0066cc);
+        color: white;
+      }
+      
+      .button.secondary {
+        background: var(--bg-secondary, #f5f5f5);
+        color: var(--text-primary, #333);
+      }
+    </style>
+  `, user, config);
 }
 
-// Public comment form for non-admin users
+// Keep the public commenting functions from your original file
 export function renderPublicCommentForm(postId, postTitle, config) {
   const requireApproval = config?.comments?.requireApproval !== false;
   const allowAnonymous = config?.comments?.allowAnonymous !== false;
@@ -56,7 +210,7 @@ export function renderPublicCommentForm(postId, postTitle, config) {
       <h3>Leave a Comment</h3>
       ${requireApproval ? '<p class="info-message">Your comment will be reviewed before publishing.</p>' : ''}
       
-      <form action="/api/comments/${postId}" method="POST" id="comment-form">
+      <form action="/comments/add/${postId}" method="POST" id="comment-form">
         ${allowAnonymous ? `
           <div class="form-group">
             <label for="author_name">Name ${!config?.comments?.anonymousOptional ? '*' : '(optional)'}</label>
@@ -196,58 +350,13 @@ export function renderPublicCommentForm(postId, postTitle, config) {
           });
         }
         
-        // Form submission
-        if (form) {
-          form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Posting...';
-            
-            try {
-              const formData = new FormData(form);
-              const data = Object.fromEntries(formData.entries());
-              
-              const response = await fetch(form.action, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-              });
-              
-              const result = await response.json();
-              
-              if (response.ok) {
-                statusDiv.className = 'status-message success';
-                statusDiv.textContent = result.message || 'Comment posted successfully!';
-                statusDiv.style.display = 'block';
-                form.reset();
-                if (charCount) charCount.textContent = '0';
-                
-                // Reload page after 2 seconds to show new comment
-                setTimeout(() => window.location.reload(), 2000);
-              } else {
-                throw new Error(result.error || 'Failed to post comment');
-              }
-            } catch (error) {
-              statusDiv.className = 'status-message error';
-              statusDiv.textContent = error.message;
-              statusDiv.style.display = 'block';
-            } finally {
-              submitBtn.disabled = false;
-              submitBtn.textContent = originalText;
-            }
-          });
-        }
+        // Form submission (standard POST, not AJAX)
+        // The route will handle redirect after success
       })();
     </script>
   `;
 }
 
-// Render comments with public form on blog posts
 export function renderPublicCommentsSection(comments, postId, postTitle, user, config) {
   const approvedComments = user ? comments : comments.filter(c => c.status === 'approved');
   
@@ -255,8 +364,8 @@ export function renderPublicCommentsSection(comments, postId, postTitle, user, c
     <div class="comment" style="margin-left: ${comment.level * 20}px;" data-comment-id="${comment.id}">
       <div class="comment-header">
         ${comment.author_url ? 
-          `<strong class="comment-author"><a href="${comment.author_url}" target="_blank" rel="nofollow">${comment.author}</a></strong>` :
-          `<strong class="comment-author">${comment.author}</strong>`
+          `<strong class="comment-author"><a href="${comment.author_url}" target="_blank" rel="nofollow">${escapeHtml(comment.author)}</a></strong>` :
+          `<strong class="comment-author">${escapeHtml(comment.author)}</strong>`
         }
         <span class="comment-date">${new Date(comment.published_at).toLocaleDateString()}</span>
         ${user && comment.status === 'pending' ? '<span class="badge pending">Pending</span>' : ''}
@@ -265,13 +374,11 @@ export function renderPublicCommentsSection(comments, postId, postTitle, user, c
         <p>${escapeHtml(comment.content)}</p>
       </div>
       ${user ? `
-        <div class="comment-actions admin-actions">
-          ${comment.status === 'pending' ? `
-            <button class="button small approve-btn" data-id="${comment.id}">Approve</button>
-            <button class="button small reject-btn" data-id="${comment.id}">Reject</button>
+        <div class="comment-actions">
+          <a href="/comments/reply/${comment.id}" class="button small">Reply</a>
+          ${user.role === 'admin' || user.id === comment.author_id ? `
+            <a href="/comments/delete/${comment.id}" class="button small delete">Delete</a>
           ` : ''}
-          <a href="/admin/comments/edit/${comment.id}" class="button small">Edit</a>
-          <a href="/admin/comments/delete/${comment.id}" class="button small delete">Delete</a>
         </div>
       ` : ''}
     </div>
@@ -283,7 +390,11 @@ export function renderPublicCommentsSection(comments, postId, postTitle, user, c
       
       ${commentHtml || '<p class="no-comments">No comments yet. Be the first to comment!</p>'}
       
-      ${config?.comments?.enabled !== false ? renderPublicCommentForm(postId, postTitle, config) : ''}
+      ${config?.comments?.enabled !== false ? (
+        user ? 
+          `<div class="comment-cta"><a href="/comments/add/${postId}" class="button primary">Add Comment</a></div>` :
+          `<div class="comment-cta"><a href="/login" class="button primary">Log in to comment</a></div>`
+      ) : ''}
     </div>
     
     <style>
@@ -339,7 +450,7 @@ export function renderPublicCommentsSection(comments, postId, postTitle, user, c
         line-height: 1.6;
       }
       
-      .admin-actions {
+      .comment-actions {
         margin-top: 0.5rem;
         display: flex;
         gap: 0.5rem;
@@ -350,9 +461,16 @@ export function renderPublicCommentsSection(comments, postId, postTitle, user, c
         font-size: 0.85rem;
       }
       
+      .comment-cta {
+        margin-top: 1.5rem;
+        text-align: center;
+      }
+      
       .no-comments {
         color: var(--text-muted, #666);
         font-style: italic;
+        text-align: center;
+        padding: 2rem;
       }
     </style>
   `;

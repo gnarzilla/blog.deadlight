@@ -453,8 +453,12 @@ export const adminRoutes = {
       if (!content) {
         return new Response('Content is required', { status: 400 });
       }
-
-      const fedSvc = new FederationService(env);
+      const fedSvc = new FederationService(
+        env,
+        env.services.config,
+        env.services.proxy,
+        env.services.queue
+      );
       const post = await env.DB.prepare('SELECT id, federation_metadata FROM posts WHERE id = ?')
         .bind(postId).first();
       if (!post) {
@@ -534,7 +538,12 @@ export const adminRoutes = {
         return new Response('Parent comment not found', { status: 404 });
       }
 
-      const fedSvc = new FederationService(env);
+      const fedSvc = new FederationService(
+        env,
+        env.services.config,
+        env.services.proxy,
+        env.services.queue
+      );
       const post = await env.DB.prepare('SELECT id, federation_metadata FROM posts WHERE id = ?')
         .bind(parentComment.parent_id || parentComment.thread_id).first();
       if (!post) {
@@ -591,7 +600,12 @@ export const adminRoutes = {
 
       await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
 
-      const fedSvc = new FederationService(env);
+      const fedSvc = new FederationService(
+        env,
+        env.services.config,
+        env.services.proxy,
+        env.services.queue
+      );
       const domains = await fedSvc.getConnectedDomains();
       const targetDomains = domains.map(d => d.domain);
       await fedSvc.sendDeleteComment(commentId, targetDomains);
@@ -859,8 +873,12 @@ export const adminRoutes = {
       if (!user) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
       }
-
-      const fedSvc = new FederationService(env);
+      const fedSvc = new FederationService(
+        env,
+        env.services.config,
+        env.services.proxy,
+        env.services.queue
+      );
       // syncNetwork now returns { imported: Number, domains: Number }
       const result = await fedSvc.syncNetwork();
       return Response.json({
