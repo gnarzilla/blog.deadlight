@@ -1,4 +1,4 @@
-// src/templates/admin/comments.js - Updated with public paths
+// src/templates/admin/comments.js 
 
 import { renderTemplate } from '../base.js';
 
@@ -200,7 +200,6 @@ export function renderReplyForm(comment, user, config) {
   `, user, config);
 }
 
-// Keep the public commenting functions from your original file
 export function renderPublicCommentForm(postId, postTitle, config) {
   const requireApproval = config?.comments?.requireApproval !== false;
   const allowAnonymous = config?.comments?.allowAnonymous !== false;

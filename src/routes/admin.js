@@ -22,6 +22,8 @@ import { renderAdminDashboard } from '../templates/admin/index.js';
 import { SettingsModel } from '../../../lib.deadlight/core/src/db/models/index.js';        
 import { renderSettings } from '../templates/admin/settings.js';
 import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
+import { renderCommentList, renderReplyForm } from '../templates/admin/comments.js';
+import { renderUserManagement } from '../templates/admin/userManagement.js';
 
 export const adminRoutes = {
   '/admin': {
@@ -262,7 +264,7 @@ export const adminRoutes = {
 
       try {
         const formData = await request.formData();
-        const { SettingsModel } = await import('../../../lib.deadlight/core/src/db/models/index.js');
+
         const settingsModel = new SettingsModel(env.DB);
         
         // Update text/number settings
@@ -424,7 +426,6 @@ export const adminRoutes = {
       );
       const comments = await fedSvc.getThreadedComments(postId);
       const config = await env.services.config.getConfig();
-      const { renderCommentList } = await import('../templates/admin/comments.js');
       return new Response(renderCommentList(comments, postId, user, config), {
         headers: { 'Content-Type': 'text/html' }
       });
@@ -510,7 +511,7 @@ export const adminRoutes = {
         WHERE p.id = ? AND p.post_type = 'comment'
       `).bind(commentId).first();
       if (!comment) return new Response('Comment not found', { status: 404 });
-      const { renderReplyForm } = await import('../templates/admin/comments.js');
+
       return new Response(renderReplyForm(comment, user), {
         headers: { 'Content-Type': 'text/html' }
       });
@@ -586,33 +587,71 @@ export const adminRoutes = {
 
   '/admin/comments/delete/:id': {
     GET: async (request, env, ctx) => {
+      const logger = new Logger({ context: 'admin' });
       const user = await checkAuth(request, env, ctx);
-      if (!user) return Response.redirect(`${new URL(request.url).origin}/login`);
+      
+      if (!user) {
+        return Response.redirect(`${new URL(request.url).origin}/login`);
+      }
+      
       const commentId = request.params.id;
 
-      const comment = await env.DB.prepare(`
-        SELECT p.*, u.username as author_username, p.parent_id AS parent_post_id
-        FROM posts p
-        LEFT JOIN users u ON p.author_id = u.id
-        WHERE p.id = ? AND p.post_type = 'comment'
-      `).bind(commentId).first();
-      if (!comment) return new Response('Comment not found', { status: 404 });
+      try {
+        const comment = await env.DB.prepare(`
+          SELECT p.*, u.username as author_username, p.parent_id AS parent_post_id
+          FROM posts p
+          LEFT JOIN users u ON p.author_id = u.id
+          WHERE p.id = ? AND p.post_type = 'comment'
+        `).bind(commentId).first();
+        
+        if (!comment) {
+          return new Response('Comment not found', { status: 404 });
+        }
 
-      await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
+        // Check permissions
+        if (user.role !== 'admin' && user.id !== comment.author_id) {
+          return new Response('Unauthorized', { status: 403 });
+        }
 
-      const fedSvc = new FederationService(
-        env,
-        env.services.config,
-        env.services.proxy,
-        env.services.queue
-      );
-      const domains = await fedSvc.getConnectedDomains();
-      const targetDomains = domains.map(d => d.domain);
-      await fedSvc.sendDeleteComment(commentId, targetDomains);
+        // Delete locally
+        await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
+        
+        // ✅ NEW: Federate deletion if there are connected domains
+        const fedSvc = new FederationService(
+          env,
+          env.services.config,
+          env.services.proxy,
+          env.services.queue
+        );
+        
+        const domains = await fedSvc.getConnectedDomains();
+        if (domains.length > 0) {
+          const targetDomains = domains.map(d => d.domain);
+          await fedSvc.sendDeleteComment(commentId, targetDomains);
+        }
 
-      return Response.redirect(`${new URL(request.url).origin}/admin/comments/${comment.parent_post_id || comment.thread_id}`);
+        logger.info('Comment deleted', { 
+          commentId, 
+          userId: user.id,
+          federated: domains.length > 0,
+          parentId: comment.parent_post_id 
+        });
+
+        return Response.redirect(
+          `${new URL(request.url).origin}/admin/comments/${comment.parent_post_id || comment.thread_id}`,
+          303
+        );
+        
+      } catch (error) {
+        logger.error('Failed to delete comment', { 
+          commentId, 
+          error: error.message 
+        });
+        return new Response('Failed to delete comment', { status: 500 });
+      }
     }
   },
+
 
   '/admin/users': {
     GET: async (request, env, ctx) => {
@@ -630,9 +669,6 @@ export const adminRoutes = {
         // Get all users (paginated in the future if needed)
         const users = await userModel.list({ limit: 50 });
         const totalUsers = await userModel.count();
-
-        // Use the template instead of inline HTML
-        const { renderUserManagement } = await import('../templates/admin/userManagement.js');
         
         return new Response(renderUserManagement(users, user, config), {
           headers: { 'Content-Type': 'text/html' }
