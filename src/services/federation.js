@@ -45,6 +45,76 @@ export class FederationService {
     await this.queue.queueItem('federation', { ...signed, targetDomains });
   }
 
+  async sendDeleteComment(commentId, targetDomains) {
+    const domain = await this._domain();
+    const siteUrl = await this._siteUrl();
+    
+    // Fetch the comment to get metadata about it
+    const comment = await this.db.prepare(`
+      SELECT id, parent_id, thread_id, federation_metadata
+      FROM posts
+      WHERE id = ? AND post_type = 'comment'
+    `).bind(commentId).first();
+
+    if (!comment) {
+      this.logger.warn('Comment not found for deletion federation', { commentId });
+      return;
+    }
+
+    const meta = comment.federation_metadata ? JSON.parse(comment.federation_metadata) : {};
+    
+    const payload = {
+      commentId,
+      parentId: comment.parent_id || comment.thread_id,
+      sourceUrl: meta.source_url || `${siteUrl}/post/${comment.parent_id}#comment-${commentId}`,
+      federationType: 'delete_comment',
+      instanceUrl: siteUrl,
+      domain: domain,
+    };
+    
+    const signed = await this._sign(payload);
+    await this.queue.queueItem('federation', { ...signed, targetDomains });
+    
+    this.logger.info('Delete comment queued for federation', { 
+      commentId, 
+      targetDomains: targetDomains.length 
+    });
+  }
+
+  async sendDeletePost(postId, targetDomains) {
+    const domain = await this._domain();
+    const siteUrl = await this._siteUrl();
+    
+    const post = await this.db.prepare(`
+      SELECT id, slug, federation_metadata
+      FROM posts
+      WHERE id = ?
+    `).bind(postId).first();
+
+    if (!post) {
+      this.logger.warn('Post not found for deletion federation', { postId });
+      return;
+    }
+
+    const meta = post.federation_metadata ? JSON.parse(post.federation_metadata) : {};
+    
+    const payload = {
+      postId,
+      slug: post.slug,
+      sourceUrl: meta.source_url || `${siteUrl}/post/${post.slug}`,
+      federationType: 'delete_post',
+      instanceUrl: siteUrl,
+      domain: domain,
+    };
+    
+    const signed = await this._sign(payload);
+    await this.queue.queueItem('federation', { ...signed, targetDomains });
+    
+    this.logger.info('Delete post queued for federation', { 
+      postId, 
+      targetDomains: targetDomains.length 
+    });
+  }
 
   /* --------------------------------------------------------------
      PROCESSING – called by QueueService (see _processFederation)
@@ -68,7 +138,12 @@ export class FederationService {
         return await this._handleNewPost(payload.payload, emailData);
       case 'comment':
         return await this._handleComment(payload.payload, emailData);
-      // add discovery, delete, etc.
+      case 'delete_comment':
+        return await this._handleDeleteComment(payload.payload, emailData);
+      case 'delete_post':
+        return await this._handleDeletePost(payload.payload, emailData);
+      case 'discovery':
+        return await this._handleDiscovery(payload.payload, emailData.from);
       default:
         throw new Error(`Unknown type ${payload.federation_type}`);
     }
@@ -115,6 +190,7 @@ export class FederationService {
     
     throw new Error('Federation private key not configured. Run: scripts/gen-fed-keys.sh');
   }
+  
   async _publicKey() {
     // For responses to /.well-known/deadlight
     const configData = await this.config.getConfig();
@@ -144,6 +220,7 @@ export class FederationService {
     const url = await this._siteUrl();
     return new URL(url).hostname;
   }
+  
   /* --------------------------------------------------------------
      INBOUND HANDLERS
      -------------------------------------------------------------- */
@@ -291,6 +368,78 @@ export class FederationService {
     }
   }
 
+  async _handleDeleteComment(deleteData, email, sourceDomain) {
+    try {
+      const { commentId, sourceUrl } = deleteData;
+
+      // Find the comment by source metadata
+      const comment = await this.db.prepare(`
+        SELECT id FROM posts
+        WHERE json_extract(federation_metadata, '$.source_id') = ?
+          AND json_extract(federation_metadata, '$.source_domain') = ?
+          AND post_type = 'comment'
+      `).bind(commentId?.toString() || 'unknown', sourceDomain).first();
+
+      if (!comment) {
+        this.logger.warn('Comment not found for deletion', { commentId, sourceDomain });
+        return { status: 'not_found', commentId };
+      }
+
+      // Delete the comment
+      await this.db.prepare('DELETE FROM posts WHERE id = ?').bind(comment.id).run();
+
+      this.logger.info('Federated comment deleted', { 
+        localId: comment.id,
+        sourceId: commentId,
+        sourceDomain 
+      });
+
+      return { status: 'deleted', commentId: comment.id };
+    } catch (error) {
+      this.logger.error('Failed to handle comment deletion', { 
+        error: error.message,
+        sourceDomain 
+      });
+      throw error;
+    }
+  }
+
+  async _handleDeletePost(deleteData, email, sourceDomain) {
+    try {
+      const { postId, sourceUrl } = deleteData;
+
+      // Find the post by source metadata
+      const post = await this.db.prepare(`
+        SELECT id FROM posts
+        WHERE json_extract(federation_metadata, '$.source_id') = ?
+          AND json_extract(federation_metadata, '$.source_domain') = ?
+          AND post_type = 'federated'
+      `).bind(postId?.toString() || 'unknown', sourceDomain).first();
+
+      if (!post) {
+        this.logger.warn('Post not found for deletion', { postId, sourceDomain });
+        return { status: 'not_found', postId };
+      }
+
+      // Delete the post (cascade should handle comments)
+      await this.db.prepare('DELETE FROM posts WHERE id = ?').bind(post.id).run();
+
+      this.logger.info('Federated post deleted', { 
+        localId: post.id,
+        sourceId: postId,
+        sourceDomain 
+      });
+
+      return { status: 'deleted', postId: post.id };
+    } catch (error) {
+      this.logger.error('Failed to handle post deletion', { 
+        error: error.message,
+        sourceDomain 
+      });
+      throw error;
+    }
+  }
+
   async _handleDiscovery(discoveryData, sourceDomain) {
     try {
       await this.establishTrust(
@@ -382,6 +531,8 @@ export class FederationService {
         p.content, 
         p.author_id, 
         p.created_at, 
+        p.parent_id,
+        p.thread_id,
         p.federation_metadata,
         u.username
       FROM posts p
@@ -392,7 +543,8 @@ export class FederationService {
       LIMIT ?
     `).bind(postId, postId, limit).all();
 
-    return (res.results || []).map(row => {
+    // Build threaded structure
+    const comments = (res.results || []).map(row => {
       const meta = row.federation_metadata ? JSON.parse(row.federation_metadata) : {};
       
       // ✅ Use username from join, fallback to metadata, then Unknown
@@ -402,10 +554,99 @@ export class FederationService {
         id: row.id,
         content: row.content,
         author: author,
+        author_id: row.author_id,
+        parent_id: row.parent_id,
+        thread_id: row.thread_id,
         source_domain: meta.source_domain,
         source_url: meta.source_url,
-        published_at: row.created_at
+        published_at: row.created_at,
+        level: 0  // Will be calculated below
       };
     });
+
+    // Calculate nesting levels for display
+    const commentMap = new Map(comments.map(c => [c.id, c]));
+    comments.forEach(comment => {
+      if (comment.parent_id && comment.parent_id !== postId) {
+        const parent = commentMap.get(comment.parent_id);
+        if (parent) {
+          comment.level = parent.level + 1;
+        }
+      }
+    });
+
+    return comments;
+  }
+
+  /* --------------------------------------------------------------
+     SYNC & BULK OPERATIONS
+     -------------------------------------------------------------- */
+  async syncNetwork() {
+    try {
+      const domains = await this.getConnectedDomains();
+      let imported = 0;
+      const newPosts = [];
+
+      for (const domain of domains) {
+        try {
+          // Fetch recent posts from federated instance
+          const response = await fetch(`https://${domain.domain}/api/federation/outbox`, {
+            headers: {
+              'User-Agent': 'Deadlight-Federation/1.0',
+              'Accept': 'application/json',
+            },
+          });
+
+          if (!response.ok) continue;
+
+          const data = await response.json();
+          const posts = data.orderedItems || [];
+
+          for (const item of posts) {
+            // Check if we already have this post
+            const existing = await this.db.prepare(`
+              SELECT id FROM posts 
+              WHERE json_extract(federation_metadata, '$.source_id') = ?
+                AND json_extract(federation_metadata, '$.source_domain') = ?
+            `).bind(item.object?.id || item.id, domain.domain).first();
+
+            if (existing) continue;
+
+            // Import the post
+            const result = await this._handleNewPost(
+              {
+                id: item.object?.id || item.id,
+                title: item.object?.name || 'Untitled',
+                content: item.object?.content || '',
+                author: item.actor,
+                source_url: item.object?.id,
+              },
+              { from: domain.domain },
+              domain.domain
+            );
+
+            if (result.status !== 'duplicate') {
+              imported++;
+              newPosts.push(result);
+            }
+          }
+        } catch (error) {
+          this.logger.error('Failed to sync with domain', { 
+            domain: domain.domain, 
+            error: error.message 
+          });
+        }
+      }
+
+      this.logger.info('Network sync completed', { 
+        domains: domains.length, 
+        imported 
+      });
+
+      return { imported, domains: domains.length, newPosts };
+    } catch (error) {
+      this.logger.error('Network sync failed', { error: error.message });
+      throw error;
+    }
   }
 }
