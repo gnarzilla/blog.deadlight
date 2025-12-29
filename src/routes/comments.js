@@ -4,6 +4,7 @@
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { FederationService } from '../services/federation.js';
 import { Logger } from '../../../lib.deadlight/core/src/logging/logger.js';
+import { renderCommentList, renderAddCommentForm, renderReplyForm } from '../templates/admin/comments.js';
 
 export const commentRoutes = {
   // View comments for a post (public or authenticated depending on config)
@@ -26,7 +27,6 @@ export const commentRoutes = {
       );
       
       const comments = await fedSvc.getThreadedComments(postId);
-      const { renderCommentList } = await import('../templates/admin/comments.js');
       
       return new Response(renderCommentList(comments, postId, user, config), {
         headers: { 'Content-Type': 'text/html' }
@@ -44,7 +44,6 @@ export const commentRoutes = {
       
       const postId = request.params.postId;
       const config = await env.services.config.getConfig();
-      const { renderAddCommentForm } = await import('../templates/admin/comments.js');
       
       return new Response(renderAddCommentForm(postId, user, config), {
         headers: { 'Content-Type': 'text/html' }
@@ -170,7 +169,6 @@ export const commentRoutes = {
       }
       
       const config = await env.services.config.getConfig();
-      const { renderReplyForm } = await import('../templates/admin/comments.js');
       
       return new Response(renderReplyForm(comment, user, config), {
         headers: { 'Content-Type': 'text/html' }

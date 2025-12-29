@@ -55,7 +55,7 @@ export class FederationService {
   }
 
   /* --------------------------------------------------------------
-     INBOUND – called from your inbox endpoint (POST /inbox)
+     INBOUND – called from inbox endpoint (POST /inbox)
      -------------------------------------------------------------- */
   async handleIncoming(emailData) {
     const payload = JSON.parse(emailData.body);
