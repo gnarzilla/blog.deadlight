@@ -966,9 +966,3 @@ See [docs/LICENSE](docs/LICENSE) for details.
 
 [EOF](#live-demos)
 
-
-
-
-
-
-
