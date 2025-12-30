@@ -8,7 +8,6 @@ import { blogRoutes } from './routes/blog.js';
 import { inboxRoutes } from './routes/inbox.js';
 import { apiRoutes } from './routes/api.js';
 import { userRoutes } from './routes/user.js';
-import { commentRoutes } from './routes/comments.js';
 import { federationRoutes } from './routes/federation.js';
 import { errorMiddleware, loggingMiddleware } from './middleware/index.js';
 import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './middleware/index.js';
@@ -87,10 +86,17 @@ router.group([authMiddleware, voteRateLimitMiddleware, csrfValidateMiddleware], 
 });
 
 /* ==============================================================
-   COMMENT ENDPOINT (auth + comment rate limit + CSRF validation)
+   COMMENT ENDPOINTS (auth + comment rate limit + CSRF validation)
    ============================================================== */
-router.group([authMiddleware, commentRateLimitMiddleware, csrfValidateMiddleware], (r) => {
+router.group([authMiddleware, commentRateLimitMiddleware, csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
+  // Blog post comments (inline commenting)
   r.register('/post/:slug/comment', blogRoutes['/post/:slug/comment']);
+  
+  // Comment management routes (all authenticated users)
+  r.register('/admin/comments/:postId', adminRoutes['/admin/comments/:postId']);
+  r.register('/admin/add-comment/:postId', adminRoutes['/admin/add-comment/:postId']);
+  r.register('/admin/comments/reply/:id', adminRoutes['/admin/comments/reply/:id']);
+  r.register('/admin/comments/delete/:id', adminRoutes['/admin/comments/delete/:id']);
 });
 
 /* ==============================================================
@@ -102,13 +108,6 @@ router.group([authMiddleware, csrfTokenMiddleware], (r) => {
 });
 
 /* ==============================================================
-   COMMENT ROUTES (authenticated users, with rate limit + CSRF)
-   ============================================================== */
-router.group([authMiddleware, commentRateLimitMiddleware, csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
-  Object.entries(commentRoutes).forEach(([p, h]) => r.register(p, h));
-});
-
-/* ==============================================================
    AUTH ROUTES (with CSRF token generation + validation)
    ============================================================== */
 router.group([csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
@@ -116,14 +115,21 @@ router.group([csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
 });
 
 /* ==============================================================
-   ADMIN ROUTES (with CSRF token)
+   ADMIN ROUTES (with CSRF token) - Admin-only functionality
    ============================================================== */
 router.group([authMiddleware, requireAdminMiddleware, csrfTokenMiddleware], (r) => {
-  Object.entries(adminRoutes).forEach(([p, h]) => r.register(p, h));
+  // Register all admin routes EXCEPT comment routes (moved above)
+  Object.entries(adminRoutes).forEach(([path, handler]) => {
+    // Skip comment routes - they're registered in the authenticated section
+    if (path.includes('/comments') || path.includes('add-comment')) {
+      return;
+    }
+    r.register(path, handler);
+  });
 });
 
 /* ==============================================================
-   PROTECTED API (API-key)
+   PROTECTED API (API-key authentication)
    ============================================================== */
 router.group([apiAuthMiddleware], (r) => {
   r.register('/api/email/receive', apiRoutes['/api/email/receive']);
@@ -142,7 +148,7 @@ console.log('Routes registered:', Array.from(router.routes.keys()));
    ============================================================== */
 let queueProcessorStarted = false;
 
-async function startQueueProcessor(env, intervalMs = 30_000) { // 30 s default
+async function startQueueProcessor(env, intervalMs = 30_000) { // 30 seconds default
   if (!env.ENABLE_QUEUE_PROCESSING) {
     console.log('Queue processing disabled (ENABLE_QUEUE_PROCESSING not set)');
     return;
@@ -151,7 +157,7 @@ async function startQueueProcessor(env, intervalMs = 30_000) { // 30 s default
   queueProcessorStarted = true;
 
   const services = initServices(env);
-  env.services = services;               // make it globally reachable for route handlers
+  env.services = services;
 
   setInterval(async () => {
     try {
@@ -169,9 +175,9 @@ async function startQueueProcessor(env, intervalMs = 30_000) { // 30 s default
 export default {
   /** HTTP entry point */
   async fetch(request, env, ctx) {
-    // Initialise services **once** per request (cheap because they are cached inside)
+    // Initialize services once per request (cached internally)
     const services = initServices(env);
-    env.services = services;               // expose to all route handlers
+    env.services = services;
 
     // Start background queue processor (fire-and-forget)
     ctx.waitUntil(startQueueProcessor(env));
@@ -188,7 +194,7 @@ export default {
     );
   },
 
-  /** Cron entry point Cloudflare cron) */
+  /** Cron entry point (Cloudflare cron) */
   async scheduled(event, env, ctx) {
     console.log('Cron job started:', new Date().toISOString());
     

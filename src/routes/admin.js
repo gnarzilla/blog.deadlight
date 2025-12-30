@@ -512,7 +512,7 @@ export const adminRoutes = {
       `).bind(commentId).first();
       if (!comment) return new Response('Comment not found', { status: 404 });
 
-      return new Response(renderReplyForm(comment, user), {
+      return new Response(renderReplyForm(comment, user, config), {
         headers: { 'Content-Type': 'text/html' }
       });
     },
@@ -616,7 +616,7 @@ export const adminRoutes = {
         // Delete locally
         await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(commentId).run();
         
-        // ✅ NEW: Federate deletion if there are connected domains
+        // Federate deletion if there are connected domains
         const fedSvc = new FederationService(
           env,
           env.services.config,
@@ -667,7 +667,7 @@ export const adminRoutes = {
         const config = await env.services.config.getConfig();
         
         // Get all users (paginated in the future if needed)
-        const users = await userModel.list({ limit: 50 });
+        const users = await userModel.list({ limit: 50, includeStats: true });
         const totalUsers = await userModel.count();
         
         return new Response(renderUserManagement(users, user, config), {
@@ -835,7 +835,7 @@ export const adminRoutes = {
     POST: async (request, env, ctx) => {
       const { to, subject, body } = await request.json();
       
-      // ✅ Smart send: tries direct, queues on failure
+      // Smart send: tries direct, queues on failure
       const result = await ctx.proxy.send('send_email', {
         to,
         from: 'noreply@deadlight.boo',
@@ -991,7 +991,12 @@ export const adminRoutes = {
       if (!user) return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       
       const postId = request.params.id;
-      const federationService = new FederationService(env);
+      const fedSvc = new FederationService(
+        env,
+        env.services.config,
+        env.services.proxy,
+        env.services.queue
+      );
       
       const post = await env.DB.prepare('SELECT * FROM posts WHERE id = ?').bind(postId).first();
       if (!post) return Response.json({ success: false, error: 'Post not found' });
@@ -1556,7 +1561,12 @@ export const adminRoutes = {
       const config = await env.services.config.getConfig();
 
       // instantiate service
-      const fed = new FederationService(env);
+      const fedSvc = new FederationService(
+        env,
+        env.services.config,
+        env.services.proxy,
+        env.services.queue
+      );
 
       let domains = [];
       let posts = [];
