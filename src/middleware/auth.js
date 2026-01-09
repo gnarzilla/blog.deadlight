@@ -3,8 +3,10 @@ import { parseCookies } from '../utils/utils.js';
 import { verifyJWT } from '../../../lib.deadlight/core/src/auth/jwt.js';
 
 export async function checkAuth(request, env) {
+  // Get Cookie header string first
+  const cookieHeader = request.headers.get('Cookie') || '';
   // 1. Try cookie/header JWT first (for user sessions)
-  const cookies = parseCookies(request);
+  const cookies = parseCookies(cookieHeader);  // Pass request here
   const token = cookies.token || getTokenFromHeader(request);
   
   if (token) {

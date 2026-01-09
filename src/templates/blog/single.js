@@ -14,9 +14,9 @@ export function renderSinglePost(post, user, navigation, config, comments = [], 
       <p class="post-meta">By ${renderAuthorLink(post.author_username)} | ${new Date(post.created_at).toLocaleDateString()}</p>
       ${user ? `
         <div class="comment-actions">
-          <a href="/admin/comments/edit/${post.id}" class="button edit-button">Edit</a>
-          <a href="/admin/comments/delete/${post.id}" class="button delete-button">Delete</a>
-          <a href="/admin/comments/reply/${post.id}" class="button reply-button">Reply</a>
+          <a href="/comments/edit/${post.id}" class="button edit-button">Edit</a>
+          <a href="/comments/delete/${post.id}" class="button delete-button">Delete</a>
+          <a href="/comments/reply/${post.id}" class="button reply-button">Reply</a>
         </div>
       ` : ''}
       <a href="${parentUrl || '/'}">Back to Post</a>
@@ -32,9 +32,9 @@ export function renderSinglePost(post, user, navigation, config, comments = [], 
           <p class="post-meta">By ${comment.author} | ${new Date(comment.published_at).toLocaleDateString()}</p>
           ${user ? `
             <div class="comment-actions">
-              <a href="/admin/comments/edit/${comment.id}" class="button edit-button">Edit</a>
-              <a href="/admin/comments/delete/${comment.id}" class="button delete-button">Delete</a>
-              <a href="/admin/comments/reply/${comment.id}" class="button reply-button">Reply</a>
+              <a href="/comments/edit/${comment.id}" class="button edit-button">Edit</a>
+              <a href="/comments/delete/${comment.id}" class="button delete-button">Delete</a>
+              <a href="/comments/reply/${comment.id}" class="button reply-button">Reply</a>
             </div>
           ` : ''}
         </div>
@@ -78,8 +78,8 @@ export function renderSinglePost(post, user, navigation, config, comments = [], 
       </div>
     ` : ''}
     
-    ${user ? `<a href="/admin/add-comment/${post.id}" class="button">Add Comment</a>` : ''}
-    ${user ? `<a href="/admin/edit/${post.id}" class="button">Edit</a>` : ''}
+    ${user ? `<a href="/comments/add/${post.id}" class="button">Add Comment</a>` : ''}
+    ${user ? `<a href="/comments/edit/${post.id}" class="button">Edit</a>` : ''}
     ${user && csrfToken ? `
       <form method="POST" action="/admin/federate-post/${post.id}" style="display: inline;">
         <input type="hidden" name="csrf_token" value="${csrfToken}">

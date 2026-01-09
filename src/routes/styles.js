@@ -184,6 +184,256 @@ const baseStyles = `
   article:last-child, .post-preview:last-child { border-bottom: none; }
   .post-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
 
+  /* =============================
+   COMMENTS SYSTEM
+   ============================= */
+
+  .comments-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .comment {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: var(--bg-secondary);
+    border-left: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+  }
+
+  /* Thread indentation (0–6 levels supported) */
+  .comment[data-level="1"] { margin-left: 20px; }
+  .comment[data-level="2"] { margin-left: 40px; }
+  .comment[data-level="3"] { margin-left: 60px; }
+  .comment[data-level="4"] { margin-left: 80px; }
+  .comment[data-level="5"] { margin-left: 100px; }
+  .comment[data-level="6"] { margin-left: 120px; }
+
+  .comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .comment-author {
+    font-weight: 600;
+  }
+
+  .comment-author a {
+    color: var(--text-primary);
+  }
+
+  .comment-date {
+    color: var(--text-secondary);
+  }
+
+  .comment-content p {
+    margin: 0.5rem 0;
+    line-height: 1.6;
+  }
+
+  .comment-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Empty state */
+  .no-comments {
+    text-align: center;
+    font-style: italic;
+    color: var(--text-secondary);
+    padding: 2rem 0;
+  }
+
+  /* Empty state */
+  .no-comments {
+    text-align: center;
+    font-style: italic;
+    color: var(--text-secondary);
+    padding: 2rem 0;
+  }
+
+  /* =============================
+   COMMENT FORMS (Admin & Public)
+   ============================= */
+  
+  /* Form groups - shared styling */
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  
+  .form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-family: inherit;
+    font-size: 1rem;
+    resize: vertical;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    min-height: 100px;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-family: inherit;
+    font-size: 1rem;
+    background: var(--input-bg);
+    color: var(--text-primary);
+  }
+  
+  .char-count {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  
+  .button.primary {
+    background: var(--button-primary-bg);
+    color: var(--button-primary-text);
+    border: 1px solid transparent;
+  }
+
+  .button.primary:hover {
+    background: var(--button-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--button-primary-shadow);
+  }
+  
+  .button.secondary {
+    background: var(--button-secondary-bg);
+    color: var(--button-secondary-text);
+    border: 1px solid var(--button-secondary-border);
+  }
+
+  .button.secondary:hover {
+    background: var(--button-secondary-hover);
+    border-color: var(--button-secondary-border-hover);
+  }
+
+  .button.small {
+    padding: 0.25rem 0.75rem !important;
+    font-size: 0.85rem;
+  }
+
+  .button.delete {
+    background: var(--button-danger-bg) !important;
+    color: var(--button-danger-text) !important;
+    border: 1px solid var(--button-danger-border) !important;
+  }
+
+  .button.delete:hover {
+    background: var(--button-danger-hover) !important;
+    border-color: var(--button-danger-border-hover) !important;
+  }
+  
+  /* Parent comment preview (reply forms) */
+  .parent-comment {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--link-color);
+    border-radius: var(--border-radius);
+  }
+  
+  .parent-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+  }
+  
+  .parent-comment blockquote {
+    margin: 0.5rem 0;
+    padding: 0;
+    border: none;
+    font-style: italic;
+    color: var(--text-primary);
+  }
+  
+  /* Info messages */
+  .info-message {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+  }
+  
+  /* Status messages */
+  .status-message {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    display: none;
+  }
+  
+  .status-message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    display: block;
+  }
+  
+  .status-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    display: block;
+  }
+
+  /* Public comment form container */
+  .public-comment-form {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+  }
+  
+  .public-comment-form h3 {
+    margin-top: 0;
+    color: var(--text-primary);
+  }
+
+  /* Comment CTA */
+  .comment-cta {
+    margin-top: 1.5rem;
+    text-align: center;
+  }
+
+  /* Badges */
+  .badge.pending {
+    background: #fff3cd;
+    color: #856404;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+  }
 
   /* =============================
    KARMA/VOTING STYLES

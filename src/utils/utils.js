@@ -1,15 +1,17 @@
 // src/utils/utils.js
 
-export function parseCookies(request) {
-  const cookieHeader = request.headers.get('Cookie');
-  if (!cookieHeader) return {};
-  const cookies = {};
-  cookieHeader.split(';').forEach((cookie) => {
-    const [name, ...rest] = cookie.split('=');
-    const value = rest.join('=').trim();
-    cookies[name.trim()] = value;
-  });
-  return cookies;
+export function parseCookies(cookieHeader) {
+  if (!cookieHeader || typeof cookieHeader !== 'string') {
+    return {};
+  }
+  
+  return cookieHeader.split(';').reduce((acc, cookie) => {
+    const [key, ...valueParts] = cookie.trim().split('=');
+    if (key) {  
+      acc[key] = valueParts.join('=');
+    }
+    return acc;
+  }, {});
 }
 
 export function escapeHtml(unsafe) {

@@ -48,7 +48,6 @@ export async function csrfValidateMiddleware(request, env, ctx, next) {
   
   let submittedToken;
   try {
-    // ✅ Clone the request so body can be read again
     const clonedRequest = request.clone();
     const formData = await clonedRequest.formData();
     submittedToken = formData.get('csrf_token');
@@ -59,7 +58,11 @@ export async function csrfValidateMiddleware(request, env, ctx, next) {
   const valid = cookieToken && submittedToken && cookieToken === submittedToken;
   
   if (!valid) {
-    console.log('CSRF validation failed');
+    console.log('CSRF validation failed', {
+      cookieToken: cookieToken ? 'present' : 'missing',
+      submittedToken: submittedToken ? 'present' : 'missing',
+      match: cookieToken === submittedToken
+    });
     return new Response('Invalid CSRF token. Please refresh and try again.', { 
       status: 403,
       headers: { 'Content-Type': 'text/plain' }

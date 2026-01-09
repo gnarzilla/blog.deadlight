@@ -17,6 +17,7 @@ import { csrfTokenMiddleware, csrfValidateMiddleware } from './middleware/csrf.j
 import { voteRateLimitMiddleware, commentRateLimitMiddleware } from './middleware/rateLimit.js';
 import { initServices } from './services/index.js';
 import { proxyOrchestrationMiddleware } from './middleware/proxy-orchestration.js';
+import { commentRoutes } from './routes/comments.js';
 
 const router = new Router();
 
@@ -88,15 +89,13 @@ router.group([authMiddleware, voteRateLimitMiddleware, csrfValidateMiddleware], 
 /* ==============================================================
    COMMENT ENDPOINTS (auth + comment rate limit + CSRF validation)
    ============================================================== */
-router.group([authMiddleware, commentRateLimitMiddleware, csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
+
+router.group([authMiddleware, commentRateLimitMiddleware, csrfValidateMiddleware, csrfTokenMiddleware], (r) => {
   // Blog post comments (inline commenting)
   r.register('/post/:slug/comment', blogRoutes['/post/:slug/comment']);
   
-  // Comment management routes (all authenticated users)
-  r.register('/admin/comments/:postId', adminRoutes['/admin/comments/:postId']);
-  r.register('/admin/add-comment/:postId', adminRoutes['/admin/add-comment/:postId']);
-  r.register('/admin/comments/reply/:id', adminRoutes['/admin/comments/reply/:id']);
-  r.register('/admin/comments/delete/:id', adminRoutes['/admin/comments/delete/:id']);
+  // Register all comment routes (replaces old adminRoutes ones)
+  Object.entries(commentRoutes).forEach(([p, h]) => r.register(p, h));
 });
 
 /* ==============================================================

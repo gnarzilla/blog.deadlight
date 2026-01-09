@@ -44,8 +44,10 @@ export const commentRoutes = {
       
       const postId = request.params.postId;
       const config = await env.services.config.getConfig();
-      
-      return new Response(renderAddCommentForm(postId, user, config), {
+
+      const csrfToken = ctx.csrfToken; 
+    
+      return new Response(renderAddCommentForm(postId, user, config, csrfToken), {
         headers: { 'Content-Type': 'text/html' }
       });
     },
@@ -169,8 +171,10 @@ export const commentRoutes = {
       }
       
       const config = await env.services.config.getConfig();
-      
-      return new Response(renderReplyForm(comment, user, config), {
+
+      const csrfToken = ctx.csrfToken;  
+    
+      return new Response(renderReplyForm(comment, user, config, csrfToken), {
         headers: { 'Content-Type': 'text/html' }
       });
     },
