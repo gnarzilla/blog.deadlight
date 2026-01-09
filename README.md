@@ -789,10 +789,10 @@ See [docs/API.md](docs/API.md) for full endpoint documentation.
 - Comment system (with rate limiting)
 
 ### Planned 
-- **2025 Q1** – Stable post-by-email + comments
-- **2025 Q2** – Full proxy dashboard integration
-- **2025 Q3** – Meshtastic-native posting client and Visual Edge Network Topology integration.
-- **2026** – ActivityPub federation, plugin architecture
+- **2026 Q1** – Stable post-by-email + comments
+- **2026 Q2** – Full proxy dashboard integration
+- **2026 Q3** – Meshtastic-native posting client and Visual Edge Network Topology integration.
+- **2027** – ActivityPub federation, plugin architecture
 
 ### Help Wanted
 Open to contributions via issues or PRs. Priority areas:
