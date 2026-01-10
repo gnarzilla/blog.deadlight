@@ -547,7 +547,7 @@ export class FederationService {
     const comments = (res.results || []).map(row => {
       const meta = row.federation_metadata ? JSON.parse(row.federation_metadata) : {};
       
-      // ✅ Use username from join, fallback to metadata, then Unknown
+      // Use username from join, fallback to metadata, then Unknown
       const author = row.username || meta.author || 'Unknown';
       
       return {
