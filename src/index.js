@@ -94,7 +94,6 @@ router.group([authMiddleware, commentRateLimitMiddleware, csrfValidateMiddleware
   // Blog post comments (inline commenting)
   r.register('/post/:slug/comment', blogRoutes['/post/:slug/comment']);
   
-  // Register all comment routes (replaces old adminRoutes ones)
   Object.entries(commentRoutes).forEach(([p, h]) => r.register(p, h));
 });
 
@@ -119,10 +118,6 @@ router.group([csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
 router.group([authMiddleware, requireAdminMiddleware, csrfTokenMiddleware], (r) => {
   // Register all admin routes EXCEPT comment routes (moved above)
   Object.entries(adminRoutes).forEach(([path, handler]) => {
-    // Skip comment routes - they're registered in the authenticated section
-    if (path.includes('/comments') || path.includes('add-comment')) {
-      return;
-    }
     r.register(path, handler);
   });
 });

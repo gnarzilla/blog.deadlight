@@ -1,12 +1,12 @@
 // src/templates/admin/comments.js 
-
+import { renderMarkdown, sanitizeHtml } from '../../../../lib.deadlight/core/src/markdown/processor.js';
 import { renderTemplate } from '../base.js';
 
 export function renderCommentList(comments, postId, user, config) {
   const commentHtml = comments.map((comment, index) => `
     <div class="comment" style="margin-left: ${comment.level * 20}px;">
-      <p>${escapeHtml(comment.content)}</p>
-      <p class="post-meta">By ${escapeHtml(comment.author)} | ${new Date(comment.published_at).toLocaleDateString()}</p>
+      <p>${sanitizeHtml(comment.content)}</p>
+      <p class="post-meta">By ${sanitizeHtml(comment.author)} | ${new Date(comment.published_at).toLocaleDateString()}</p>
       ${user ? `
         <div class="comment-actions">
           <a href="/comments/reply/${comment.id}" class="button reply-button">Reply</a>
@@ -67,9 +67,9 @@ export function renderReplyForm(comment, user, config, csrfToken) {
     <div class="parent-comment">
       <p class="parent-label">Replying to:</p>
       <blockquote>
-        ${escapeHtml(comment.content.substring(0, 200))}${comment.content.length > 200 ? '...' : ''}
+        ${sanitizeHtml(comment.content.substring(0, 200))}${comment.content.length > 200 ? '...' : ''}
       </blockquote>
-      <p class="post-meta">By ${escapeHtml(comment.author_username || 'Unknown')}</p>
+      <p class="post-meta">By ${sanitizeHtml(comment.author_username || 'Unknown')}</p>
     </div>
     
     <form action="/comments/reply/${comment.id}" method="POST">
