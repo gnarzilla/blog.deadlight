@@ -699,8 +699,6 @@ Adjust in shared library `lib.deadlight/core/security/`:
 - **Validation rules** – `validation.js` (input sanitization)
 - **Security headers** – `headers.js` (CSP, HSTS, etc.)
 
----
-
 ## Administration
 ### Creating Your First Admin User
 
@@ -754,8 +752,6 @@ curl -X POST https://your-blog.tld/api/posts \
 
 See [docs/API.md](docs/API.md) for full endpoint documentation.
 
----
-
 ## Roadmap
 ### Production-Ready
 - Core blogging (posts, pages, archives)
@@ -786,8 +782,6 @@ Open to contributions via issues or PRs. Priority areas:
 - Documentation improvements
 - Accessibility enhancements
 - Translations (i18n)
-
----
 
 ## API Documentation
 ### Authentication
@@ -931,6 +925,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
