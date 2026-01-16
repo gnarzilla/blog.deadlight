@@ -30,8 +30,6 @@ Your blog is now live on the edge.
 2. Log in with the credentials you set during setup
 3. Write your first post
 
---- 
-
 ## Live Demos
 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
@@ -961,5 +959,6 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
 
