@@ -30,13 +30,9 @@ Your blog is now live on the edge.
 2. Log in with the credentials you set during setup
 3. Write your first post
 
----
+--- 
 
-## It actually works
-
-[This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**.]: # 
-
-### Live Demos
+## Live Demos
 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
 - **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
@@ -965,4 +961,5 @@ See [docs/LICENSE](docs/LICENSE) for details.
 ---
 
 [EOF](#live-demos)
+
 
