@@ -93,8 +93,6 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 
 [Jump to ecosystem details ↓](#the-deadlight-ecosystem)
 
----
-
 ## Use Cases
 
 ### Disaster Response (Standalone Blog)
@@ -132,8 +130,6 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 - No always-on server to raid or subpoena
 - Cloudflare's DDoS protection included
 - Can operate behind VPN/proxy
-
----
 
 ### Tested On
 
@@ -443,8 +439,6 @@ sequenceDiagram
 | **The Bunker** (Local) | `workerd` + SQLite (Local Hardware) | **Variable** (Depends on your net) | **High** (You own the hardware) | Archives, Offline LANs |
 | **The Hybrid** (Full Stack) | CF Frontend + Local Proxy | **High** | **Maximum** (Best of both) | Mesh Networks, NGOs |
 
----
-
 ### Project Structure
 
 ```
@@ -506,15 +500,13 @@ deadlight/
 - **Federation ready** – Blog-to-blog communication (alpha)
 - **Audit-friendly** – ~8 npm dependencies, readable in an afternoon
 
----
-
-## Data Sovereignty (The Eject Button)
+## The Eject Button (Data Sovereignty)
 
 Deadlight uses Cloudflare for anonymity and global distribution ("The Cloak"), but we refuse to let it become a dependency cage.
 
 **You can take your data and leave at any time.**
 
-We include an "Eject" script that downloads your remote D1 database, converts it to standard SQLite, and generates a Docker configuration to run your blog locally or on a VPS.
+An "Eject" script that downloads your remote D1 database, converts it to standard SQLite, and generates a Docker configuration to run your blog locally or on a VPS.
 
 ```bash
 # Downloads production DB -> local SQLite -> Docker container
@@ -836,9 +828,8 @@ DELETE /api/posts/:id
 
 Full API documentation: [docs/API.md](docs/API.md)
 
----
-
-## Why You Might Choose Deadlight
+## Who's this for
+- Myself, first and foremost. I didn't build this framework for any other intention than for my own personal use, and its quirks likely reflect that.
 
 **Choose Deadlight if you:**
 - Need a blog that works over terrible connectivity
@@ -856,9 +847,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 - Require a visual page builder
 - Want a fully GUI-based setup with no terminal required
 
----
-
----
 
 ## Appendix A: Component Deep Dive
 
@@ -877,8 +865,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 **See Also:** [Full README](#) | [API Docs](docs/API.md) | [Architecture](docs/ARCHITECTURE.md)
 
----
-
 ### proxy.deadlight
 
 **Purpose:** Protocol bridging & stateful connections  
@@ -891,8 +877,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 **See Also:** [proxy.deadlight README](https://github.com/gnarzilla/proxy.deadlight)
 
----
-
 ### meshtastic.deadlight
 
 **Purpose:** LoRa mesh ↔ Internet gateway  
@@ -902,8 +886,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 **Why it exists:** Enables posting to blog.deadlight over LoRa mesh networks
 
 **See Also:** [meshtastic.deadlight README](https://github.com/gnarzilla/meshtastic.deadlight)
-
----
 
 ### lib.deadlight
 
@@ -918,8 +900,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 **See Also:** [lib.deadlight README](https://github.com/gnarzilla/lib.deadlight)
 
----
-
 ### edge.deadlight
 
 **Purpose:** Orchestration layer (umbrella project)  
@@ -928,8 +908,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 **Use when:** Running multi-instance deployments or full-stack setups
 
 **See Also:** [edge.deadlight README](https://github.com/gnarzilla/edge.deadlight)
-
----
 
 ## Support
 
@@ -942,13 +920,9 @@ Other ways to help:
 -  Submit PRs
 -  Tell others who might need this
 
----
-
 ## License
 
 See [docs/LICENSE](docs/LICENSE) for details.
-
----
 
 ## Contact
 
@@ -956,9 +930,8 @@ See [docs/LICENSE](docs/LICENSE) for details.
 - **Email:** gnarzilla@deadlight.boo
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
----
-
 [EOF](#live-demos)
+
 
 
 
