@@ -6,7 +6,7 @@
 ![edge.deadlight](https://img.shields.io/badge/platform-active-success)
 ![npm](https://img.shields.io/npm/v/create-deadlight-blog)
 
-[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Middleware](#middleware-architecture) · [Roadmap](#roadmap) · [Security](#security) · [License](#license)
+[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Middleware](#middleware-architecture) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
 
 > Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
 
@@ -926,9 +926,15 @@ Other ways to help:
 -  Submit PRs
 -  Tell others who might need this
 
-## License
+## Documentation
 
-See [docs/LICENSE](docs/LICENSE) for details.
+- **[Quick Start](docs/QUICKSTART.md)** – Detailed setup for all platforms
+- **[Architecture](docs/ARCHITECTURE.md)** – Technical deep dive
+- **[Security](docs/SECURITY.md)** – Full security model and threat analysis
+- **[API Reference](docs/API.md)** – Complete endpoint documentation
+- **[Middleware](docs/MIDDLEWARE.md)** – Custom middleware development
+- **[Ecosystem](docs/ECOSYSTEM.md)** – Integration with proxy/vault/meshtastic
+- **[License](docs/LICENSE) - MIT 2026 deadlight
 
 ## Contact
 
@@ -937,9 +943,5 @@ See [docs/LICENSE](docs/LICENSE) for details.
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
-
-
-
-
 
 
