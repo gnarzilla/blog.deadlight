@@ -109,7 +109,7 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
                 ${posts.map(post => `
                   <tr>
                     <td>
-                      <a href="/post/${post.slug || post.id}" class="post-title-link">${post.title}</a>
+                      <a href="/post/${post.id}" class="post-title-link">${post.title}</a>
                     </td>
                     <td>${post.author_username || 'Unknown'}</td>
                     <td>${new Date(post.created_at).toLocaleDateString()}</td>
