@@ -347,6 +347,18 @@ The `/federation/*` routes aren't just for ActivityPub wannabes - they enable:
 
 **This is why blog.deadlight has a federation layer** - it enables decentralized community organization.
 
+#### How Federation Posts Are Authenticated
+
+Each Deadlight instance has an Ed25519 identity keypair:
+
+1. **Key generation:** `vault.deadlight` generates keypair (or use `openssl`)
+2. **Public key publication:** Add to DNS TXT record or `/.well-known/deadlight`
+3. **Post signing:** Outbound posts include signature in `X-Deadlight-Signature` header
+4. **Verification:** Receiving instance fetches sender's public key, verifies signature
+
+**Without vault.deadlight:** Keys stored in environment variables or config file
+**With vault.deadlight:** Keys stored encrypted, never touch disk in plaintext
+
 #### Why the Proxy Uses Port 443 (Not 25)
 
 Residential ISPs block port 25 (SMTP). Traditional email delivery fails.
@@ -925,6 +937,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
