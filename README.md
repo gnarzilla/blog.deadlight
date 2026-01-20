@@ -6,7 +6,7 @@
 ![edge.deadlight](https://img.shields.io/badge/platform-active-success)
 ![npm](https://img.shields.io/npm/v/create-deadlight-blog)
 
-[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Middleware](#middleware-architecture) · [Roadmap](#roadmap) · [Security](#security) · [License](#license)
+[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](#the-deadlight-ecosystem) · [Middleware](#middleware-architecture) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
 
 > Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
 
@@ -30,13 +30,7 @@ Your blog is now live on the edge.
 2. Log in with the credentials you set during setup
 3. Write your first post
 
----
-
-## It actually works
-
-[This isn't vaporware. Deadlight is production-deployed and **literally running over LoRa mesh networks right now.**.]: # 
-
-### Live Demos
+## Live Demos
 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
 - **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
@@ -99,8 +93,6 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 
 [Jump to ecosystem details ↓](#the-deadlight-ecosystem)
 
----
-
 ## Use Cases
 
 ### Disaster Response (Standalone Blog)
@@ -138,8 +130,6 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 - No always-on server to raid or subpoena
 - Cloudflare's DDoS protection included
 - Can operate behind VPN/proxy
-
----
 
 ### Tested On
 
@@ -357,6 +347,18 @@ The `/federation/*` routes aren't just for ActivityPub wannabes - they enable:
 
 **This is why blog.deadlight has a federation layer** - it enables decentralized community organization.
 
+#### How Federation Posts Are Authenticated
+
+Each Deadlight instance has an Ed25519 identity keypair:
+
+1. **Key generation:** `vault.deadlight` generates keypair (or use `openssl`)
+2. **Public key publication:** Add to DNS TXT record or `/.well-known/deadlight`
+3. **Post signing:** Outbound posts include signature in `X-Deadlight-Signature` header
+4. **Verification:** Receiving instance fetches sender's public key, verifies signature
+
+**Without vault.deadlight:** Keys stored in environment variables or config file
+**With vault.deadlight:** Keys stored encrypted, never touch disk in plaintext
+
 #### Why the Proxy Uses Port 443 (Not 25)
 
 Residential ISPs block port 25 (SMTP). Traditional email delivery fails.
@@ -449,8 +451,6 @@ sequenceDiagram
 | **The Bunker** (Local) | `workerd` + SQLite (Local Hardware) | **Variable** (Depends on your net) | **High** (You own the hardware) | Archives, Offline LANs |
 | **The Hybrid** (Full Stack) | CF Frontend + Local Proxy | **High** | **Maximum** (Best of both) | Mesh Networks, NGOs |
 
----
-
 ### Project Structure
 
 ```
@@ -512,15 +512,13 @@ deadlight/
 - **Federation ready** – Blog-to-blog communication (alpha)
 - **Audit-friendly** – ~8 npm dependencies, readable in an afternoon
 
----
-
-## Data Sovereignty (The Eject Button)
+## The Eject Button (Data Sovereignty)
 
 Deadlight uses Cloudflare for anonymity and global distribution ("The Cloak"), but we refuse to let it become a dependency cage.
 
 **You can take your data and leave at any time.**
 
-We include an "Eject" script that downloads your remote D1 database, converts it to standard SQLite, and generates a Docker configuration to run your blog locally or on a VPS.
+An "Eject" script that downloads your remote D1 database, converts it to standard SQLite, and generates a Docker configuration to run your blog locally or on a VPS.
 
 ```bash
 # Downloads production DB -> local SQLite -> Docker container
@@ -713,8 +711,6 @@ Adjust in shared library `lib.deadlight/core/security/`:
 - **Validation rules** – `validation.js` (input sanitization)
 - **Security headers** – `headers.js` (CSP, HSTS, etc.)
 
----
-
 ## Administration
 ### Creating Your First Admin User
 
@@ -768,8 +764,6 @@ curl -X POST https://your-blog.tld/api/posts \
 
 See [docs/API.md](docs/API.md) for full endpoint documentation.
 
----
-
 ## Roadmap
 ### Production-Ready
 - Core blogging (posts, pages, archives)
@@ -800,8 +794,6 @@ Open to contributions via issues or PRs. Priority areas:
 - Documentation improvements
 - Accessibility enhancements
 - Translations (i18n)
-
----
 
 ## API Documentation
 ### Authentication
@@ -842,9 +834,8 @@ DELETE /api/posts/:id
 
 Full API documentation: [docs/API.md](docs/API.md)
 
----
-
-## Why You Might Choose Deadlight
+## Who's this for
+- Myself, first and foremost. I didn't build this framework for any other intention than for my own personal use, and its quirks likely reflect that.
 
 **Choose Deadlight if you:**
 - Need a blog that works over terrible connectivity
@@ -862,9 +853,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 - Require a visual page builder
 - Want a fully GUI-based setup with no terminal required
 
----
-
----
 
 ## Appendix A: Component Deep Dive
 
@@ -883,8 +871,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 **See Also:** [Full README](#) | [API Docs](docs/API.md) | [Architecture](docs/ARCHITECTURE.md)
 
----
-
 ### proxy.deadlight
 
 **Purpose:** Protocol bridging & stateful connections  
@@ -897,8 +883,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 **See Also:** [proxy.deadlight README](https://github.com/gnarzilla/proxy.deadlight)
 
----
-
 ### meshtastic.deadlight
 
 **Purpose:** LoRa mesh ↔ Internet gateway  
@@ -908,8 +892,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 **Why it exists:** Enables posting to blog.deadlight over LoRa mesh networks
 
 **See Also:** [meshtastic.deadlight README](https://github.com/gnarzilla/meshtastic.deadlight)
-
----
 
 ### lib.deadlight
 
@@ -924,8 +906,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 
 **See Also:** [lib.deadlight README](https://github.com/gnarzilla/lib.deadlight)
 
----
-
 ### edge.deadlight
 
 **Purpose:** Orchestration layer (umbrella project)  
@@ -934,8 +914,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 **Use when:** Running multi-instance deployments or full-stack setups
 
 **See Also:** [edge.deadlight README](https://github.com/gnarzilla/edge.deadlight)
-
----
 
 ## Support
 
@@ -948,13 +926,15 @@ Other ways to help:
 -  Submit PRs
 -  Tell others who might need this
 
----
+## Documentation
 
-## License
-
-See [docs/LICENSE](docs/LICENSE) for details.
-
----
+- **[Quick Start](docs/QUICKSTART.md)** – Detailed setup for all platforms
+- **[Architecture](docs/ARCHITECTURE.md)** – Technical deep dive
+- **[Security](docs/SECURITY.md)** – Full security model and threat analysis
+- **[API Reference](docs/API.md)** – Complete endpoint documentation
+- **[Middleware](docs/MIDDLEWARE.md)** – Custom middleware development
+- **[Ecosystem](docs/ECOSYSTEM.md)** – Integration with proxy/vault/meshtastic
+- **[License](docs/LICENSE)** - MIT 2026 deadlight
 
 ## Contact
 
@@ -962,7 +942,7 @@ See [docs/LICENSE](docs/LICENSE) for details.
 - **Email:** gnarzilla@deadlight.boo
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
----
-
 [EOF](#live-demos)
+
+
 
