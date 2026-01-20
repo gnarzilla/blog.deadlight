@@ -79,7 +79,8 @@ export function renderSinglePost(post, user, navigation, config, comments = [], 
     ` : ''}
     
     ${user ? `<a href="/comments/add/${post.id}" class="button">Add Comment</a>` : ''}
-    ${user ? `<a href="/comments/edit/${post.id}" class="button">Edit</a>` : ''}
+    ${user ? `<a href="/admin/edit/${post.id}" class="edit-button button button-sm">Edit</a>` : ''}
+    
     ${user && csrfToken ? `
       <form method="POST" action="/admin/federate-post/${post.id}" style="display: inline;">
         <input type="hidden" name="csrf_token" value="${csrfToken}">
