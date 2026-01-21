@@ -91,7 +91,7 @@ Modes:  [Standalone: blog only]  [Connected: +proxy]  [Full Stack: all]
 **Connected mode:** Post via email/LoRa, federate with other instances  
 **Full platform:** [edge.deadlight](https://github.com/gnarzilla/edge.deadlight) orchestrates everything
 
-[Jump to ecosystem details ↓](#the-deadlight-ecosystem)
+[Jump to ecosystem details ↓](docs/ECOSYSTEM.md)
 
 ## Use Cases
 
@@ -579,7 +579,7 @@ Other ways to help:
 - **[API Reference](docs/API.md)** – Complete endpoint documentation
 - **[Middleware](docs/MIDDLEWARE.md)** – Custom middleware development
 - **[Ecosystem](docs/ECOSYSTEM.md)** – Integration with proxy/vault/meshtastic
-- **[Appendix A: Component Deep Dive](docs/APPENDIXA.md)
+- **[Appendix A: Component Deep Dive](docs/APPENDIXA.md)** - Ecosystem component deep dive
 - **[License](docs/LICENSE)** - MIT 2026 deadlight
 
 ## Contact
@@ -589,6 +589,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
