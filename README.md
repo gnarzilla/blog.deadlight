@@ -173,268 +173,6 @@ Use Case 1: The Privacy-Conscious Blogger
 # → Fully readable, zero layout breakage
 ```
 
----
-
-## Getting Started
-
-<Choose based on your needs>
-
-## Choosing Your Deployment
-```mermaid
-graph TD
-    A[I want to run a blog] --> B{Need email posting?}
-    B -->|No| C[Standalone: blog.deadlight only]
-    B -->|Yes| D{Posting over mesh networks?}
-    D -->|No| E[Add proxy.deadlight]
-    D -->|Yes| F[Full stack + meshtastic.deadlight]
-    
-    C --> G[Deploy time: 5 min<br/>Components: blog + lib<br/>Cost: ~$0/month]
-    E --> H[Deploy time: 15 min<br/>Components: blog + lib + proxy<br/>Cost: ~$0/month]
-    F --> I[Deploy time: 30 min<br/>Components: all<br/>Cost: ~$0/month + hardware]
-```
-
-**Start simple, add components as needed.** Everything works standalone.
-
-**Option 1: Standalone Blog (5 minutes)**
-
-Deploy a fully functional, production-ready instance in under 2 minutes using our interactive launcher.
-
-```bash
-npx create-deadlight-blog my-blog
-```
-
-*This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
-
-Use when: You just want a fast, resilient blog
-
-**Option 2: Blog + Proxy (15 minutes)**
-```bash
-# Deploy blog (as above)
-# Then add proxy:
-git clone https://github.com/gnarzilla/proxy.deadlight
-cd proxy.deadlight && docker compose up -d
-```
-Use when: You want email posting, federation, self-hosted SMTP
-
-**Option 3: Full Stack (30 minutes)**
-See [edge.deadlight docs](gnarzilla/edge.deadlight.git) for orchestrated deployment
-Use when: You need LoRa, full federation, multi-protocol bridging
-
-**Your blog is now global, costs pennies, and survives apocalypse-level connectivity.**
-
----
-
-### ARM64-Friendly Quick Start (Raspberry Pi, PinePhone, Android/Termux)
-
-Deadlight can be deployed entirely from a phone, but on ARM64 Android you’ll need to run a Debian userland inside Termux using proot. This bypasses Android’s memory layout limitations that break workerd.
-
-![termux deployment](src/assets/termux-deploy.gif)
-
-```bash
-# 1. Install Termux + proot
-pkg update && pkg install proot-distro git jq openssl-tool
-
-# 2. Bootstrap Debian inside Termux
-proot-distro install debian
-proot-distro login debian
-
-# 3. Install prerequisites inside Debian
-apt update && apt install nodejs npm git jq openssl -y
-
-# 4. Clone blog + lib
-git clone https://github.com/gnarzilla/blog.deadlight
-git clone https://github.com/gnarzilla/lib.deadlight
-cd blog.deadlight && npm install
-cd ../lib.deadlight && npm install && cd ../blog.deadlight
-
-# 5. Authenticate with Cloudflare
-npx wrangler login
-
-# 6. Create & bootstrap remote database
-npx wrangler d1 create mobile-deadlight
-npx wrangler d1 execute mobile-deadlight --remote --file=migrations/20250911_schema.sql
-
-# 7. Seed admin user (remote-only)
-./scripts/gen-admin/seed-termux.sh
-
-# 8. Set secrets
-openssl rand -base64 32 | npx wrangler secret put JWT_SECRET
-echo "https://mobile.deadlight.boo" | npx wrangler secret put SITE_URL
-
-# 9. Deploy
-npx wrangler deploy
-
-
-```
-
----
-
-## The Deadlight Ecosystem
-
-### Architecture Overview
-
-The blog is one component of a larger resilience stack:
-
-```
-┌─────────────────────────────────────────────┐
-│           edge.deadlight                    │  ← Umbrella platform
-│  (orchestrates everything below)            │
-└─────────────────────────────────────────────┘
-           │
-           ├──────────────────┬──────────────────┬─────────────────
-           ▼                  ▼                  ▼
-   ┌───────────────┐  ┌───────────────┐  ┌──────────────────┐
-   │blog.deadlight │  │proxy.deadlight│  │meshtastic        │
-   │               │  │               │  │  .deadlight      │
-   │ Content layer │  │Protocol bridge│  │                  │
-   │ (this repo)   │  │SMTP/IMAP/SOCKS│  │LoRa ↔ Internet   │
-   │               │  │VPN gateway    │  │bridge            │
-   │ JavaScript    │  │ C             │  │ C (proxy fork)   │
-   └───────────────┘  └───────────────┘  └──────────────────┘
-           │                  │                  │
-           └──────────────────┴──────────────────┘
-                              │
-                              ▼
-                   ┌─────────────────────┐
-                   │   lib.deadlight     │
-                   │                     │
-                   │ Shared libraries:   │
-                   │ • Auth & JWT        │
-                   │ • DB models (D1)    │
-                   │ • Security utils    │
-                   │ • UI components     │
-                   └─────────────────────┘
-```
-
-### Component Roles
-
-| Component | Purpose | When You Need It |
-|-----------|---------|------------------|
-| **blog.deadlight** | Content storage & delivery | Always (core component) |
-| **lib.deadlight** | Shared code (auth, queuing, DB) | Always (dependency) |
-| **proxy.deadlight** | Protocol bridging | Email posting, federation, self-hosted SMTP |
-| **meshtastic.deadlight** | LoRa ↔ Internet gateway | Mesh network publishing |
-| **edge.deadlight** | Orchestration layer | Multi-instance deployments |
-
-### Integration Patterns
-
-#### Why the Blog Needs Queuing
-
-Cloudflare Workers are **stateless** (no persistent connections). The proxy is **stateful** (maintains SMTP sessions, VPN tunnels). They can't directly communicate.
-
-**Solution:** Queue-based resilience
-```
-User clicks "Send notification"
-         ↓
-Blog queues in D1 database (always succeeds)
-         ↓
-Cron job (every 5 min) checks queue
-         ↓
-IF proxy reachable → flush queue
-IF proxy offline → keep queued (retry later)
-```
-
-**This is why blog.deadlight has a QueueService** - it enables federation and email features without requiring the proxy to be always-on.
-
-#### Why the Blog Needs Federation Endpoints
-
-The `/federation/*` routes aren't just for ActivityPub wannabes - they enable:
-
-1. **Tag-based discovery:** Instances auto-discover peers via hashtags
-2. **Pull-based content:** Spam-resistant (instances request what they want)
-3. **Multi-protocol delivery:** HTTP primary, email fallback, LoRa future
-4. **Subdomain communities:** `politics.deadlight.boo` aggregates all #politics posts
-
-**This is why blog.deadlight has a federation layer** - it enables decentralized community organization.
-
-#### How Federation Posts Are Authenticated
-
-Each Deadlight instance has an Ed25519 identity keypair:
-
-1. **Key generation:** `vault.deadlight` generates keypair (or use `openssl`)
-2. **Public key publication:** Add to DNS TXT record or `/.well-known/deadlight`
-3. **Post signing:** Outbound posts include signature in `X-Deadlight-Signature` header
-4. **Verification:** Receiving instance fetches sender's public key, verifies signature
-
-**Without vault.deadlight:** Keys stored in environment variables or config file
-**With vault.deadlight:** Keys stored encrypted, never touch disk in plaintext
-
-#### Why the Proxy Uses Port 443 (Not 25)
-
-Residential ISPs block port 25 (SMTP). Traditional email delivery fails.
-
-**Solution:** HTTP-to-Email bridge via transactional APIs
-```
-blog.deadlight → Queue notification
-     ↓
-proxy.deadlight → HTTP POST to MailChannels (port 443)
-     ↓
-MailChannels → Recipient's inbox (proper SPF/DKIM)
-```
-
-**This is why email posting works** - the proxy translates between protocols so the blog never needs port 25.
-
-### Working Together: Real Scenarios
-
-**Scenario 1: Blogging over LoRa**
-1. Write post on phone connected to Meshtastic node
-2. Send via SMTP (could be over LoRa → meshtastic.deadlight gateway)
-3. Gateway forwards to blog.deadlight inbox endpoint
-4. Post published globally via Cloudflare Workers
-
-**Scenario 2: Self-hosted email + edge blog**
-1. Run proxy.deadlight locally (bridges SMTP/IMAP)
-2. Configure blog.deadlight to use your proxy for outbound email
-3. Receive replies to blog posts in your self-hosted inbox
-4. Respond via normal email client
-5. Blog federates with other Deadlight instances
-
-**Scenario 3: Disaster response team**
-1. Deploy blog.deadlight for team updates
-2. Team members post via satellite email when web is down
-3. Public reads blog over intermittent 2G/3G
-4. Zero server infrastructure required on-site
-
-Deadlight is designed for maximum resilience with minimum complexity.
-
-## Architecture: Blog + Proxy Integration
-
-### Sequence: User Posts Comment
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant B as blog.deadlight
-    participant D as D1 Queue
-    participant C as Cron (5 min)
-    participant P as proxy.deadlight
-    participant M as MailChannels
-    participant R as Recipient
-
-    U->>B: POST /api/comments (new comment)
-    B->>D: Queue notification {to, subject, body}
-    B->>U: 200 OK (comment saved)
-    
-    Note over D: Queue persisted<br/>even if proxy offline
-    
-    C->>B: Trigger (every 5 min)
-    B->>P: GET /api/health (via Tailscale)
-    
-    alt Proxy Online
-        P->>B: 200 OK
-        B->>D: Fetch queued items
-        B->>P: POST /api/email/send {payload}
-        P->>M: POST /tx/v1/send (HTTPS, port 443)
-        M->>R: Deliver email
-        P->>B: 202 Accepted
-        B->>D: Mark delivered
-    else Proxy Offline
-        P--xB: Timeout
-        B->>D: Keep in queue (retry later)
-    end
-```
-
-**Key insight:** The blog never directly touches SMTP. The proxy translates HTTP → Email API → SMTP. This is why residential networks (port 25 blocked) still work.
-
 ### Technology Stack
 
 - **Cloudflare Workers** – Globally distributed compute that sleeps when idle
@@ -573,60 +311,6 @@ Server-side validation for all user input:
 - **Username/password strength requirements**
 - **Slug format validation**
 
-## Middleware Architecture
-
-Deadlight uses a layered middleware approach for security and functionality:
-```
-Request
-↓
-Global Middleware (all routes)
-├─ Error handling
-├─ Logging
-├─ Analytics
-└─ Rate limiting (optional)
-↓
-Route-Specific Middleware
-├─ Authentication (sets ctx.user)
-├─ Authorization (admin check)
-├─ CSRF token generation
-└─ CSRF validation (POST/PUT/DELETE only)
-↓
-Route Handler
-↓
-Response
-```
-
-### Middleware Order
-
-Order matters! Middleware executes in **reverse array order**:
-
-```javascript
-// src/index.js
-router.group([
-  authMiddleware,           // Runs FIRST (sets ctx.user)
-  requireAdminMiddleware,   // Runs SECOND (checks role)
-  csrfTokenMiddleware      // Runs THIRD (generates token)
-], (r) => {
-  // Admin routes
-});
-```
-
-### Custom Middleware
-Create your own middleware following this pattern:
-```javascript
-export async function myMiddleware(request, env, ctx, next) {
-  // Pre-processing
-  console.log('Before handler');
-  
-  // Call next middleware/handler
-  const response = await next();
-  
-  // Post-processing
-  console.log('After handler');
-  
-  return response;
-}
-```
 ## Configuration
 
 ### Deployment Modes
@@ -693,6 +377,29 @@ export const CONFIG = {
   enableLoRaPosting: false,     // Requires mesh gateway
 };
 ```
+
+### Working Together: Real Scenarios
+
+**Scenario 1: Blogging over LoRa**
+1. Write post on phone connected to Meshtastic node
+2. Send via SMTP (could be over LoRa → meshtastic.deadlight gateway)
+3. Gateway forwards to blog.deadlight inbox endpoint
+4. Post published globally via Cloudflare Workers
+
+**Scenario 2: Self-hosted email + edge blog**
+1. Run proxy.deadlight locally (bridges SMTP/IMAP)
+2. Configure blog.deadlight to use your proxy for outbound email
+3. Receive replies to blog posts in your self-hosted inbox
+4. Respond via normal email client
+5. Blog federates with other Deadlight instances
+
+**Scenario 3: Disaster response team**
+1. Deploy blog.deadlight for team updates
+2. Team members post via satellite email when web is down
+3. Public reads blog over intermittent 2G/3G
+4. Zero server infrastructure required on-site
+
+Deadlight is designed for maximum resilience with minimum complexity.
 
 ### Advanced Configuration
 
@@ -852,68 +559,6 @@ Full API documentation: [docs/API.md](docs/API.md)
 - Need a WordPress plugin ecosystem
 - Require a visual page builder
 - Want a fully GUI-based setup with no terminal required
-
-
-## Appendix A: Component Deep Dive
-
-### blog.deadlight (This Repository)
-
-**Purpose:** Content delivery & federation hub  
-**Stack:** Cloudflare Workers, D1, Markdown  
-**Binary Size:** N/A (serverless)  
-**Memory:** ~128 MB (Workers limit)  
-**Protocols:** HTTP/S, WebSocket (future)
-
-**Key Integration Points:**
-- `POST /api/email/send` → Queues notification for proxy
-- `POST /federation/announce` → Notifies federated instances  
-- `GET /api/posts/:id` → Serves content to federation
-
-**See Also:** [Full README](#) | [API Docs](docs/API.md) | [Architecture](docs/ARCHITECTURE.md)
-
-### proxy.deadlight
-
-**Purpose:** Protocol bridging & stateful connections  
-**Stack:** C17, GLib, OpenSSL  
-**Binary Size:** 17 MB (Docker), 8 MB (native)  
-**Memory:** ~50 MB  
-**Protocols:** HTTP/S, SOCKS4/5, WebSocket, SMTP/IMAP bridge, VPN
-
-**Why it exists:** Bridges stateless (Workers) with stateful (SMTP, VPN, LoRa)
-
-**See Also:** [proxy.deadlight README](https://github.com/gnarzilla/proxy.deadlight)
-
-### meshtastic.deadlight
-
-**Purpose:** LoRa mesh ↔ Internet gateway  
-**Stack:** C (fork of proxy.deadlight)  
-**Hardware:** Requires Meshtastic-compatible radio (LoRa, nRF52)
-
-**Why it exists:** Enables posting to blog.deadlight over LoRa mesh networks
-
-**See Also:** [meshtastic.deadlight README](https://github.com/gnarzilla/meshtastic.deadlight)
-
-### lib.deadlight
-
-**Purpose:** Shared code (prevents duplication across components)  
-**Stack:** JavaScript (Workers), TypeScript (future)
-
-**Contains:**
-- Auth (JWT generation/validation)
-- Database models (D1 schema)
-- Queue service (used by blog for federation)
-- Security (rate limiting, CSRF)
-
-**See Also:** [lib.deadlight README](https://github.com/gnarzilla/lib.deadlight)
-
-### edge.deadlight
-
-**Purpose:** Orchestration layer (umbrella project)  
-**Stack:** Documentation + deployment scripts
-
-**Use when:** Running multi-instance deployments or full-stack setups
-
-**See Also:** [edge.deadlight README](https://github.com/gnarzilla/edge.deadlight)
 
 ## Support
 
