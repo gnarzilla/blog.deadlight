@@ -14,7 +14,7 @@ const pagination = new Pagination({
 });
 
 export function renderPostList(posts = [], user = null, paginationData = null, config = null, csrfToken = null) {
-  const currentSort = paginationData?.currentSort || 'newest';
+  const currentSort = paginationData?.currentSort || 'oldest';
   const sortControls = `
     <div class="sort-controls">
       <label for="sort-select">Sort by:</label>

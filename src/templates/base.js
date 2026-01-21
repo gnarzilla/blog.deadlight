@@ -130,6 +130,12 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
           }
         });
       </script>
+      <footer class="site-footer">
+        <p>
+          This site runs on <a href="https://deadlight.boo/">Deadlight</a>,
+          an open-source, edge-native publishing platform designed for unreliable and hostile networks.
+        </p>
+      </footer>
     </body>
     </html>
   `;

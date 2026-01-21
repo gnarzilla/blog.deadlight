@@ -15,7 +15,7 @@ export const blogRoutes = {
         const postsPerPage = parseInt(config.postsPerPage) || 10;
         const url = new URL(request.url);
         const page = parseInt(url.searchParams.get('page') || '1');
-        const sort = url.searchParams.get('sort') || 'newest';
+        const sort = url.searchParams.get('sort') || 'karma';
         const offset = (page - 1) * postsPerPage;
 
         // Build ORDER BY based on sort parameter
