@@ -31,6 +31,7 @@ Your blog is now live on the edge.
 3. Write your first post
 
 Full getting started for all platoforms: [docs/QUICKSTART.md](docs/QUICKSTART.md)
+For Andrioid/Raspberry PI: [docs/ARM64_QUICKSTART.md](docs/ARM64_QUICKSTART.md)
 
 ## Live Demos
 
@@ -591,6 +592,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
