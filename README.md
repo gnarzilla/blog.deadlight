@@ -579,6 +579,7 @@ Other ways to help:
 - **[API Reference](docs/API.md)** – Complete endpoint documentation
 - **[Middleware](docs/MIDDLEWARE.md)** – Custom middleware development
 - **[Ecosystem](docs/ECOSYSTEM.md)** – Integration with proxy/vault/meshtastic
+- **[Appendix A: Component Deep Dive](docs/APPENDIXA.md)
 - **[License](docs/LICENSE)** - MIT 2026 deadlight
 
 ## Contact
@@ -588,6 +589,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
