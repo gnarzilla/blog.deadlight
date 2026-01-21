@@ -577,6 +577,7 @@ Other ways to help:
 ## Documentation
 
 - **[Quick Start](docs/QUICKSTART.md)** – Detailed setup for all platforms
+- **[ARM64 Quick Start](docs/ARM64_QUICKSTART.md)** - Detailed setup for Android/Termux, Raspberry Pi, Pine Phone
 - **[Architecture](docs/ARCHITECTURE.md)** – Technical deep dive
 - **[Security](docs/SECURITY.md)** – Full security model and threat analysis
 - **[API Reference](docs/API.md)** – Complete endpoint documentation
@@ -592,6 +593,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
