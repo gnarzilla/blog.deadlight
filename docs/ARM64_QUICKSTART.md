@@ -2,7 +2,7 @@
 
 Deadlight can be deployed entirely from a phone, but on ARM64 Android you’ll need to run a Debian userland inside Termux using proot. This bypasses Android’s memory layout limitations that break workerd.
 
-![termux deployment](src/assets/termuxgif)
+![termux deployment](src/assets/termux.gif)
 
 ```bash
 # 1. Install Termux + proot
