@@ -30,6 +30,8 @@ Your blog is now live on the edge.
 2. Log in with the credentials you set during setup
 3. Write your first post
 
+Full getting started for all platoforms: [docs/QUICKSTART.md](docs/QUICKSTART.md)
+
 ## Live Demos
 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
@@ -589,6 +591,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
