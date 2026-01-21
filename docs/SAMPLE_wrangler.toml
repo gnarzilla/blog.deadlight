@@ -1,6 +1,6 @@
 name = "your-domain.tld"
 main = "src/index.js"
-compatibility_date = "2023-10-20"
+compatibility_date = "2025-12-25"
 
 # Main domain (landing page)
 [[routes]]
@@ -32,17 +32,3 @@ binding = "ASSETS"
 binding = "DB"
 database_name = "your-db-name"
 database_id = "your-database-id"
-
-[env.production]
-name = "your-domain"
-
-[env.production.vars]
-PROXY_URL = "https://proxy.your-domain.tld"
-SITE_URL = "https://your-domain.tld"
-ENABLE_QUEUE_PROCESSING = "true"  # Explicitly set for production
-
-# Copy bindings to production env
-[[env.production.d1_databases]]
-binding = "DB"
-database_name = "your-db-name"
-database_id = "your-db-id"
