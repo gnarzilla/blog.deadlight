@@ -597,15 +597,3 @@ Other ways to help:
 [EOF](#live-demos)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
