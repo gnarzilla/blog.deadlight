@@ -29,7 +29,7 @@ export function renderSinglePost(post, user, navigation, config, comments = [], 
       ${comments.map((comment, index) => `
         <div class="comment" style="margin-left: ${comment.level * 20}px;">
           <p class="post-content">${comment.content}</p>
-          <p class="post-meta">By ${comment.author} | ${new Date(comment.published_at).toLocaleDateString()}</p>
+          <p class="post-meta">By ${renderAuthorLink(comment.author)} | ${new Date(comment.published_at).toLocaleDateString()}</p>
           ${user ? `
             <div class="comment-actions">
               <a href="/comments/edit/${comment.id}" class="button edit-button">Edit</a>

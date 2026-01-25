@@ -1,5 +1,6 @@
 // src/templates/admin/dashboard.js
 import { renderTemplate } from '../base.js';
+import { renderAuthorLink } from '../../../../lib.deadlight/core/src/utils/templates.js'
 
 export function renderAdminDashboard(stats, posts, requestStats = [], user, config = null) { 
   // Prepare data for the simple chart
@@ -108,7 +109,7 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
                     <td>
                       <a href="/post/${post.slug}" class="post-title-link">${post.title}</a>
                     </td>
-                    <td>${post.author_username || 'Unknown'}</td>
+                    <td>${renderAuthorLink(post.author_username) || 'Unknown'}</td>
                     <td>${new Date(post.created_at).toLocaleDateString()}</td>
                     <td>${post.published ? '<span class="badge">Published</span>' : 'Draft'}</td>
                     <td class="action-cell">
