@@ -2,7 +2,7 @@
 import { renderAuthTemplate } from './base.js';
 
 export function renderLoginForm(data = {}) {
-  const { error, validationErrors, username = '', csrfToken = '' } = data;
+  const { error, validationErrors, username = '', csrfToken = '', allowRegistration = true } = data;
   
   // Build error display
   let errorHtml = '';
@@ -38,7 +38,12 @@ export function renderLoginForm(data = {}) {
         >
         <button type="submit">Login</button>
       </form>
-    </div>
+
+      ${allowRegistration ? `
+        <div class="auth-footer">
+          <p>Don't have an account? <a href="/register">Register</a></p>
+        </div>
+      ` : ''}
   `;
   
   return renderAuthTemplate('Login', content);
