@@ -51,7 +51,6 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
           </div>
         </div>
 
-        <!-- Browser Stats (if available) -->
         ${stats.browserStats && stats.browserStats.length > 0 ? `
           <div class="browser-stats">
             <h3>Browser Usage</h3>
@@ -75,7 +74,6 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
           </div>
         </div>
 
-        <!-- Rest of your template remains the same -->
         ${chartData.length > 0 ? `
           <div class="chart-section">
             <h2>Requests (Last 7 Days)</h2>
@@ -91,7 +89,6 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
           </div>
         ` : ''}
 
-        <!-- Recent Posts section continues as before -->
         <div class="recent-posts-section">
           <h2>Recent Posts</h2>
           ${posts.length > 0 ? `
@@ -109,7 +106,7 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
                 ${posts.map(post => `
                   <tr>
                     <td>
-                      <a href="/post/${post.id}" class="post-title-link">${post.title}</a>
+                      <a href="/post/${post.slug}" class="post-title-link">${post.title}</a>
                     </td>
                     <td>${post.author_username || 'Unknown'}</td>
                     <td>${new Date(post.created_at).toLocaleDateString()}</td>
