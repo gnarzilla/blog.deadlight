@@ -1,5 +1,6 @@
 // src/templates/admin/userManagement.js
 import { renderTemplate } from '../base.js';
+import { renderAuthorLink } from '../../../../lib.deadlight/core/src/utils/templates.js'
 
 export function renderUserManagement(users, currentUser, config = null) {
   const content = `
@@ -27,7 +28,7 @@ export function renderUserManagement(users, currentUser, config = null) {
           ${users.map(user => `
             <tr>
               <td>
-                <strong>${user.username}</strong>
+                <strong>${renderAuthorLink(user.username)}</strong>
                 ${user.id === currentUser.id ? '<span class="badge">You</span>' : ''}
               </td>
               <td>${user.post_count || 0}</td>
