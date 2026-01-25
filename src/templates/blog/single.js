@@ -40,7 +40,11 @@ export function renderSinglePost(post, user, navigation, config, comments = [], 
         </div>
       `).join('')}
     </div>
-  ` : '<p class="no-comments">No comments yet.</p>';
+  ` : `<div class="comments-section">
+    <p class="no-comments">
+      Be the first to <a href="/login">comment</a> on this post.
+    </p>
+  </div>`;
 
   const fullContent = post.content.replace('<--!more-->', '');
   const karma = post.karma || 0;
