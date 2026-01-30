@@ -36,11 +36,11 @@ export function renderPostList(posts = [], user = null, paginationData = null, c
 
   return renderTemplate(
     'Blog Posts',
-    `<div class="container">
+    `
       ${sortControls}
       ${postsHtml}
       ${paginationHtml}
-    </div>`,
+    `,
     user,
     config
   );

@@ -85,31 +85,32 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
         const themeToggle = document.getElementById('theme-toggle');
         const html = document.documentElement;
         const stylesheet = document.getElementById('theme-stylesheet');
+        const themeIcon = themeToggle.querySelector('.theme-icon'); // Move this up
+        
+        // Define Icon Sets
+        // Dark Mode: ♤ (Spade)
+        // Light Mode: ♡ (Heart)
         
         // Load saved theme
         let currentTheme = localStorage.getItem('theme') || 'dark';
+        
+        // Apply initial state
         html.setAttribute('data-theme', currentTheme);
         stylesheet.href = '/styles/' + currentTheme + '_min.css?v=${cacheBust}';
+        themeIcon.textContent = currentTheme === 'dark' ? '♤' : '♡'; 
 
-        // Update theme icon
-        const themeIcon = themeToggle.querySelector('.theme-icon');
-        themeIcon.textContent = currentTheme === 'dark' ? '♧' : '◇';
-        
         // Handle theme toggle
         themeToggle.addEventListener('click', () => {
+          // Flip state
           currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
           
-          // Update localStorage
+          // Save and Apply
           localStorage.setItem('theme', currentTheme);
-          
-          // Update HTML attribute
           html.setAttribute('data-theme', currentTheme);
-          
-          // Update stylesheet
           stylesheet.href = '/styles/' + currentTheme + '_min.css?v=${cacheBust}';
           
-          // Update icon
-          themeIcon.textContent = currentTheme === 'dark' ? '♡' : '♤';
+          // Update Icon
+          themeIcon.textContent = currentTheme === 'dark' ? '♤' : '♡';
         });
 
         // Keyboard navigation for pagination (moved outside of theme toggle)

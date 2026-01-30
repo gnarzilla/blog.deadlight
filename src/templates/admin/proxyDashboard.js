@@ -1,168 +1,172 @@
 // src/templates/admin/proxyDashboard.js
-import { renderTemplate } from '../base.js';
 
 export function proxyDashboardTemplate(data, user, config) {
-  const { status, queue, federation } = data || {};
-  const PROXY_URL = config.proxyUrl;
+  // Extract data with fallbacks
+  const { 
+    status = {}, 
+    queue = {}, 
+    federation = {}, 
+    csrfToken = '' 
+  } = data || {};
 
-  // Safe data extraction
-  const connected = status?.proxy_connected ?? false;
-  const circuitState = status?.circuit_state ?? { state: 'UNKNOWN', failures: 0 };
-  const queuedTotal = queue?.status?.queued?.total ?? 0;
-  const connectedDomains = federation?.connected_domains ?? [];
-  const recentActivity = federation?.recent_activity ?? [];
-  const recommendations = status?.recommendations ?? [];
-  const lastProcessing = queue?.lastProcessing ?? null;
+  // 1. Status Logic
+  const PROXY_URL = config.proxyUrl || '';
+  const isConnected = status.proxy_connected ?? false;
+  
+  // Circuit Breaker Logic
+  const circuitState = status.circuit_state || { state: 'UNKNOWN', failures: 0 };
+  let circuitClass = 'neutral';
+  if (circuitState.state === 'CLOSED') circuitClass = 'success'; 
+  if (circuitState.state === 'OPEN') circuitClass = 'danger';     
+  if (circuitState.state === 'HALF_OPEN') circuitClass = 'warning';
 
-  // Status colors
-  const connectedColor = connected ? 'green' : 'red';
-  const circuitColor = circuitState.state === 'CLOSED' ? 'green' : circuitState.state === 'OPEN' ? 'red' : 'yellow';
-  const queueColor = queuedTotal > 0 ? 'yellow' : 'green';
+  // Queue Logic
+  const queuedTotal = queue.status?.queued?.total ?? 0;
+  // Handle nested object structure safely or fallback to timestamp
+  const lastProcessing = queue.lastProcessing 
+    ? new Date(queue.lastProcessing.timestamp || queue.lastProcessing).toLocaleString() 
+    : 'Never';
 
-  // HTML sections
-  const statusHtml = `
-    <div class="card">
-      <h3>Proxy Status</h3>
-      <p>Configured Proxy URL: ${PROXY_URL ? `<a href="${PROXY_URL}" target="_blank">${PROXY_URL}</a>` : 'Not Configured'}</p>
-      <p>Connected: <span style="color: ${connectedColor};">${connected ? 'Yes' : 'No'}</span></p>
-      <p>Circuit Breaker: <span style="color: ${circuitColor};">${circuitState.state} (${circuitState.failures} failures)</span></p>
+  // Federation Data
+  const connectedDomains = federation.connected_domains || [];
+  const recentActivity = federation.recent_activity || [];
+  const recommendations = status.recommendations || [];
+
+  const content = `
+    <div class="admin-header">
+      <h2>Proxy Node Status</h2>
+      <div class="admin-actions">
+        <a href="/admin" class="button outline">← Back to Dash</a>
+        ${PROXY_URL ? `<a href="${PROXY_URL}/api/health" target="_blank" class="button outline">Ping Proxy</a>` : ''}
+      </div>
     </div>
-  `;
 
-  const queueHtml = `
-    <div class="card">
-      <h3>Queue Status</h3>
-      <p>Total Queued: <span style="color: ${queueColor};">${queuedTotal}</span></p>
-      <p>Last Processed: ${lastProcessing ? new Date(lastProcessing.timestamp).toLocaleString() : 'N/A'}</p>
-      <button class="button" onclick="processQueue()">Process Now</button>
+    <!-- 1. HEADS UP DISPLAY (HUD) -->
+    <div class="stats-grid">
+      
+      <!-- Connection Card -->
+      <div class="stat-card ${isConnected ? 'success-border' : 'danger-border'}">
+        <span class="stat-label">Uplink Status</span>
+        <span class="stat-value">${isConnected ? 'ONLINE' : 'OFFLINE'}</span>
+        <span class="stat-desc">
+           ${PROXY_URL ? new URL(PROXY_URL).hostname : 'No Proxy Configured'}
+        </span>
+      </div>
+
+      <!-- Circuit Breaker Card -->
+      <div class="stat-card ${circuitClass}-border">
+        <span class="stat-label">Circuit Breaker</span>
+        <span class="stat-value">${circuitState.state}</span>
+        <span class="stat-desc">${circuitState.failures} failures detected</span>
+      </div>
+
+      <!-- Queue Card -->
+      <div class="stat-card ${queuedTotal > 0 ? 'warning-border' : ''}">
+        <span class="stat-label">Outbox Queue</span>
+        <span class="stat-value">${queuedTotal}</span>
+        <span class="stat-desc">Last run: ${lastProcessing}</span>
+      </div>
+
     </div>
-  `;
 
-  const domainsHtml = `
-    <div class="card">
-      <h3>Connected Domains (${connectedDomains.length || 0})</h3>
-      ${connectedDomains.length > 0 ? `
-        <table>
+    ${recommendations.length > 0 ? `
+    <div class="alert-box warning">
+      <strong>System Recommendations:</strong>
+      <ul>
+        ${recommendations.map(r => `<li>${r}</li>`).join('')}
+      </ul>
+    </div>
+    ` : ''}
+
+    <hr class="divider">
+
+    <!-- 2. QUEUE MANAGEMENT -->
+    <div class="dashboard-section">
+      <div class="section-header">
+        <h3><span class="icon">⇄</span> Message Queue</h3>
+        <form action="/admin/process-queue" method="POST">
+          <input type="hidden" name="csrf_token" value="${csrfToken}">
+          <button type="submit" class="button">Force Process Now ↻</button>
+        </form>
+      </div>
+      
+      ${queuedTotal === 0 ? '<p class="text-muted">Queue is clear.</p>' : `
+        <p>There are <strong>${queuedTotal}</strong> items waiting to be sent.</p>
+      `}
+    </div>
+
+    <!-- 3. FEDERATION DIRECTORY -->
+    <div class="dashboard-section">
+      <h3><span class="icon">🛡</span> Trusted Domains (${connectedDomains.length})</h3>
+      
+      <div class="table-responsive">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Domain</th>
               <th>Trust Level</th>
               <th>Last Seen</th>
-              <th>Actions</th>
+              <th style="text-align:right">Actions</th>
             </tr>
           </thead>
           <tbody>
             ${connectedDomains.map(d => `
               <tr>
-                <td>${d.domain}</td>
-                <td>${d.trust_level}</td>
-                <td>${new Date(d.last_seen).toLocaleString()}</td>
-                <td>
-                  <button onclick="testDomain('${d.domain}')">Test</button>
-                  <button onclick="removeDomain('${d.domain}')">Remove</button>
+                <td><strong>${d.domain}</strong></td>
+                <td><span class="badge ${d.trust_level}">${d.trust_level}</span></td>
+                <td><small>${new Date(d.last_seen).toLocaleString()}</small></td>
+                <td style="text-align:right">
+                  <div class="button-group">
+                    <form action="/admin/proxy/test-federation" method="POST" style="display:inline">
+                      <input type="hidden" name="csrf_token" value="${csrfToken}">
+                      <input type="hidden" name="domain" value="${d.domain}">
+                      <button type="submit" class="button small outline">Test</button>
+                    </form>
+
+                    <form action="/api/federation/remove" method="POST" style="display:inline" onsubmit="return confirm('Disconnect from ${d.domain}?');">
+                      <input type="hidden" name="csrf_token" value="${csrfToken}">
+                      <input type="hidden" name="domain" value="${d.domain}">
+                      <button type="submit" class="button small danger">Remove</button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             `).join('')}
+            ${connectedDomains.length === 0 ? '<tr><td colspan="4" class="text-center">No active federation peers.</td></tr>' : ''}
           </tbody>
         </table>
-      ` : '<p>No connected domains.</p>'}
-      <form id="add-domain-form" style="margin-top: 1rem;">
-        <input type="text" id="new-domain" placeholder="deadlight.boo" required />
-        <button type="submit">Add Domain</button>
-      </form>
-    </div>
-  `;
+      </div>
 
-  const activityHtml = `
-    <div class="card">
-      <h3>Recent Federation Activity</h3>
-      ${recentActivity.length > 0 ? `
+      <!-- Add Domain Form -->
+      <details class="admin-details" style="margin-top: 1rem;">
+        <summary>+ Connect New Domain</summary>
+        <form action="/api/federation/connect" method="POST" class="inline-form">
+          <input type="hidden" name="csrf_token" value="${csrfToken}">
+          <input type="text" name="domain" placeholder="example.deadlight.boo" required>
+          <label>
+            <input type="checkbox" name="auto_discover" checked> Auto-Discover
+          </label>
+          <button type="submit">Connect</button>
+        </form>
+      </details>
+    </div>
+
+    <!-- 4. RECENT ACTIVITY LOG -->
+    <div class="dashboard-section">
+      <h3><span class="icon">terminal</span> Activity Log</h3>
+      <div class="terminal-window">
         <ul>
-          ${recentActivity.map(a => `
-            <li>${a.type}: ${a.description} at ${new Date(a.timestamp).toLocaleString()}</li>
-          `).join('')}
+        ${recentActivity.length > 0 ? recentActivity.map(a => `
+          <li>
+            <span class="log-time">[${new Date(a.timestamp).toLocaleTimeString()}]</span>
+            <span class="log-type">[${a.type}]</span>
+            ${a.title || 'Unknown Action'} 
+            <span class="text-muted">(${a.domain || 'system'})</span>
+          </li>
+        `).join('') : '<li class="text-muted">No recent activity logged.</li>'}
         </ul>
-      ` : '<p>No recent activity.</p>'}
+      </div>
     </div>
-  `;
-
-  const recommendationsHtml = `
-    <div class="card">
-      <h3>Recommendations</h3>
-      ${recommendations.length > 0 ? `
-        <ul>
-          ${recommendations.map(r => `<li>${r}</li>`).join('')}
-        </ul>
-      ` : '<p>All systems normal.</p>'}
-    </div>
-  `;
-
-  const content = `
-    <div class="container">
-      <h1>Proxy Dashboard</h1>
-        ${statusHtml}
-        ${queueHtml}
-        ${domainsHtml}
-        ${activityHtml}
-        ${recommendationsHtml}
-    </div>
-
-    <script>
-      // Add domain
-      document.getElementById('add-domain-form').onsubmit = async (e) => {
-        e.preventDefault();
-        const domain = document.getElementById('new-domain').value.trim();
-        if (!domain) return;
-
-        const res = await fetch('/api/federation/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domain, auto_discover: true })
-        });
-        if (res.ok) {
-          location.reload();
-        } else {
-          alert('Error adding domain');
-        }
-      };
-
-      // Process queue
-      async function processQueue() {
-        await fetch('/admin/process-queue', { method: 'POST' });
-        location.reload();
-      }
-
-      // Test domain
-      async function testDomain(domain) {
-        await fetch('/admin/proxy/test-federation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domain })
-        });
-        alert('Test complete');
-      }
-
-      // Remove domain
-      async function removeDomain(domain) {
-        if (confirm('Remove domain?')) {
-          await fetch('/api/federation/remove', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domain })
-          });
-          location.reload();
-        }
-      }
-    </script>
-
-    <style>
-      .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
-      .card { background: var(--card-bg, #f8f9fa); border: 1px solid var(--border, #dee2e6); border-radius: 0.25rem; padding: 1rem; margin-bottom: 1rem; }
-      .button { padding: 0.5rem 1rem; background: var(--primary, #007bff); color: white; border: none; cursor: pointer; border-radius: 0.25rem; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { padding: 0.5rem; border-bottom: 1px solid var(--border, #dee2e6); text-align: left; }
-      ul { list-style-type: disc; padding-left: 1.5rem; }
-    </style>
   `;
 
   return content;
