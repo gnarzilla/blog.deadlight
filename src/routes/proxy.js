@@ -11,75 +11,84 @@ export async function handleProxyRoutes(request, env, user) {
     let body = {};
     try {
         if (request.headers.get('Content-Type')?.includes('application/json')) {
-        body = await request.json();
+            body = await request.json();
         } else {
-        const formData = await request.clone().formData();
-        body = Object.fromEntries(formData);
+            const formData = await request.clone().formData();
+            body = Object.fromEntries(formData);
         }
     } catch {}
 
     if (request.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
     
     try {
+        // 1. Fetch all status data in parallel
         const [status, queueStatus, domains, realtimeFed] = await Promise.all([
-        env.services.proxy.healthCheck(),
-        env.services.queue.getStatus(),
-        env.services.federation.getConnectedDomains(),
-        getFederationRealtimeStatus(env),
+            env.services.proxy.healthCheck(),
+            env.services.queue.getStatus(),
+            env.services.federation.getConnectedDomains(),
+            getFederationRealtimeStatus(env),
         ]);
 
-        // --------------------------------------------------------------
-        //  Get the public URL of THIS blog (used for inbound federation URLs)
-        // --------------------------------------------------------------
-        const cfg = await env.services.config.getConfig();
-        const siteUrl = cfg.siteUrl || env.SITE_URL || new URL(request.url).origin;
+        // 2. Get Configuration
+        const dbConfig = await env.services.config.getConfig();
 
+        const siteUrl = dbConfig.siteUrl || env.SITE_URL || new URL(request.url).origin;
+        
+        // Resolve Proxy URL (Env > DB > Empty)
+        const effectiveProxyUrl = env.PROXY_URL || dbConfig.proxyUrl || '';
+
+        console.log(`[Proxy Config] Site: ${siteUrl}, Proxy: ${effectiveProxyUrl}`);
+
+        // 3. Create the Final Config Object
         const config = {
-        ...cfg,  // Database config
-        proxyUrl: env.PROXY_URL || cfg.proxyUrl || ''  // Merge with env var
+            ...dbConfig,
+            proxyUrl: effectiveProxyUrl,
+            siteUrl: siteUrl 
         };
 
-        
+        // 4. Get Circuit State & Recommendations
         const circuitState = env.services.proxy.getCircuitState();
         const recommendations = getCircuitRecommendations(circuitState);
-            let lastProcessing = null;
+        
+        let lastProcessing = null;
         if (status.proxy_connected && queueStatus.queued?.total > 0) {
             lastProcessing = await env.services.queue.processAll();
         }
 
         const data = {
-            siteUrl,                     
+            siteUrl, 
             status: { ...status, recommendations, circuit_state: circuitState },
             queue: { status: queueStatus, lastProcessing },
             federation: { connected_domains: domains, ...realtimeFed },
-            config: {
-                proxyUrl: env.PROXY_URL,
-                enabled: true,
-            },
+            config: config,
         };
-        const body = proxyDashboardTemplate(data, user, config);
-        console.log('Proxy URL being passed:', env.PROXY_URL);
-        console.log('Config object:', config);
+
+        const responseBody = proxyDashboardTemplate(data, user, config);
 
         return new Response(
-        renderTemplate('Proxy Dashboard', body, user, config),
-        { headers: { 'Content-Type': 'text/html' } }
+            renderTemplate('Proxy Dashboard', responseBody, user, config),
+            { headers: { 'Content-Type': 'text/html' } }
         );
+
     } catch (error) {
         console.error('Proxy dashboard error:', error);
+        
+        // Fallback for error state
+        const dbConfig = await env.services.config.getConfig();
+        const config = { ...dbConfig, proxyUrl: env.PROXY_URL || '' };
+        
         const errorData = {
-        status: { proxy_connected: false, error: error.message, circuit_state: env.services.proxy.getCircuitState(), recommendations: [] },
-        queue: { status: { queued: { total: 0 }, status: 'error' } },
-        federation: { connected_domains: [], recent_activity: [] },
-        config: { proxyUrl: env.PROXY_URL, enabled: false },
+            status: { proxy_connected: false, error: error.message, circuit_state: env.services.proxy.getCircuitState(), recommendations: [] },
+            queue: { status: { queued: { total: 0 }, status: 'error' } },
+            federation: { connected_domains: [], recent_activity: [] },
+            config: config
         };
 
-        const config = await env.services.config.getConfig();
-        const body = proxyDashboardTemplate(errorData, user, config);
+        const responseBody = proxyDashboardTemplate(errorData, user, config);
 
         return new Response(
-        renderTemplate('Proxy Dashboard', body, user, config),
-        { headers: { 'Content-Type': 'text/html' } }
+            renderTemplate('Proxy Dashboard', responseBody, user, config),
+            { headers: { 'Content-Type': 'text/html' } }
         );
     }
 }
@@ -535,7 +544,7 @@ export const handleProxyTests = {
                 });
             }
             
-            const result = await queueervice.processQueue();
+            const result = await queueService.processQueue();
             return Response.json({
                 success: true,
                 data: result
