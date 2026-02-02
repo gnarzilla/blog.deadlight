@@ -72,6 +72,7 @@ export function renderAdminDashboard(stats, posts, requestStats = [], user, conf
           <div class="action-buttons">
             <a href="/admin/settings" class="button">Settings</a>
             <a href="/admin/federation" class="button">Federation</a>
+            <a href="/inbox" class="button">Inbox</a>
           </div>
         </div>
 
