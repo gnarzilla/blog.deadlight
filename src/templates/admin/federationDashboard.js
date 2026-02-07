@@ -18,27 +18,47 @@ export function federationDashboard(federatedPosts, domains, user, config) {
           <p>Federated Posts</p>
         </div>
         <div class="card">
-          <h3>${trusted.length}</h3>
-          <p>Connected Domains</p>
+          <h3>${trusted.filter(d => d.trust_level === 'verified').length}</h3>
+          <p>Verified Domains</p>
         </div>
       </div>
 
       <div class="section">
         <h2>Add a Deadlight Blog</h2>
+        <p class="help-text">Connect to other Deadlight instances to share and receive posts</p>
+        
         <form id="add-domain-form">
-          <input type="text" placeholder="threat-level-midnight.deadlight.boo" id="domain-input" required />
-          <button type="submit">Discover & Trust</button>
-          <span id="discover-status"></span>
+          <input 
+            type="text" 
+            placeholder="threat-level-midnight.deadlight.boo" 
+            id="domain-input" 
+            required 
+          />
+          <button type="submit" id="discover-btn">Discover & Trust</button>
         </form>
+        
+        <div id="discover-status" class="status-message"></div>
 
         <div id="trusted-list">
-          ${trusted.map(d => `
-            <div class="trusted-domain" data-domain="${d.domain}">
-              <strong>${d.domain}</strong> 
-              <span class="badge ${d.trust_level}">${d.trust_level}</span>
-              <button class="small follow-btn" data-domain="${d.domain}">Follow</button>
-            </div>
-          `).join('')}
+          ${trusted.length === 0 
+            ? '<p class="empty-state">No connected blogs yet. Add one above to get started!</p>'
+            : trusted.map(d => `
+              <div class="trusted-domain" data-domain="${d.domain}">
+                <div class="domain-info">
+                  <strong>${d.domain}</strong>
+                  <span class="badge ${d.trust_level}">${d.trust_level}</span>
+                  ${d.last_seen ? `<span class="last-seen">Last seen: ${new Date(d.last_seen).toLocaleDateString()}</span>` : ''}
+                </div>
+                <div class="domain-actions">
+                  <button class="small sync-btn" data-domain="${d.domain}" title="Sync posts from this blog">
+                    Sync
+                  </button>
+                  <button class="small danger remove-btn" data-domain="${d.domain}" title="Remove connection">
+                    Remove
+                  </button>
+                </div>
+              </div>
+            `).join('')}
         </div>
       </div>
 
@@ -46,17 +66,25 @@ export function federationDashboard(federatedPosts, domains, user, config) {
         <h2>Posts from the Federation</h2>
         <div id="federated-posts">
           ${federatedPostsSafe.length === 0 
-            ? '<p>No federated posts yet. Add a blog to start receiving!</p>'
-            : federatedPostsSafe.map(p => `
-              <article class="federated-post">
-                <h3><a href="${p.source_url || '/post/' + p.id}" target="_blank">${p.title}</a></h3>
-                <p>
-                  <em>by ${p.author || 'Unknown'} from <strong>${p.source_domain}</strong></em>
-                  ${p.published_at ? ' · ' + new Date(p.published_at).toLocaleDateString() : ''}
-                </p>
-                <div class="preview">${p.content.substring(0, 300)}...</div>
-              </article>
-            `).join('')}
+            ? '<p class="empty-state">No federated posts yet. Add a blog above to start receiving content!</p>'
+            : federatedPostsSafe.map(p => {
+                const meta = p.federation_metadata ? JSON.parse(p.federation_metadata) : {};
+                return `
+                  <article class="federated-post">
+                    <h3>
+                      <a href="${meta.source_url || '/post/' + p.slug}" target="_blank">
+                        ${p.title}
+                      </a>
+                    </h3>
+                    <p class="post-meta">
+                      <em>by ${meta.author || 'Unknown'} from <strong>${meta.source_domain || 'unknown'}</strong></em>
+                      ${p.created_at ? ' · ' + new Date(p.created_at).toLocaleDateString() : ''}
+                      ${p.moderation_status === 'pending' ? ' · <span class="badge warning">Pending Moderation</span>' : ''}
+                    </p>
+                    <div class="preview">${p.content.substring(0, 300)}${p.content.length > 300 ? '...' : ''}</div>
+                  </article>
+                `;
+              }).join('')}
         </div>
       </div>
     </div>
@@ -64,57 +92,101 @@ export function federationDashboard(federatedPosts, domains, user, config) {
     <script>
       const form = document.getElementById('add-domain-form');
       const status = document.getElementById('discover-status');
+      const btn = document.getElementById('discover-btn');
 
       form.onsubmit = async (e) => {
         e.preventDefault();
         const domain = document.getElementById('domain-input').value.trim();
         if (!domain) return;
 
-        status.textContent = 'Discovering...';
-        const res = await fetch('/api/federation/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domain, auto_discover: true })
-        });
-        const json = await res.json();
+        // UI feedback
+        status.className = 'status-message info';
+        status.textContent = '🔍 Discovering instance...';
+        btn.disabled = true;
 
-        if (json.success) {
-          status.textContent = 'Trusted!';
-          setTimeout(() => location.reload(), 1000);
-        } else {
-          status.textContent = 'Error: ' + json.error;
+        try {
+          const res = await fetch('/api/federation/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domain, auto_discover: true })
+          });
+          
+          const json = await res.json();
+
+          if (json.success) {
+            status.className = 'status-message success';
+            status.textContent = '✓ Successfully connected to ' + domain + '!';
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            status.className = 'status-message error';
+            
+            // Provide helpful error messages
+            if (json.setup_required) {
+              status.innerHTML = '⚠️ <strong>' + domain + '</strong> has not configured federation yet.<br><small>They need to run: <code>scripts/gen-fed-keys.sh</code></small>';
+            } else if (json.federation_enabled === false) {
+              status.textContent = '⚠️ ' + domain + ' does not have federation enabled';
+            } else {
+              status.textContent = '✗ Error: ' + (json.error || 'Unknown error');
+            }
+          }
+        } catch (error) {
+          status.className = 'status-message error';
+          status.textContent = '✗ Network error: ' + error.message;
+        } finally {
+          btn.disabled = false;
         }
       };
 
-      document.querySelectorAll('.follow-btn').forEach(btn => {
+      // Sync button handlers
+      document.querySelectorAll('.sync-btn').forEach(btn => {
         btn.onclick = async () => {
           const domain = btn.dataset.domain;
-          const res = await fetch('/api/federation/connect', {  // Reuse connect for follow, or add new endpoint
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domain, auto_discover: false })  // Skip rediscovery
-          });
-          if (res.ok) {
-            btn.replaceWith('<span class="badge success">Following</span>');
+          btn.textContent = 'Syncing...';
+          btn.disabled = true;
+          
+          try {
+            const res = await fetch('/admin/federation/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ domain })
+            });
+            
+            if (res.ok) {
+              btn.textContent = '✓ Synced';
+              setTimeout(() => location.reload(), 1000);
+            } else {
+              btn.textContent = 'Error';
+              setTimeout(() => { btn.textContent = 'Sync'; btn.disabled = false; }, 2000);
+            }
+          } catch (error) {
+            btn.textContent = 'Error';
+            setTimeout(() => { btn.textContent = 'Sync'; btn.disabled = false; }, 2000);
+          }
+        };
+      });
+
+      // Remove button handlers
+      document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.onclick = async () => {
+          const domain = btn.dataset.domain;
+          if (!confirm('Remove connection to ' + domain + '?')) return;
+          
+          try {
+            const res = await fetch('/api/federation/trust', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ domain })
+            });
+            
+            if (res.ok) {
+              btn.closest('.trusted-domain').remove();
+            }
+          } catch (error) {
+            alert('Failed to remove: ' + error.message);
           }
         };
       });
     </script>
-
-    <style>
-      .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
-      .card { background: var(--card); padding: 1.5rem; border-radius: 8px; text-align: center; }
-      .card h3 { margin: 0; font-size: 2.5rem; }
-      .section { margin: 3rem 0; }
-      .trusted-domain { padding: 0.75rem; background: var(--card); margin: 0.5rem 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
-      .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
-      .badge.verified { background: #0f0; color: #000; }
-      .badge.unverified { background: #ff0; color: #000; }
-      .badge.success { background: #0f0; color: #000; }
-      .small { font-size: 0.8rem; }
-      .federated-post { border-bottom: 1px solid var(--border); padding: 1rem 0; }
-      .preview { margin-top: 0.5rem; opacity: 0.9; }
-    </style>
   `;
 
   return renderTemplate('Federation Dashboard', html, user, config);

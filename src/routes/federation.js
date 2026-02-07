@@ -40,16 +40,42 @@ export const federationRoutes = {
     GET: async (request, env) => {
       try {
         const config = await env.services.config.getConfig();
-        const publicKey = await env.services.federation._publicKey();
         const siteUrl = config.siteUrl || env.SITE_URL || new URL(request.url).origin;
         const domain = new URL(siteUrl).hostname;
+
+        // Try to get public key, but don't fail if missing
+        let publicKey = null;
+        try {
+          publicKey = await env.services.federation._publicKey();
+        } catch (error) {
+          console.warn('Federation public key not configured:', error.message);
+          // Return a minimal response indicating federation is not set up
+          return new Response(JSON.stringify({
+            version: "1.0",
+            instance: siteUrl,
+            domain: domain,
+            software: "deadlight",
+            federation_enabled: false,
+            error: "Federation keys not configured",
+            setup_required: true,
+            setup_instructions: "Run: scripts/gen-fed-keys.sh to generate federation keypair"
+          }), {
+            status: 200, // Changed from 500 to 200 with error info
+            headers: { 
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=60'
+            }
+          });
+        }
 
         return new Response(JSON.stringify({
           version: "1.0",
           instance: siteUrl,
           domain: domain,
           software: "deadlight",
-          public_key: publicKey,  // CRITICAL: enables signature verification
+          public_key: publicKey,
+          federation_enabled: true,
           federation: {
             protocols: ["deadlight-email", "activitypub"],
             inbox: `${siteUrl}/api/federation/inbox`,
@@ -74,7 +100,8 @@ export const federationRoutes = {
         console.error('Discovery endpoint error:', error);
         return new Response(JSON.stringify({
           error: 'Discovery failed',
-          message: error.message
+          message: error.message,
+          federation_enabled: false
         }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
@@ -82,7 +109,6 @@ export const federationRoutes = {
       }
     }
   },
-
   // Public outbox for federation discovery
   '/api/federation/outbox': {
     GET: async (request, env) => {
@@ -139,14 +165,45 @@ export const federationRoutes = {
           });
         }
 
-        const federationService = new FederationService(env);
+        const federationService = env.services.federation;
         
         // Test connection first
         const testResult = await federationService.testConnection(domain);
+        
+        // Handle case where remote instance doesn't have federation enabled
         if (!testResult.success) {
+          // Check if it's a setup issue vs connection issue
+          if (testResult.error?.includes('Federation keys not configured') || 
+              testResult.setup_required) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Remote instance has not configured federation yet',
+              federation_enabled: false,
+              setup_required: true,
+              details: testResult.error
+            }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          
           return new Response(JSON.stringify({
             success: false,
-            error: 'Failed to connect to domain: ' + testResult.error
+            error: 'Failed to connect to domain: ' + testResult.error,
+            details: testResult
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Check if remote instance has federation enabled
+        if (testResult.federation_enabled === false) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Remote instance does not have federation enabled',
+            federation_enabled: false,
+            setup_required: testResult.setup_required || false
           }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' }
@@ -157,13 +214,19 @@ export const federationRoutes = {
         const result = await federationService.addDomain(domain, {
           auto_discover,
           verified: true,
-          connected_at: new Date().toISOString()
+          connected_at: new Date().toISOString(),
+          public_key: testResult.public_key
         });
 
         return new Response(JSON.stringify({
           success: true,
           domain: domain,
-          result: result
+          result: result,
+          remote_info: {
+            software: testResult.software,
+            version: testResult.version,
+            capabilities: testResult.capabilities
+          }
         }), {
           headers: { 'Content-Type': 'application/json' }
         });

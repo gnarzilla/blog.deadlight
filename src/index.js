@@ -9,6 +9,7 @@ import { inboxRoutes } from './routes/inbox.js';
 import { apiRoutes } from './routes/api.js';
 import { userRoutes } from './routes/user.js';
 import { federationRoutes } from './routes/federation.js';
+import { commentRoutes } from './routes/comments.js';
 import { errorMiddleware, loggingMiddleware } from './middleware/index.js';
 import { authMiddleware, apiAuthMiddleware, requireAdminMiddleware } from './middleware/index.js';
 import { rateLimitMiddleware, securityHeadersMiddleware } from '../../lib.deadlight/core/src/security/middleware.js';
@@ -17,7 +18,6 @@ import { csrfTokenMiddleware, csrfValidateMiddleware } from './middleware/csrf.j
 import { voteRateLimitMiddleware, commentRateLimitMiddleware } from './middleware/rateLimit.js';
 import { initServices } from './services/index.js';
 import { proxyOrchestrationMiddleware } from './middleware/proxy-orchestration.js';
-import { commentRoutes } from './routes/comments.js';
 
 const router = new Router();
 
@@ -45,34 +45,7 @@ router.group([csrfTokenMiddleware], (r) => {
   r.register('/api/blog/posts', apiRoutes['/api/blog/posts']);
   r.register('/api/metrics', apiRoutes['/api/metrics']);
 
-  // temporary
-  r.register('/test-proxy', {
-    GET: async (request, env, ctx) => {
-      try {
-        const response = await fetch('http://127.0.0.1:8080/api/health');
-        const text = await response.text();
-        
-        return new Response(JSON.stringify({
-          status: response.status,
-          statusText: response.statusText,
-          body: text,
-          headers: Object.fromEntries(response.headers.entries())
-        }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({
-          error: error.message,
-          stack: error.stack
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    }
-  });
-
-  // Public federation
+  // Public federation endpoints (discovery & outbox)
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
   r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
   r.register('/api/federation/test/*', federationRoutes['/api/federation/test/*']);
@@ -89,11 +62,11 @@ router.group([authMiddleware, voteRateLimitMiddleware, csrfValidateMiddleware], 
 /* ==============================================================
    COMMENT ENDPOINTS (auth + comment rate limit + CSRF validation)
    ============================================================== */
-
 router.group([authMiddleware, commentRateLimitMiddleware, csrfValidateMiddleware, csrfTokenMiddleware], (r) => {
   // Blog post comments (inline commenting)
   r.register('/post/:slug/comment', blogRoutes['/post/:slug/comment']);
   
+  // Comment management routes
   Object.entries(commentRoutes).forEach(([p, h]) => r.register(p, h));
 });
 
@@ -113,13 +86,19 @@ router.group([csrfTokenMiddleware, csrfValidateMiddleware], (r) => {
 });
 
 /* ==============================================================
-   ADMIN ROUTES (with CSRF token) - Admin-only functionality
+   ADMIN ROUTES (auth + admin check + CSRF token)
    ============================================================== */
 router.group([authMiddleware, requireAdminMiddleware, csrfTokenMiddleware], (r) => {
-  // Register all admin routes EXCEPT comment routes (moved above)
+  // Core admin routes
   Object.entries(adminRoutes).forEach(([path, handler]) => {
     r.register(path, handler);
   });
+
+  // Federation admin endpoints (require admin auth + CSRF)
+  r.register('/api/federation/trust', federationRoutes['/api/federation/trust']);
+  r.register('/api/federation/follow', federationRoutes['/api/federation/follow']);
+  r.register('/api/federation/connect', federationRoutes['/api/federation/connect']);
+  r.register('/api/federation/queue', federationRoutes['/api/federation/queue']);
 });
 
 /* ==============================================================

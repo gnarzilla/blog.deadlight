@@ -1234,6 +1234,297 @@ const adminStyles = `
       width: auto;
     }
   }
+
+  /* =============================
+   FEDERATION DASHBOARD STYLES
+   ============================= */
+  
+  /* Grid layout for stats */
+  .grid-3 { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+    gap: 1rem; 
+    margin: 2rem 0; 
+  }
+  
+  /* Section containers */
+  .section { 
+    margin: 3rem 0; 
+  }
+  
+  .section h2 { 
+    margin-bottom: 0.5rem; 
+    font-size: 1.5rem;
+    color: var(--text-primary);
+  }
+  
+  .help-text { 
+    opacity: 0.7; 
+    margin-top: 0; 
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+  
+  /* Domain input form */
+  #add-domain-form { 
+    display: flex; 
+    gap: 0.5rem; 
+    margin: 1rem 0; 
+    max-width: 600px;
+  }
+  
+  #add-domain-form input { 
+    flex: 1; 
+    padding: 0.75rem; 
+    border: 1px solid var(--border-color); 
+    border-radius: var(--border-radius);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 1rem;
+  }
+  
+  #add-domain-form button { 
+    padding: 0.75rem 1.5rem; 
+    background: var(--button-primary-bg); 
+    color: var(--button-primary-text);
+    border: none; 
+    border-radius: var(--border-radius); 
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+  }
+  
+  #add-domain-form button:hover {
+    background: var(--button-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--button-primary-shadow);
+  }
+  
+  #add-domain-form button:disabled { 
+    opacity: 0.5; 
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  /* Status messages */
+  .status-message { 
+    padding: 0.75rem 1rem; 
+    border-radius: var(--border-radius); 
+    margin: 1rem 0; 
+    display: none;
+    font-size: 0.95rem;
+  }
+  
+  .status-message:not(:empty) { 
+    display: block; 
+  }
+  
+  .status-message.info { 
+    background: #e3f2fd; 
+    color: #1976d2;
+    border: 1px solid #90caf9;
+  }
+  
+  .status-message.success { 
+    background: #e8f5e9; 
+    color: #388e3c;
+    border: 1px solid #81c784;
+  }
+  
+  .status-message.error { 
+    background: #ffebee; 
+    color: #c62828;
+    border: 1px solid #ef5350;
+  }
+  
+  .status-message code { 
+    background: rgba(0,0,0,0.1); 
+    padding: 0.2rem 0.4rem; 
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+  }
+  
+  /* Trusted domains list */
+  .trusted-domain { 
+    padding: 1rem; 
+    background: var(--card-bg); 
+    margin: 0.5rem 0; 
+    border-radius: var(--border-radius); 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid var(--card-border);
+    transition: var(--transition);
+  }
+  
+  .trusted-domain:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+  }
+  
+  .domain-info { 
+    display: flex; 
+    gap: 0.75rem; 
+    align-items: center;
+    flex: 1;
+  }
+  
+  .domain-info strong {
+    color: var(--text-primary);
+    font-size: 1rem;
+  }
+  
+  .domain-actions { 
+    display: flex; 
+    gap: 0.5rem; 
+  }
+  
+  /* Trust level badges */
+  .badge.verified { 
+    background: #4caf50; 
+    color: white; 
+  }
+  
+  .badge.unverified { 
+    background: #ff9800; 
+    color: white; 
+  }
+  
+  .badge.warning { 
+    background: #ff9800; 
+    color: white; 
+  }
+  
+  .badge.blocked { 
+    background: #f44336; 
+    color: white; 
+  }
+  
+  .last-seen { 
+    font-size: 0.85rem; 
+    opacity: 0.6;
+    color: var(--text-secondary);
+  }
+  
+  /* Action buttons in federation */
+  .small { 
+    font-size: 0.85rem; 
+    padding: 0.4rem 0.8rem; 
+    border-radius: var(--border-radius); 
+    border: none; 
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+  }
+  
+  .small:not(.danger) { 
+    background: var(--button-secondary-bg); 
+    color: var(--button-secondary-text);
+    border: 1px solid var(--button-secondary-border);
+  }
+  
+  .small:not(.danger):hover {
+    background: var(--button-secondary-hover);
+    border-color: var(--button-secondary-border-hover);
+  }
+  
+  .small.danger { 
+    background: var(--button-danger-bg); 
+    color: var(--button-danger-text);
+    border: 1px solid var(--button-danger-border);
+  }
+  
+  .small.danger:hover {
+    background: var(--button-danger-hover);
+    border-color: var(--button-danger-border-hover);
+  }
+  
+  .small:disabled { 
+    opacity: 0.5; 
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  /* Empty states */
+  .empty-state { 
+    padding: 2rem; 
+    text-align: center; 
+    opacity: 0.6; 
+    font-style: italic;
+    color: var(--text-secondary);
+  }
+  
+  /* Federated posts display */
+  .federated-post { 
+    border-bottom: 1px solid var(--border-color); 
+    padding: 1.5rem 0; 
+  }
+  
+  .federated-post:last-child { 
+    border-bottom: none; 
+  }
+  
+  .federated-post h3 { 
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+  }
+  
+  .federated-post h3 a { 
+    color: var(--text-primary); 
+    text-decoration: none;
+    transition: var(--transition);
+  }
+  
+  .federated-post h3 a:hover { 
+    color: var(--link-color); 
+  }
+  
+  .post-meta { 
+    margin: 0.5rem 0; 
+    font-size: 0.9rem; 
+    opacity: 0.8;
+    color: var(--text-secondary);
+  }
+  
+  .post-meta strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  
+  .preview { 
+    margin-top: 1rem; 
+    opacity: 0.9; 
+    line-height: 1.6;
+    color: var(--text-primary);
+  }
+
+  /* Responsive adjustments for federation */
+  @media (max-width: 768px) {
+    .grid-3 {
+      grid-template-columns: 1fr;
+    }
+    
+    #add-domain-form {
+      flex-direction: column;
+    }
+    
+    #add-domain-form button {
+      width: 100%;
+    }
+    
+    .trusted-domain {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    
+    .domain-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
 `;
 
 // =============================

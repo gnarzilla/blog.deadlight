@@ -649,4 +649,144 @@ export class FederationService {
       throw error;
     }
   }
+
+  /* --------------------------------------------------------------
+   CONNECTION TESTING
+   -------------------------------------------------------------- */
+  async testConnection(domain) {
+    try {
+      // Normalize domain
+      let url = domain;
+      if (!url.startsWith('http')) {
+        url = 'https://' + url;
+      }
+      
+      const testUrl = new URL(url);
+      const discoveryUrl = `${testUrl.origin}/.well-known/deadlight`;
+
+      this.logger.info('Testing federation connection', { domain, discoveryUrl });
+
+      // Attempt to fetch the discovery endpoint
+      const response = await fetch(discoveryUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Deadlight-Federation/1.0',
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`,
+          domain: domain
+        };
+      }
+
+      // Parse the discovery response
+      const data = await response.json();
+
+      // Check if remote instance has federation disabled or not configured
+      if (data.federation_enabled === false) {
+        return {
+          success: false,
+          error: data.error || 'Federation not enabled on remote instance',
+          federation_enabled: false,
+          setup_required: data.setup_required || false,
+          domain: domain
+        };
+      }
+
+      // Validate required fields for active federation
+      if (!data.public_key && data.federation_enabled !== false) {
+        return {
+          success: false,
+          error: 'Discovery endpoint missing public_key',
+          federation_enabled: false,
+          domain: domain
+        };
+      }
+
+      this.logger.info('Federation connection test successful', { 
+        domain, 
+        software: data.software,
+        version: data.version,
+        federation_enabled: data.federation_enabled
+      });
+
+      return {
+        success: true,
+        domain: data.domain || domain,
+        public_key: data.public_key,
+        software: data.software,
+        version: data.version,
+        capabilities: data.capabilities,
+        federation: data.federation,
+        federation_enabled: data.federation_enabled !== false
+      };
+
+    } catch (error) {
+      this.logger.error('Federation connection test failed', { 
+        domain, 
+        error: error.message 
+      });
+
+      return {
+        success: false,
+        error: error.message,
+        domain: domain
+      };
+    }
+  }
+
+  /* --------------------------------------------------------------
+    DOMAIN MANAGEMENT
+    -------------------------------------------------------------- */
+  async addDomain(domain, options = {}) {
+    try {
+      const {
+        auto_discover = true,
+        verified = false,
+        connected_at = new Date().toISOString()
+      } = options;
+
+      // If auto_discover is enabled, fetch the public key first
+      let publicKey = options.public_key || '';
+      let trustLevel = verified ? 'verified' : 'unverified';
+
+      if (auto_discover && !publicKey) {
+        const discovery = await this.discoverAndTrust(domain);
+        publicKey = discovery.public_key;
+      }
+
+      // Insert or update the domain in federation_trust
+      await this.db.prepare(`
+        INSERT OR REPLACE INTO federation_trust (
+          domain, public_key, trust_level, last_seen
+        ) VALUES (?, ?, ?, ?)
+      `).bind(domain, publicKey, trustLevel, connected_at).run();
+
+      this.logger.info('Domain added to federation', { 
+        domain, 
+        trustLevel,
+        auto_discover 
+      });
+
+      return {
+        success: true,
+        domain: domain,
+        trust_level: trustLevel,
+        connected_at: connected_at
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to add domain', { 
+        domain, 
+        error: error.message 
+      });
+      throw error;
+    }
+  }
 }
+
