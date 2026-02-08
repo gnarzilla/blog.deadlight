@@ -53,8 +53,8 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
       <meta name="mobile-web-app-capable" content="yes">
       <meta name="apple-mobile-web-app-capable" content="yes">
       <title>${pageTitle}</title>
-      <link rel="icon" type="image/x-icon" href="/favicon.ico">
-      <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+      <link rel="icon" type="image/x-icon" href="/apple-touch-icon.png">
+      <link rel="shortcut icon" type="image/x-icon" href="/apple-touch-icon.png">
       <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
       <link rel="stylesheet" href="/styles/theme.css?v=${cacheBust}">
       <link rel="stylesheet" href="/styles/dark_min.css?v=${cacheBust}" id="theme-stylesheet">
