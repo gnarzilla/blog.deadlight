@@ -49,6 +49,7 @@ router.group([csrfTokenMiddleware], (r) => {
   r.register('/.well-known/deadlight', federationRoutes['/.well-known/deadlight']);
   r.register('/api/federation/outbox', federationRoutes['/api/federation/outbox']);
   r.register('/api/federation/test/*', federationRoutes['/api/federation/test/*']);
+  r.register('/api/federation/inbox', federationRoutes['/api/federation/inbox']);
 });
 
 /* ==============================================================
@@ -108,7 +109,6 @@ router.group([apiAuthMiddleware], (r) => {
   r.register('/api/email/receive', apiRoutes['/api/email/receive']);
   r.register('/api/email/fetch', apiRoutes['/api/email/fetch']);
   r.register('/api/email/pending-replies', apiRoutes['/api/email/pending-replies']);
-  r.register('/api/federation/inbox', federationRoutes['/api/federation/inbox']);
 });
 
 /* ==============================================================

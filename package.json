@@ -22,6 +22,6 @@
     "reset-db": "rm -f .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite* && wrangler d1 execute blog_content_new --local --file=./scripts/seed-db.sql"
   },
   "devDependencies": {
-    "wrangler": "^4.51.0"
+    "wrangler": "^4.63.0"
   }
 }
