@@ -41,6 +41,18 @@ For Andrioid/Raspberry PI: [docs/ARM64_QUICKSTART.md](docs/ARM64_QUICKSTART.md)
 - **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
 - **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
 
+**Test federation:**
+```bash
+# Send a post to the test instance
+curl -X POST http://your-proxy:8080/api/federation/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target_domain": "threat-level-midnight.deadlight.boo",
+    "content": "Testing federation!",
+    "author": "your-username"
+  }'
+```
+
 ## Why this exists
 
 Most blogging platforms assume you have reliable connectivity, cheap power, and modern browsers. **The rest of the planet doesn't.**
@@ -353,7 +365,7 @@ export const CONFIG = {
   postsPerPage: 10,
   theme: 'minimal', // or 'default'
   enableComments: true,
-  enableFederation: false, // alpha
+  enableFederation: true, // alpha - basic HTTP federation working
   
   // Security settings
   enableRegistration: false,  // Public signups
@@ -372,14 +384,15 @@ The blog auto-detects available services:
 export const CONFIG = {
   // ... other config
   
-  // Auto-detected at runtime
-  proxyAvailable: false,  // Set by /api/health check
-  meshAvailable: false,   // Set by /api/mesh/status check
+  // Component detection (runtime checks)
+  proxyAvailable: false,        // Check via /api/health
+  meshAvailable: false,          // Check via /api/mesh/status
   
-  // Feature flags (enable based on available components)
-  enableEmailPosting: false,    // Requires proxy
-  enableEmailNotifications: false,  // Requires proxy
-  enableLoRaPosting: false,     // Requires mesh gateway
+  // Feature flags (auto-enabled when components detected)
+  enableEmailPosting: false,     // Requires proxy (alpha)
+  enableEmailNotifications: false, // Requires proxy + MailChannels
+  enableLoRaPosting: false,      // Requires mesh gateway
+  enableFederation: true,        // Works standalone (alpha)
 };
 ```
 
@@ -403,6 +416,14 @@ export const CONFIG = {
 2. Team members post via satellite email when web is down
 3. Public reads blog over intermittent 2G/3G
 4. Zero server infrastructure required on-site
+
+**Scenario 4: Multi-instance blog network**
+1. Deploy two Deadlight instances (e.g., `blog-a.tld` and `blog-b.tld`)
+2. Post on `blog-a.tld/admin/posts/new`
+3. Use federation send: `POST /api/federation/send` with `target_domain: blog-b.tld`
+4. Post appears in `blog-b.tld/dashboard/inbox` as draft
+5. Admin on blog-b approves → post goes live
+6. Email fallback ensures delivery even if HTTPS fails
 
 Deadlight is designed for maximum resilience with minimum complexity.
 
@@ -489,9 +510,11 @@ See [docs/API.md](docs/API.md) for full endpoint documentation.
 - ARM64 deployment support
 
 ### Alpha / Testing
-- Post-by-email (SMTP inbox processing)
-- Blog-to-blog federation via email protocols
-- Full proxy.deadlight dashboard integration
+-  **Blog-to-blog federation** (HTTP + email fallback working)
+-  **Federation inbox** (posts require admin approval)
+-  **Discovery protocol** (`.well-known/deadlight` endpoint)
+-  **Post-by-email** (SMTP inbox processing - needs testing)
+-  **Per-user federation inboxes** (currently shared admin inbox)
 - Comment system (with rate limiting)
 
 ### Planned 
@@ -544,6 +567,29 @@ PUT /api/posts/:id
 DELETE /api/posts/:id
 ```
 
+### Federation
+```bash
+# Get instance info (public)
+GET /.well-known/deadlight
+
+# Send post to another instance (requires auth)
+POST /api/federation/send
+{
+  "target_domain": "other-blog.tld",
+  "content": "Post content",
+  "author": "username"
+}
+
+# Get federation inbox (admin only)
+GET /dashboard/inbox
+
+# Approve federated post (admin only)
+POST /admin/posts/:slug/approve
+
+# Reject federated post (admin only)
+POST /admin/posts/:slug/reject
+```
+
 Full API documentation: [docs/API.md](docs/API.md)
 
 ## Who's this for
@@ -585,6 +631,7 @@ Other ways to help:
 - **[API Reference](docs/API.md)** – Complete endpoint documentation
 - **[Middleware](docs/MIDDLEWARE.md)** – Custom middleware development
 - **[Ecosystem](docs/ECOSYSTEM.md)** – Integration with proxy/vault/meshtastic
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Submit issues if not covered in troubleshooting
 - **[Appendix A: Component Deep Dive](docs/APPENDIXA.md)** - Ecosystem component deep dive
 - **[License](docs/LICENSE)** - MIT 2026 deadlight
 
@@ -595,5 +642,8 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
+
+
 
 
