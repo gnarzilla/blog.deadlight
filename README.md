@@ -372,14 +372,15 @@ The blog auto-detects available services:
 export const CONFIG = {
   // ... other config
   
-  // Auto-detected at runtime
-  proxyAvailable: false,  // Set by /api/health check
-  meshAvailable: false,   // Set by /api/mesh/status check
+  // Component detection (runtime checks)
+  proxyAvailable: false,        // Check via /api/health
+  meshAvailable: false,          // Check via /api/mesh/status
   
-  // Feature flags (enable based on available components)
-  enableEmailPosting: false,    // Requires proxy
-  enableEmailNotifications: false,  // Requires proxy
-  enableLoRaPosting: false,     // Requires mesh gateway
+  // Feature flags (auto-enabled when components detected)
+  enableEmailPosting: false,     // Requires proxy (alpha)
+  enableEmailNotifications: false, // Requires proxy + MailChannels
+  enableLoRaPosting: false,      // Requires mesh gateway
+  enableFederation: true,        // Works standalone (alpha)
 };
 ```
 
@@ -554,6 +555,29 @@ PUT /api/posts/:id
 DELETE /api/posts/:id
 ```
 
+### Federation
+```bash
+# Get instance info (public)
+GET /.well-known/deadlight
+
+# Send post to another instance (requires auth)
+POST /api/federation/send
+{
+  "target_domain": "other-blog.tld",
+  "content": "Post content",
+  "author": "username"
+}
+
+# Get federation inbox (admin only)
+GET /dashboard/inbox
+
+# Approve federated post (admin only)
+POST /admin/posts/:slug/approve
+
+# Reject federated post (admin only)
+POST /admin/posts/:slug/reject
+```
+
 Full API documentation: [docs/API.md](docs/API.md)
 
 ## Who's this for
@@ -605,6 +629,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
