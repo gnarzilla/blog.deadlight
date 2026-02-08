@@ -41,6 +41,18 @@ For Andrioid/Raspberry PI: [docs/ARM64_QUICKSTART.md](docs/ARM64_QUICKSTART.md)
 - **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
 - **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
 
+**Test federation:**
+```bash
+# Send a post to the test instance
+curl -X POST http://your-proxy:8080/api/federation/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target_domain": "threat-level-midnight.deadlight.boo",
+    "content": "Testing federation!",
+    "author": "your-username"
+  }'
+```
+
 ## Why this exists
 
 Most blogging platforms assume you have reliable connectivity, cheap power, and modern browsers. **The rest of the planet doesn't.**
@@ -619,6 +631,7 @@ Other ways to help:
 - **[API Reference](docs/API.md)** – Complete endpoint documentation
 - **[Middleware](docs/MIDDLEWARE.md)** – Custom middleware development
 - **[Ecosystem](docs/ECOSYSTEM.md)** – Integration with proxy/vault/meshtastic
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Submit issues if not covered in troubleshooting
 - **[Appendix A: Component Deep Dive](docs/APPENDIXA.md)** - Ecosystem component deep dive
 - **[License](docs/LICENSE)** - MIT 2026 deadlight
 
@@ -629,6 +642,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
