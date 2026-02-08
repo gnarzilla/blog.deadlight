@@ -353,7 +353,7 @@ export const CONFIG = {
   postsPerPage: 10,
   theme: 'minimal', // or 'default'
   enableComments: true,
-  enableFederation: false, // alpha
+  enableFederation: true, // alpha - basic HTTP federation working
   
   // Security settings
   enableRegistration: false,  // Public signups
@@ -403,6 +403,14 @@ export const CONFIG = {
 2. Team members post via satellite email when web is down
 3. Public reads blog over intermittent 2G/3G
 4. Zero server infrastructure required on-site
+
+**Scenario 4: Multi-instance blog network**
+1. Deploy two Deadlight instances (e.g., `blog-a.tld` and `blog-b.tld`)
+2. Post on `blog-a.tld/admin/posts/new`
+3. Use federation send: `POST /api/federation/send` with `target_domain: blog-b.tld`
+4. Post appears in `blog-b.tld/dashboard/inbox` as draft
+5. Admin on blog-b approves → post goes live
+6. Email fallback ensures delivery even if HTTPS fails
 
 Deadlight is designed for maximum resilience with minimum complexity.
 
@@ -489,9 +497,11 @@ See [docs/API.md](docs/API.md) for full endpoint documentation.
 - ARM64 deployment support
 
 ### Alpha / Testing
-- Post-by-email (SMTP inbox processing)
-- Blog-to-blog federation via email protocols
-- Full proxy.deadlight dashboard integration
+-  **Blog-to-blog federation** (HTTP + email fallback working)
+-  **Federation inbox** (posts require admin approval)
+-  **Discovery protocol** (`.well-known/deadlight` endpoint)
+-  **Post-by-email** (SMTP inbox processing - needs testing)
+-  **Per-user federation inboxes** (currently shared admin inbox)
 - Comment system (with rate limiting)
 
 ### Planned 
@@ -595,5 +605,6 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
