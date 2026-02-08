@@ -57,3 +57,44 @@ MailChannels → Recipient's inbox (proper SPF/DKIM)
 ```
 
 **This is why email posting works** - the proxy translates between protocols so the blog never needs port 25.
+
+### Federation Architecture
+
+Deadlight instances can federate via two transports:
+
+**Primary: Direct HTTPS**
+
+Instance A Instance B
+│ │
+│ POST /api/federation/inbox │
+│─────────────────────────────>│
+│ {"from":"user@instanceA", │
+│ "body":"...", │
+│ "headers":{ │
+│ "X-Deadlight-Type": │
+│ "federation"}} │
+│ │
+│<─────────────────────────────│
+│ {"success":true, │
+│ "slug":"fed-1234-user"} │
+
+
+**Fallback: Email via MailChannels**
+- Used when HTTPS delivery fails
+- Sends to `federation@target-domain.tld`
+- Requires target instance to process email inbox
+- Ensures delivery even during connectivity issues
+
+**Discovery Protocol**
+```bash
+curl https://target-instance.tld/.well-known/deadlight
+{
+  "version": "1.0",
+  "instance": "https://target-instance.tld",
+  "domain": "target-instance.tld",
+  "software": "deadlight",
+  "federation_enabled": true,
+  "inbox": "https://target-instance.tld/api/federation/inbox",
+  "outbox": "https://target-instance.tld/api/federation/outbox"
+}
+```
