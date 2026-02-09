@@ -54,12 +54,18 @@ export async function handleProxyRoutes(request, env, user) {
         if (status.proxy_connected && queueStatus.queued?.total > 0) {
             lastProcessing = await env.services.queue.processAll();
         }
-
         const data = {
             siteUrl, 
             status: { ...status, recommendations, circuit_state: circuitState },
             queue: { status: queueStatus, lastProcessing },
-            federation: { connected_domains: domains, ...realtimeFed },
+            federation: { 
+                connected_domains: domains,  // ✅ Keep the actual array
+                connected_count: realtimeFed.connected_domains,  // Rename the count
+                pending_posts: realtimeFed.pending_posts,
+                recent_activity: realtimeFed.recent_activity,
+                last_outgoing: realtimeFed.last_outgoing,
+                last_incoming: realtimeFed.last_incoming
+            },
             config: config,
         };
 
