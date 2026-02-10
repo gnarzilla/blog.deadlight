@@ -2,6 +2,7 @@ import { renderPostList } from '../templates/blog/list.js';
 import { renderSinglePost } from '../templates/blog/single.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { FederationService } from '../services/federation.js';
+import { PostModel } from '../../../lib.deadlight/core/src/db/models/index.js';
 import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
 import { getAnalyticsSummary, getHourlyTraffic, getTopPaths, getCountryStats } from '../middleware/analytics.js';
 

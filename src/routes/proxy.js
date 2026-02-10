@@ -1,70 +1,67 @@
 // src/routes/proxy.js 
-import { ProxyService } from '../services/proxy.js';
-import { QueueService } from '../services/queue.js';
-import { FederationService } from '../services/federation.js';
 import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { renderTemplate } from '../templates/base.js'; 
 import { proxyDashboardTemplate } from '../templates/admin/proxyDashboard.js';
 
+/* ==============================================================
+   MAIN PROXY DASHBOARD HANDLER
+   ============================================================== */
 export async function handleProxyRoutes(request, env, user) {
-
-    let body = {};
-    try {
-        if (request.headers.get('Content-Type')?.includes('application/json')) {
-            body = await request.json();
-        } else {
-            const formData = await request.clone().formData();
-            body = Object.fromEntries(formData);
-        }
-    } catch {}
-
-    if (request.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+    if (request.method !== 'GET') {
+        return new Response('Method Not Allowed', { status: 405 });
+    }
     
     try {
         // 1. Fetch all status data in parallel
-        const [status, queueStatus, domains, realtimeFed] = await Promise.all([
+        const [status, queueStatus, domains] = await Promise.all([
             env.services.proxy.healthCheck(),
             env.services.queue.getStatus(),
             env.services.federation.getConnectedDomains(),
-            getFederationRealtimeStatus(env),
         ]);
 
-        // 2. Get Configuration
+        // 2. Get configuration
         const dbConfig = await env.services.config.getConfig();
-
         const siteUrl = dbConfig.siteUrl || env.SITE_URL || new URL(request.url).origin;
-        
-        // Resolve Proxy URL (Env > DB > Empty)
         const effectiveProxyUrl = env.PROXY_URL || dbConfig.proxyUrl || '';
 
-        console.log(`[Proxy Config] Site: ${siteUrl}, Proxy: ${effectiveProxyUrl}`);
-
-        // 3. Create the Final Config Object
         const config = {
             ...dbConfig,
             proxyUrl: effectiveProxyUrl,
             siteUrl: siteUrl 
         };
 
-        // 4. Get Circuit State & Recommendations
+        // 3. Get circuit state & recommendations
         const circuitState = env.services.proxy.getCircuitState();
         const recommendations = getCircuitRecommendations(circuitState);
         
+        // 4. Auto-process queue if proxy is connected and items are waiting
         let lastProcessing = null;
         if (status.proxy_connected && queueStatus.queued?.total > 0) {
             lastProcessing = await env.services.queue.processAll();
         }
+
+        // 5. Get real-time federation stats
+        const federationStats = await getFederationRealtimeStatus(env);
+
+        // 6. Assemble data object
         const data = {
             siteUrl, 
-            status: { ...status, recommendations, circuit_state: circuitState },
-            queue: { status: queueStatus, lastProcessing },
+            status: { 
+                ...status, 
+                recommendations, 
+                circuit_state: circuitState 
+            },
+            queue: { 
+                status: queueStatus, 
+                lastProcessing 
+            },
             federation: { 
-                connected_domains: domains,  // ✅ Keep the actual array
-                connected_count: realtimeFed.connected_domains,  // Rename the count
-                pending_posts: realtimeFed.pending_posts,
-                recent_activity: realtimeFed.recent_activity,
-                last_outgoing: realtimeFed.last_outgoing,
-                last_incoming: realtimeFed.last_incoming
+                connected_domains: domains,  // Array of domain objects
+                connected_count: federationStats.connected_domains,  // Count
+                pending_posts: federationStats.pending_posts,
+                recent_activity: federationStats.recent_activity,
+                last_outgoing: federationStats.last_outgoing,
+                last_incoming: federationStats.last_incoming
             },
             config: config,
         };
@@ -79,14 +76,26 @@ export async function handleProxyRoutes(request, env, user) {
     } catch (error) {
         console.error('Proxy dashboard error:', error);
         
-        // Fallback for error state
+        // Fallback error state
         const dbConfig = await env.services.config.getConfig();
         const config = { ...dbConfig, proxyUrl: env.PROXY_URL || '' };
         
         const errorData = {
-            status: { proxy_connected: false, error: error.message, circuit_state: env.services.proxy.getCircuitState(), recommendations: [] },
-            queue: { status: { queued: { total: 0 }, status: 'error' } },
-            federation: { connected_domains: [], recent_activity: [] },
+            status: { 
+                proxy_connected: false, 
+                error: error.message, 
+                circuit_state: env.services.proxy.getCircuitState(), 
+                recommendations: ['Error loading proxy dashboard'] 
+            },
+            queue: { 
+                status: { queued: { total: 0 }, status: 'error' } 
+            },
+            federation: { 
+                connected_domains: [], 
+                connected_count: 0,
+                pending_posts: 0,
+                recent_activity: [] 
+            },
             config: config
         };
 
@@ -99,335 +108,159 @@ export async function handleProxyRoutes(request, env, user) {
     }
 }
 
-// --- Helper Functions ---
+/* ==============================================================
+   HELPER FUNCTIONS
+   ============================================================== */
+
 function getCircuitRecommendations(circuitState) {
-  const recommendations = [];
-  if (circuitState.state === 'OPEN') {
-    recommendations.push('Circuit breaker is OPEN - proxy appears to be down');
-    recommendations.push('Check proxy server status and network connectivity');
-    recommendations.push('Operations are being queued until proxy recovers');
-  } else if (circuitState.state === 'HALF_OPEN') {
-    recommendations.push('Circuit breaker is testing connectivity');
-    recommendations.push('Next request will determine if circuit closes');
-  } else if (circuitState.failures > 0) {
-    recommendations.push(`${circuitState.failures} recent failures detected`);
-    recommendations.push('Monitor proxy health closely');
-  } else {
-    recommendations.push('All systems operating normally');
-  }
-  return recommendations;
+    const recommendations = [];
+    
+    if (circuitState.state === 'OPEN') {
+        recommendations.push('Circuit breaker is OPEN - proxy appears to be down');
+        recommendations.push('Check proxy server status and network connectivity');
+        recommendations.push('Operations are being queued until proxy recovers');
+    } else if (circuitState.state === 'HALF_OPEN') {
+        recommendations.push('Circuit breaker is testing connectivity');
+        recommendations.push('Next request will determine if circuit closes');
+    } else if (circuitState.failures > 0) {
+        recommendations.push(`${circuitState.failures} recent failures detected`);
+        recommendations.push('Monitor proxy health closely');
+    } else {
+        recommendations.push('All systems operating normally');
+    }
+    
+    return recommendations;
 }
 
 async function getFederationRealtimeStatus(env) {
-  const federationService = env.services.federation;
+    const [domains, pendingPosts, recentActivity, lastSent, lastReceived] = await Promise.allSettled([
+        env.services.federation.getConnectedDomains(),
+        getPendingFederationPosts(env.DB),
+        getRecentFederationActivity(env.DB),
+        getLastFederationSent(env.DB),
+        getLastFederationReceived(env.DB),
+    ]);
 
-  const [domains, pendingPosts, recentActivity] = await Promise.allSettled([
-    federationService.getConnectedDomains(),
-    getPendingFederationPosts(env.DB),
-    getRecentFederationActivity(env.DB),
-  ]);
-
-  return {
-    connected_domains: domains.status === 'fulfilled' ? domains.value.length : 0,
-    pending_posts: pendingPosts.status === 'fulfilled' ? pendingPosts.value : 0,
-    recent_activity: recentActivity.status === 'fulfilled' ? recentActivity.value : [],
-    last_outgoing: await getLastFederationSent(env.DB),
-    last_incoming: await getLastFederationReceived(env.DB),
-  };
+    return {
+        connected_domains: domains.status === 'fulfilled' ? domains.value.length : 0,
+        pending_posts: pendingPosts.status === 'fulfilled' ? pendingPosts.value : 0,
+        recent_activity: recentActivity.status === 'fulfilled' ? recentActivity.value : [],
+        last_outgoing: lastSent.status === 'fulfilled' ? lastSent.value : null,
+        last_incoming: lastReceived.status === 'fulfilled' ? lastReceived.value : null,
+    };
 }
 
-// Keep DB helpers: getPendingFederationPosts, getRecentFederationActivity, etc.
 async function getPendingFederationPosts(db) {
-  const result = await db.prepare(`SELECT COUNT(*) as count FROM posts WHERE federation_pending = 1`).first();
-  return result?.count || 0;
+    const result = await db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM posts 
+        WHERE federation_pending = 1
+    `).first();
+    return result?.count || 0;
 }
 
 async function getRecentFederationActivity(db, limit = 5) {
-  const result = await db.prepare(`
-    SELECT id, title, 
-           json_extract(federation_metadata, '$.source_domain') as source_domain,
-           json_extract(federation_metadata, '$.received_at') as received_at,
-           post_type, moderation_status
-    FROM posts 
-    WHERE post_type IN ('federated', 'comment') AND federation_metadata IS NOT NULL
-    ORDER BY created_at DESC LIMIT ?
-  `).bind(limit).all();
-  return (result.results || []).map(row => ({
-    type: row.post_type,
-    title: row.title,
-    domain: row.source_domain,
-    timestamp: row.received_at,
-    status: row.moderation_status
-  }));
+    const result = await db.prepare(`
+        SELECT 
+            id, 
+            title, 
+            json_extract(federation_metadata, '$.source_domain') as source_domain,
+            json_extract(federation_metadata, '$.received_at') as received_at,
+            post_type, 
+            moderation_status
+        FROM posts 
+        WHERE post_type IN ('federated', 'comment') 
+            AND federation_metadata IS NOT NULL
+        ORDER BY created_at DESC 
+        LIMIT ?
+    `).bind(limit).all();
+    
+    return (result.results || []).map(row => ({
+        type: row.post_type,
+        title: row.title,
+        domain: row.source_domain,
+        timestamp: row.received_at,
+        status: row.moderation_status
+    }));
 }
 
 async function getLastFederationSent(db) {
-  const result = await db.prepare(`
-    SELECT federation_sent_at, title FROM posts 
-    WHERE federation_sent_at IS NOT NULL 
-    ORDER BY federation_sent_at DESC LIMIT 1
-  `).first();
-  return result ? { timestamp: result.federation_sent_at, title: result.title } : null;
+    const result = await db.prepare(`
+        SELECT federation_sent_at, title 
+        FROM posts 
+        WHERE federation_sent_at IS NOT NULL 
+        ORDER BY federation_sent_at DESC 
+        LIMIT 1
+    `).first();
+    
+    return result ? { 
+        timestamp: result.federation_sent_at, 
+        title: result.title 
+    } : null;
 }
 
 async function getLastFederationReceived(db) {
-  const result = await db.prepare(`
-    SELECT json_extract(federation_metadata, '$.received_at') as received_at, title
-    FROM posts WHERE post_type = 'federated' AND federation_metadata IS NOT NULL
-    ORDER BY created_at DESC LIMIT 1
-  `).first();
-  return result ? { timestamp: result.received_at, title: result.title } : null;
+    const result = await db.prepare(`
+        SELECT 
+            json_extract(federation_metadata, '$.received_at') as received_at, 
+            title
+        FROM posts 
+        WHERE post_type = 'federated' 
+            AND federation_metadata IS NOT NULL
+        ORDER BY created_at DESC 
+        LIMIT 1
+    `).first();
+    
+    return result ? { 
+        timestamp: result.received_at, 
+        title: result.title 
+    } : null;
 }
 
+/* ==============================================================
+   API HANDLERS (exported for admin routes)
+   ============================================================== */
+
 export const handleProxyTests = {
-    async addFederationDomain(request, env) {
-        try {
-            const { domain } = await request.json();
-            
-            if (!domain) {
-                return Response.json({ success: false, error: 'Domain is required' });
-            }
-
-            const federationService = new FederationService(env);
-            
-            // First, discover the domain
-            const discoveryResult = await federationService.discoverAndTrust(domain);
-            
-            // Use correct table name: federation_trust
-            await env.DB.prepare(`
-                INSERT INTO federation_trust (domain, public_key, trust_level, added_at, last_seen)
-                VALUES (?, ?, 'verified', datetime('now'), datetime('now'))
-                ON CONFLICT(domain) DO UPDATE SET
-                    last_seen = datetime('now')
-            `).bind(domain, discoveryResult.public_key || '').run();
-            
-            return Response.json({
-                success: true,
-                data: discoveryResult,
-                message: `Domain ${domain} added and discovery initiated`
-            });
-        } catch (error) {
-            console.error('Add federation domain error:', error);
-            return Response.json({
-                success: false,
-                error: error.message
-            });
-        }
-    },
-
-    async testFederationDomain(request, env) {
-        try {
-            const { domain } = await request.json();
-            
-            if (!domain) {
-                return Response.json({ success: false, error: 'Domain is required' });
-            }
-
-            const federationService = new FederationService(env);
-            
-            // Test connectivity to the domain
-            const testResult = await federationService.testDomain(domain);
-            
-            return Response.json({
-                success: true,
-                data: testResult,
-                message: `Connection test to ${domain} completed`
-            });
-        } catch (error) {
-            console.error('Test federation domain error:', error);
-            return Response.json({
-                success: false,
-                error: error.message
-            });
-        }
-    },
-
-    async removeFederationDomain(request, env) {
-        try {
-            const { domain } = await request.json();
-            
-            if (!domain) {
-                return Response.json({ success: false, error: 'Domain is required' });
-            }
-
-            // Use correct table name: federation_trust
-            const result = await env.DB.prepare(`
-                UPDATE federation_trust 
-                SET trust_level = 'blocked', last_seen = datetime('now')
-                WHERE domain = ?
-            `).bind(domain).run();
-            
-            if (result.changes === 0) {
-                return Response.json({
-                    success: false,
-                    error: 'Domain not found'
-                });
-            }
-            
-            return Response.json({
-                success: true,
-                message: `Domain ${domain} removed from federation`
-            });
-        } catch (error) {
-            console.error('Remove federation domain error:', error);
-            return Response.json({
-                success: false,
-                error: error.message
-            });
-        }
-    },
-
-    async healthCheck() {
-        try {
-            console.log('Attempting proxy health check...');
-            const data = await this._req('/api/health');
-            console.log('Proxy health check succeeded:', data);
-            return { proxy_connected: true, ...data };
-        } catch (error) {
-            console.error('Proxy health check failed:', error.message);
-            return { proxy_connected: false };
-        }
-    },
-
-    async _req(endpoint, opts = {}, retries = 2) {
-        const base = (await this.config.getConfig()).proxyUrl;
-        if (this.isCircuitOpen()) throw new Error('Circuit breaker is OPEN');
-
-        const url = `${base}${endpoint}`;
-        console.log('Proxy request:', url);  
-
-        for (let i = 0; i <= retries; i++) {
-            try {
-            const ctrl = new AbortController();
-            const tid = setTimeout(() => ctrl.abort(), 8000);
-            const res = await fetch(url, {
-                signal: ctrl.signal,
-                headers: { 'Content-Type': 'application/json', 'User-Agent': 'Deadlight/4.0' },
-                ...opts,
-            });
-            clearTimeout(tid);
-
-            console.log('📥 Proxy response:', res.status, res.statusText);
-            if (!res.ok) {
-                const text = await res.text();
-                console.error('Proxy returned error:', text); 
-                throw new Error(`${res.status} ${text}`);
-            }
-
-            const body = await res.text();  
-            console.log('Proxy response body:', body);  
-            
-            const json = JSON.parse(body); 
-            this.recordSuccess();
-            return json;
-            
-            } catch (e) {
-            console.error(`Proxy request attempt ${i + 1} failed:`, e.message); 
-            if (i === retries) {
-                this.recordFailure();
-                throw e;
-            }
-            await new Promise(r => setTimeout(r, 2 ** i * 1000));
-            }
-        }
-    },
-
-    async resetCircuit(request, env) {
-        try {
-            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-            
-            // Reset the circuit breaker
-            proxyService.circuitBreaker.reset();
-            
-            return Response.json({
-                success: true,
-                message: 'Circuit breaker reset successfully',
-                circuit_state: proxyService.getCircuitState()
-            });
-        } catch (error) {
-            console.error('Reset circuit error:', error);
-            return Response.json({
-                success: false,
-                error: error.message
-            });
-        }
-    },
-
-    async clearFailed(request, env) {
-        try {
-            const queueService = new QueueService(env);
-            
-            // Clear failed operations from the outbox
-            const result = await env.DB.prepare(`
-                DELETE FROM outbox 
-                WHERE status = 'failed' AND operation_type IN ('email', 'federation')
-            `).run();
-            
-            return Response.json({
-                success: true,
-                cleared: result.changes,
-                message: `Cleared ${result.changes} failed operations`
-            });
-        } catch (error) {
-            console.error('Clear failed operations error:', error);
-            return Response.json({
-                success: false,
-                error: error.message
-            });
-        }
-    },
-
-    async viewQueue(request, env) {
-        // Redirect to proxy dashboard for now
-        return Response.redirect('/admin/proxy', 302);
-    },
-
+    
+    // POST /api/federation/connect - handled by federation routes now
+    // This can be removed if it's already in federationRoutes
+    
     async testBlogApi(request, env) {
         try {
-            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-            const result = await proxyService.getBlogStatus();
-            
+            const result = await env.services.proxy.getBlogStatus();
             return Response.json({ 
                 success: true, 
                 data: result,
-                circuit_state: proxyService.getCircuitState()
+                circuit_state: env.services.proxy.getCircuitState()
             });
         } catch (error) {
-            console.error('Blog API test error:', error);
-            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
             return Response.json({ 
                 success: false, 
                 error: error.message,
-                circuit_state: proxyService.getCircuitState()
+                circuit_state: env.services.proxy.getCircuitState()
             });
         }
     },
 
     async testEmailApi(request, env) {
         try {
-            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-            const result = await proxyService.getEmailStatus();
-            
+            const result = await env.services.proxy.getEmailStatus();
             return Response.json({ 
                 success: true, 
                 data: result,
-                circuit_state: proxyService.getCircuitState()
+                circuit_state: env.services.proxy.getCircuitState()
             });
         } catch (error) {
-            console.error('Email API test error:', error);
-            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
             return Response.json({ 
                 success: false, 
                 error: error.message,
-                circuit_state: proxyService.getCircuitState()
+                circuit_state: env.services.proxy.getCircuitState()
             });
         }
     },
 
     async sendTestEmail(request, env) {
-        const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-        const queueService = new QueueService(env);
-        
         try {
             const { email } = await request.json();
             
@@ -435,148 +268,106 @@ export const handleProxyTests = {
                 to: email,
                 from: 'noreply@deadlight.boo',
                 subject: 'Test Email from Deadlight Proxy',
-                body: `Hello!\n\nThis is a test email sent through the enhanced Deadlight Proxy system.\n\nTimestamp: ${new Date().toISOString()}\nCircuit State: ${proxyService.getCircuitState().state}\n\nBest regards,\nDeadlight System`
+                body: `Hello!\n\nThis is a test email sent through the Deadlight Proxy.\n\nTimestamp: ${new Date().toISOString()}\nCircuit State: ${env.services.proxy.getCircuitState().state}\n\nBest regards,\nDeadlight`
             };
             
             try {
-                const result = await proxyService.sendEmail(emailData);
+                // Try to send immediately
+                const result = await env.services.proxy.sendEmail(emailData);
                 return Response.json({ 
                     success: true, 
                     data: result,
                     sent_immediately: true,
-                    circuit_state: proxyService.getCircuitState()
+                    circuit_state: env.services.proxy.getCircuitState()
                 });
             } catch (proxyError) {
-                console.log('Proxy unavailable, queuing email via outbox...');
-                await queueService.queueEmailNotification(1, emailData);
+                // Queue if proxy is down
+                await env.services.queue.queueEmailNotification(1, emailData);
                 
                 return Response.json({ 
                     success: true, 
-                    data: { 
-                        message: 'Email queued for delivery when proxy comes online',
-                        queued_via: 'outbox_service'
-                    },
+                    data: { message: 'Email queued for delivery when proxy comes online' },
                     queued: true,
-                    proxy_error: proxyError.message,
-                    circuit_state: proxyService.getCircuitState()
+                    circuit_state: env.services.proxy.getCircuitState()
                 });
             }
             
         } catch (error) {
-            console.error('Test email error:', error);
             return Response.json({ 
                 success: false, 
                 error: error.message,
-                circuit_state: proxyService.getCircuitState()
+                circuit_state: env.services.proxy.getCircuitState()
             });
         }
     },
 
     async testFederation(request, env) {
-        const federationService = new FederationService(env);
-        
         try {
-            const results = await federationService.testFederation();
-            return Response.json({ 
-                success: true, 
-                data: results,
-                sent_immediately: true,
-                federation_domains: (await federationService.getConnectedDomains()).length
-            });
-        } catch (error) {
-            console.error('Federation test error:', error);
-            return Response.json({ 
-                success: false, 
-                error: error.message,
-                suggestion: 'Check that federation domains are configured and proxy is online'
-            });
-        }
-    },
-
-    async testSms(request, env) {
-        const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-        const queueService = new QueueService(env);
-        
-        try {
-            const { phone } = await request.json();
+            const domains = await env.services.federation.getConnectedDomains();
             
-            const smsData = {
-                to: phone,
-                message: `Test SMS from Deadlight Proxy - ${new Date().toISOString()}`,
-                from: 'Deadlight'
-            };
-            
-            try {
-                const result = await proxyService.sendSms(smsData);
-                return Response.json({ 
-                    success: true, 
-                    data: result,
-                    sent_immediately: true,
-                    circuit_state: proxyService.getCircuitState()
-                });
-            } catch (proxyError) {
-                await queueService.queueSms(1, phone, smsData.message);
-                
-                return Response.json({ 
-                    success: true, 
-                    data: { message: 'SMS queued for delivery when proxy comes online' },
-                    queued: true,
-                    proxy_error: proxyError.message,
-                    circuit_state: proxyService.getCircuitState()
+            if (domains.length === 0) {
+                return Response.json({
+                    success: false,
+                    error: 'No federation domains configured',
+                    suggestion: 'Add a domain in the Federation dashboard first'
                 });
             }
-            
+
+            return Response.json({ 
+                success: true, 
+                data: {
+                    domains: domains,
+                    count: domains.length,
+                    proxy_status: env.services.proxy.getCircuitState()
+                }
+            });
         } catch (error) {
-            console.error('Test SMS error:', error);
             return Response.json({ 
                 success: false, 
                 error: error.message,
-                circuit_state: proxyService.getCircuitState()
+                suggestion: 'Check that federation is configured and proxy is online'
             });
         }
     },
 
     async processQueue(request, env) {
-        const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-        const queueService = new QueueService(env);
-
         try {
-            const isAvailable = await proxyService.isProxyAvailable();
+            const isAvailable = await env.services.proxy.isProxyAvailable();
+            
             if (!isAvailable) {
                 return Response.json({
                     success: false,
                     error: 'Proxy is not available - cannot process queue',
-                    circuit_state: proxyService.getCircuitState()
+                    circuit_state: env.services.proxy.getCircuitState()
                 });
             }
             
-            const result = await queueService.processQueue();
+            const result = await env.services.queue.processAll();
+            
             return Response.json({
                 success: true,
                 data: result
             });
             
         } catch (error) {
-            console.error('Manual queue processing error:', error);
             return Response.json({
                 success: false,
                 error: error.message,
-                circuit_state: proxyService.getCircuitState()
+                circuit_state: env.services.proxy.getCircuitState()
             });
         }
     },
 
-    async getQueueStatus(request, env) {
+    async resetCircuit(request, env) {
         try {
-            const queueService = new QueueService(env);
-            const status = await queueService.getStatus();
+            env.services.proxy.circuitBreaker.reset();
             
             return Response.json({
                 success: true,
-                data: status
+                message: 'Circuit breaker reset successfully',
+                circuit_state: env.services.proxy.getCircuitState()
             });
         } catch (error) {
-            console.error('Queue status error:', error);
             return Response.json({
                 success: false,
                 error: error.message
@@ -584,63 +375,23 @@ export const handleProxyTests = {
         }
     },
 
-    async getFederationStatus(request, env) {
+    async getCircuitStatus(request, env) {
         try {
-            const federationService = new FederationService(env);
-            const [domains, federatedPosts] = await Promise.allSettled([
-                federationService.getConnectedDomains(),
-                federationService.getFederatedPosts(10)
-            ]);
+            const circuitState = env.services.proxy.getCircuitState();
             
             return Response.json({
                 success: true,
                 data: {
-                    connected_domains: domains.status === 'fulfilled' ? domains.value : [],
-                    recent_federated_posts: federatedPosts.status === 'fulfilled' ? federatedPosts.value : [],
-                    status: 'online'
+                    circuit_state: circuitState,
+                    recommendations: getCircuitRecommendations(circuitState)
                 }
             });
         } catch (error) {
-            console.error('Federation status error:', error);
             return Response.json({
                 success: false,
-                error: error.message
+                error: error.message,
+                circuit_state: env.services.proxy.getCircuitState()
             });
-        }
-    },
-
-    // POST /admin/proxy/discover-domain
-    async discoverDomain(request, env) {
-        try {
-            // 1. Parse form data (not JSON)
-            const formData = await request.formData();
-            const domain = formData.get('domain')?.trim();
-
-            if (!domain) {
-            return Response.json({ success: false, error: 'Domain is required' }, { status: 400 });
-            }
-
-            // 2. Normalize URL
-            let normalized = domain;
-            if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-            normalized = 'https://' + normalized;
-            }
-
-            // 3. Call federation discovery
-            const federationService = env.services.federation;
-            const result = await federationService.discoverAndTrust(normalized);
-
-            return Response.json({
-            success: true,
-            domain: normalized,
-            result,
-            });
-        } catch (error) {
-            console.error('Domain discovery error:', error);
-            return Response.json({
-            success: false,
-            error: error.message || 'Discovery failed',
-            }, { status: 500 });
         }
     },
 
@@ -650,44 +401,32 @@ export const handleProxyTests = {
             return new Response('Unauthorized', { status: 401 });
         }
 
-        // Create SSE stream
         const stream = new ReadableStream({
             async start(controller) {
                 const encoder = new TextEncoder();
                 
-                // Send initial data
                 const sendUpdate = async () => {
                     try {
-                        const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-                        const queueService = new QueueService(env);
-                        const federationService = new FederationService(env); // Add this
-                        
                         const [proxyStatus, queueStatus, federationStatus] = await Promise.allSettled([
-                            proxyService.healthCheck(),
-                            queueService.getStatus(),
-                            getFederationRealtimeStatus(env) // New function
+                            env.services.proxy.healthCheck(),
+                            env.services.queue.getStatus(),
+                            getFederationRealtimeStatus(env)
                         ]);
                         
                         const data = {
                             timestamp: new Date().toISOString(),
                             proxy_connected: proxyStatus.status === 'fulfilled' && proxyStatus.value.proxy_connected,
-                            blogApi: proxyStatus.status === 'fulfilled' ? proxyStatus.value.blog_api : null,
-                            emailApi: proxyStatus.status === 'fulfilled' ? proxyStatus.value.email_api : null,
-                            queueCount: queueStatus.status === 'fulfilled' ? queueStatus.value.queued_operations?.total || 0 : 0,
-                            circuitState: proxyService.getCircuitState(),
-                            
-                            // NEW: Federation real-time status
+                            queueCount: queueStatus.status === 'fulfilled' ? queueStatus.value.queued?.total || 0 : 0,
+                            circuitState: env.services.proxy.getCircuitState(),
                             federation: federationStatus.status === 'fulfilled' ? federationStatus.value : {
                                 connected_domains: 0,
                                 pending_posts: 0,
-                                recent_activity: [],
-                                trust_relationships: []
+                                recent_activity: []
                             }
                         };
                         
                         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
                     } catch (error) {
-                        console.error('SSE update error:', error);
                         controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                             error: error.message,
                             timestamp: new Date().toISOString(),
@@ -696,27 +435,22 @@ export const handleProxyTests = {
                     }
                 };
                 
-                // Send initial update
                 await sendUpdate();
-                
-                // Set up interval for periodic updates
-                const interval = setInterval(sendUpdate, 5000); // Every 5 seconds
-                
-                // Cleanup when client disconnects
-                request.signal?.addEventListener('abort', () => {
-                    clearInterval(interval);
-                    controller.close();
-                });
-                
-                // Keep connection alive with heartbeat
-                const heartbeat = setInterval(() => {
+                const updateInterval = setInterval(sendUpdate, 5000);
+                const heartbeatInterval = setInterval(() => {
                     try {
                         controller.enqueue(encoder.encode(': heartbeat\n\n'));
-                    } catch (error) {
-                        clearInterval(heartbeat);
-                        clearInterval(interval);
+                    } catch {
+                        clearInterval(heartbeatInterval);
+                        clearInterval(updateInterval);
                     }
-                }, 30000); // Every 30 seconds
+                }, 30000);
+                
+                request.signal?.addEventListener('abort', () => {
+                    clearInterval(updateInterval);
+                    clearInterval(heartbeatInterval);
+                    controller.close();
+                });
             }
         });
 
@@ -725,32 +459,8 @@ export const handleProxyTests = {
                 'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache',
                 'Connection': 'keep-alive',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Cache-Control',
+                'Access-Control-Allow-Origin': '*'
             }
         });
-    },
-
-    async getCircuitStatus(request, env) {
-        try {
-            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-            const circuitState = proxyService.getCircuitState();
-            
-            return Response.json({
-                success: true,
-                data: {
-                    circuit_state: circuitState,
-                    recommendations: this.getCircuitRecommendations(circuitState)
-                }
-            });
-        } catch (error) {
-            const proxyService = new ProxyService({ PROXY_URL: env.PROXY_URL || 'http://localhost:8080' });
-            return Response.json({
-                success: false,
-                error: error.message,
-                circuit_state: proxyService.getCircuitState()
-            });
-        }
     }
-    
 };
