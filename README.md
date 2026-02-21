@@ -5,6 +5,7 @@
 ![meshtastic.deadlight](https://img.shields.io/badge/mesh-alpha-yellow)
 ![edge.deadlight](https://img.shields.io/badge/platform-active-success)
 ![npm](https://img.shields.io/npm/v/create-deadlight-blog)
+[![GitHub License](https://img.shields.io/github/license/gnarzilla/proxy.deadlight)](LICENSE)
 
 [Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](docs/ECOSYSTEM.md) · [Middleware](docs/MIDDLEWARE.md) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
 
@@ -642,6 +643,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
