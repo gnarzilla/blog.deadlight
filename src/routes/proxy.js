@@ -66,7 +66,7 @@ export async function handleProxyRoutes(request, env, user) {
             config: config,
         };
 
-        const responseBody = proxyDashboardTemplate(data, user, config);
+        const responseBody = proxyDashboardTemplate(data, config, user);
 
         return new Response(
             renderTemplate('Proxy Dashboard', responseBody, user, config),
