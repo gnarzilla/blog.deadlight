@@ -86,8 +86,8 @@ It works standalone, but unlocks its full potential when combined with:
 └─────────────────────────────────────────────────────────┘
 
     ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-    │    proxy     │◄───────►│     blog     │◄───────►│  meshtastic  │
-    │  .deadlight  │  queue  │  .deadlight  │ gateway │  .deadlight  │
+    │    proxy     │◄───────►│     blog     │◄───────►│   deadmesh   │
+    │  .deadlight  │  queue  │  .deadlight  │ gateway │              │
     │              │         │   (CORE)     │         │              │
     │ SMTP/IMAP/   │         │ Content &    │         │  LoRa ↔ Net  │
     │ SOCKS/VPN    │         │ Federation   │         │              │
@@ -643,6 +643,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
