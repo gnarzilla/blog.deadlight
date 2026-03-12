@@ -2,7 +2,7 @@
 ![Works on LoRa](https://img.shields.io/badge/works%20on-LoRa-brightgreen)
 ![blog.deadlight](https://img.shields.io/badge/blog-production-success)
 ![proxy.deadlight](https://img.shields.io/badge/proxy-stable-blue)
-![meshtastic.deadlight](https://img.shields.io/badge/mesh-alpha-yellow)
+![deadmesh](https://img.shields.io/badge/mesh-alpha-yellow)
 ![edge.deadlight](https://img.shields.io/badge/platform-active-success)
 ![npm](https://img.shields.io/npm/v/create-deadlight-blog)
 [![GitHub License](https://img.shields.io/github/license/gnarzilla/proxy.deadlight)](LICENSE)
@@ -38,7 +38,7 @@ For Andrioid/Raspberry PI: [docs/ARM64_QUICKSTART.md](docs/ARM64_QUICKSTART.md)
 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
 - **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
-- **[meshtastic.deadlight.boo](https://meshtastic.deadlight.boo)** – Blog published over LoRa mesh
+- **[deadmesh.deadlight.boo](https://deadmesh.deadlight.boo)** – Blog published over LoRa mesh
 - **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
 - **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
 
@@ -76,7 +76,7 @@ blog.deadlight is the **content and federation layer** of the Deadlight edge pla
 It works standalone, but unlocks its full potential when combined with:
 
 - **proxy.deadlight** – Protocol bridge (enables email posting, SMTP-less notifications)
-- **meshtastic.deadlight** – LoRa gateway (post from mesh networks)
+- **deadmesh** – LoRa gateway (post from mesh networks)
 - **lib.deadlight** – Shared libraries (auth, queuing, federation)
 
 
@@ -401,7 +401,7 @@ export const CONFIG = {
 
 **Scenario 1: Blogging over LoRa**
 1. Write post on phone connected to Meshtastic node
-2. Send via SMTP (could be over LoRa → meshtastic.deadlight gateway)
+2. Send via SMTP (could be over LoRa → deadmesh gateway)
 3. Gateway forwards to blog.deadlight inbox endpoint
 4. Post published globally via Cloudflare Workers
 
@@ -643,6 +643,7 @@ Other ways to help:
 - **Blog:** [deadlight.boo](https://deadlight.boo)
 
 [EOF](#live-demos)
+
 
 
 
