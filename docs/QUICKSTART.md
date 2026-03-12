@@ -9,7 +9,7 @@ graph TD
     B -->|No| C[Standalone: blog.deadlight only]
     B -->|Yes| D{Posting over mesh networks?}
     D -->|No| E[Add proxy.deadlight]
-    D -->|Yes| F[Full stack + meshtastic.deadlight]
+    D -->|Yes| F[Full stack + deadmesh]
     
     C --> G[Deploy time: 5 min<br/>Components: blog + lib<br/>Cost: ~$0/month]
     E --> H[Deploy time: 15 min<br/>Components: blog + lib + proxy<br/>Cost: ~$0/month]
