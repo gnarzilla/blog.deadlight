@@ -627,6 +627,7 @@ Other ways to help:
 
 - **[Quick Start](docs/QUICKSTART.md)** – Detailed setup for all platforms
 - **[ARM64 Quick Start](docs/ARM64_QUICKSTART.md)** - Detailed setup for Android/Termux, Raspberry Pi, Pine Phone
+- **[Sample wrangler.toml configuration](docs/SAMPLE_wrangler.toml)
 - **[Architecture](docs/ARCHITECTURE.md)** – Technical deep dive
 - **[Security](docs/SECURITY.md)** – Full security model and threat analysis
 - **[API Reference](docs/API.md)** – Complete endpoint documentation
