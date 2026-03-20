@@ -1,4 +1,4 @@
-// src/templates/admin/settings.js - Updated with accent color
+// src/templates/admin/settings.js
 import { renderTemplate } from '../base.js';
 
 export function renderSettings(settings, user, config = null) {
