@@ -11,11 +11,11 @@ The blog is one component of a larger resilience stack:
            ├──────────────────┬──────────────────┬─────────────────
            ▼                  ▼                  ▼
    ┌───────────────┐  ┌───────────────┐  ┌──────────────────┐
-   │blog.deadlight │  │proxy.deadlight│  │meshtastic        │
-   │               │  │               │  │  .deadlight      │
-   │ Content layer │  │Protocol bridge│  │                  │
-   │ (this repo)   │  │SMTP/IMAP/SOCKS│  │LoRa ↔ Internet   │
-   │               │  │VPN gateway    │  │bridge            │
+   │blog.deadlight │  │proxy.deadlight│  │  deadmesh        │
+   │               │  │               │  │                  │
+   │ Content layer │  │Protocol bridge│  │LoRa ↔ Internet   │
+   │ (this repo)   │  │SMTP/IMAP/SOCKS│  │bridge            │
+   │               │  │VPN gateway    │  │                  │
    │ JavaScript    │  │ C             │  │ C (proxy fork)   │
    └───────────────┘  └───────────────┘  └──────────────────┘
            │                  │                  │
@@ -40,7 +40,7 @@ The blog is one component of a larger resilience stack:
 | **blog.deadlight** | Content storage & delivery | Always (core component) |
 | **lib.deadlight** | Shared code (auth, queuing, DB) | Always (dependency) |
 | **proxy.deadlight** | Protocol bridging | Email posting, federation, self-hosted SMTP |
-| **meshtastic.deadlight** | LoRa ↔ Internet gateway | Mesh network publishing |
+| **deadmesh** | LoRa ↔ Internet gateway | Mesh network publishing |
 | **edge.deadlight** | Orchestration layer | Multi-instance deployments |
 
 ## Architecture: Blog + Proxy Integration

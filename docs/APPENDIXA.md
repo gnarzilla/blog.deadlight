@@ -1,3 +1,4 @@
+
 ## Appendix A: Component Deep Dive
 
 ### blog.deadlight (This Repository)
@@ -27,7 +28,7 @@
 
 **See Also:** [proxy.deadlight README](https://github.com/gnarzilla/proxy.deadlight)
 
-### meshtastic.deadlight
+### deadmesh
 
 **Purpose:** LoRa mesh ↔ Internet gateway  
 **Stack:** C (fork of proxy.deadlight)  
@@ -35,7 +36,7 @@
 
 **Why it exists:** Enables posting to blog.deadlight over LoRa mesh networks
 
-**See Also:** [meshtastic.deadlight README](https://github.com/gnarzilla/meshtastic.deadlight)
+**See Also:** [deadmesh.deadlight README](https://github.com/gnarzilla/deadmesh)
 
 ### lib.deadlight
 
