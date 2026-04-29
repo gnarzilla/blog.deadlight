@@ -1,12 +1,12 @@
 // src/templates/base.js
+const cacheBust = Date.now();  // Cache bust for CSS
+
 export function renderTemplate(title, bodyContent, user = null, config = null) {
   const siteTitle = config?.title || 'D E A D L I G H T';
 
   // Truncate long titles for the browser tab
   const truncatedTitle = title.length > 60 ? title.substring(0, 57) + '...' : title;
   const pageTitle = title === 'home' ? siteTitle : `${truncatedTitle} | ${siteTitle}`;
-  
-  const cacheBust = Date.now();  // Cache bust for CSS
   
   let authLinks = '';
   
@@ -135,7 +135,7 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
         <p>
           Running on Deadlight —
           <a href="https://github.com/gnarzilla/blog.deadlight" target="_blank" rel="noopener noreferrer">
-            ⭐ Star on GitHub
+            Star on GitHub
           </a>
         </p>
       </footer>
