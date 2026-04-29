@@ -85,11 +85,11 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
         const themeToggle = document.getElementById('theme-toggle');
         const html = document.documentElement;
         const stylesheet = document.getElementById('theme-stylesheet');
-        const themeIcon = themeToggle.querySelector('.theme-icon'); // Move this up
+        const themeIcon = themeToggle.querySelector('.theme-icon');
         
         // Define Icon Sets
         // Dark Mode: ♤ (Spade)
-        // Light Mode: ♡ (Heart)
+        // Light Mode: ♣ (Club)
         
         // Load saved theme
         let currentTheme = localStorage.getItem('theme') || 'dark';
@@ -97,7 +97,7 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
         // Apply initial state
         html.setAttribute('data-theme', currentTheme);
         stylesheet.href = '/styles/' + currentTheme + '_min.css?v=${cacheBust}';
-        themeIcon.textContent = currentTheme === 'dark' ? '♤' : '♡'; 
+        themeIcon.textContent = currentTheme === 'dark' ? '♤' : '♣'; 
 
         // Handle theme toggle
         themeToggle.addEventListener('click', () => {
@@ -110,7 +110,7 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
           stylesheet.href = '/styles/' + currentTheme + '_min.css?v=${cacheBust}';
           
           // Update Icon
-          themeIcon.textContent = currentTheme === 'dark' ? '♤' : '♡';
+          themeIcon.textContent = currentTheme === 'dark' ? '♤' : '♧';
         });
 
         // Keyboard navigation for pagination (moved outside of theme toggle)
