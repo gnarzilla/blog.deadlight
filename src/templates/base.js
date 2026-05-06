@@ -135,7 +135,7 @@ export function renderTemplate(title, bodyContent, user = null, config = null) {
         <p>
           Running on Deadlight —
           <a href="https://github.com/gnarzilla/blog.deadlight" target="_blank" rel="noopener noreferrer">
-            Star on GitHub
+            ★ on GitHub
           </a>
         </p>
       </footer>
