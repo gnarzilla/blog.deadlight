@@ -7,7 +7,7 @@
 ![npm](https://img.shields.io/npm/v/create-deadlight-blog)
 [![GitHub License](https://img.shields.io/github/license/gnarzilla/proxy.deadlight)](LICENSE)
 
-[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](docs/ECOSYSTEM.md) · [Middleware](docs/MIDDLEWARE.md) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
+[Why This Exists](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](docs/ECOSYSTEM.md) · [Middleware](docs/MIDDLEWARE.md) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
 
 > Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
 
@@ -38,7 +38,7 @@ For Andrioid/Raspberry PI: [docs/ARM64_QUICKSTART.md](docs/ARM64_QUICKSTART.md)
 
 - **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
 - **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
-- **[deadmesh.deadlight.boo](https://deadmesh.deadlight.boo)** – Blog published over LoRa mesh
+- **[deadmesh.boo](https://deadmesh.boo)** – LoRa Gateway Project Blog
 - **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
 - **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
 
