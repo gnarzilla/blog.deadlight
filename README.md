@@ -7,7 +7,7 @@
 ![npm](https://img.shields.io/npm/v/create-deadlight-blog)
 [![GitHub License](https://img.shields.io/github/license/gnarzilla/proxy.deadlight)](LICENSE)
 
-[Why This Exists](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](docs/ECOSYSTEM.md) · [Middleware](docs/MIDDLEWARE.md) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
+[Purpose](#purpose) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](docs/ECOSYSTEM.md) · [Middleware](docs/MIDDLEWARE.md) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
 
 > Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
 
@@ -21,7 +21,8 @@ Deploy a fully functional, production-ready instance in under 2 minutes using th
 npx create-deadlight-blog my-blog
 ```
 
-*This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
+*This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
+
 
 ### Post-Deployment
 Your blog is now live on the edge.
