@@ -70,6 +70,7 @@ curl -X POST http://your-proxy:8080/api/federation/send \
 
 I wanted a lightweight framework free of bloat that I could trust, so I turned it into a learning exercise and built my own. It was built for a userbase of 1, but I have presented it here for what I see as the frameworks best use cases, many of which relate to my other open source work. 
 
+
 | The internet most people actually have | Why Ghost/WordPress/Substack die here | How Deadlight just works |
 |----------------------------------------|--------------------------------------|--------------------------|
 | **300–3000 ms latency**<br>(Starlink, LoRa, HF, mesh) | 400 KB of JS + hydration before you see text | <10 KB semantic HTML + optional CSS. Loads before the first satellite ACK |
