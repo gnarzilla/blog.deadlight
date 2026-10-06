@@ -9,7 +9,7 @@
 
 [Purpose](#purpose) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](docs/ECOSYSTEM.md) · [Middleware](docs/MIDDLEWARE.md) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
 
-> Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
+**3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
 
 ![Quad-instance landing](src/assets/quad-instance-landing.gif)
 
