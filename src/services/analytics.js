@@ -85,7 +85,7 @@ export class AnalyticsService {
           MAX(duration) as max_duration,
           SUM(CASE WHEN status >= 400 THEN 1 ELSE 0 END) as error_count
         FROM analytics
-        WHERE date(timestamp) >= ${this._getIntervalSql('day', days)}
+        WHERE timestamp >= ${this._getIntervalSql('day', days)}
       `).first();
       return summary || { // Ensure default values if no data
         total_requests: 0, 
@@ -114,7 +114,7 @@ export class AnalyticsService {
           COUNT(*) as requests,
           COUNT(DISTINCT ip) as unique_visitors
         FROM analytics
-        WHERE date(timestamp) >= ${this._getIntervalSql('day', days)}
+        WHERE timestamp >= ${this._getIntervalSql('day', days)}
         GROUP BY hour_bucket
         ORDER BY hour_bucket
       `).all();
@@ -140,7 +140,7 @@ export class AnalyticsService {
           AVG(duration) as avg_duration,
           COUNT(DISTINCT ip) as unique_visitors
         FROM analytics
-        WHERE date(timestamp) >= ${this._getIntervalSql('day', days)}
+        WHERE timestamp >= ${this._getIntervalSql('day', days)}
         GROUP BY path
         ORDER BY hit_count DESC
         LIMIT ?
@@ -166,7 +166,7 @@ export class AnalyticsService {
           COUNT(*) as requests,
           COUNT(DISTINCT ip) as unique_visitors
         FROM analytics
-        WHERE date(timestamp) >= ${this._getIntervalSql('day', days)}
+        WHERE timestamp >= ${this._getIntervalSql('day', days)}
           AND country IS NOT NULL 
           AND country != 'unknown'
         GROUP BY country

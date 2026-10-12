@@ -1102,7 +1102,7 @@ async function getAnalytics(request, env, ctx) {
         MAX(duration) as max_duration,
         SUM(CASE WHEN status >= 400 THEN 1 ELSE 0 END) as error_count
       FROM analytics
-      WHERE date(timestamp) >= date('now', '-7 days')
+      WHERE timestamp >= datetime('now', '-7 days')
     `).first();
     
     const hourlyTraffic = await env.DB.prepare(`
@@ -1111,7 +1111,7 @@ async function getAnalytics(request, env, ctx) {
         COUNT(*) as requests,
         COUNT(DISTINCT ip) as unique_visitors
       FROM analytics
-      WHERE date(timestamp) >= date('now', '-1 day')
+      WHERE timestamp >= datetime('now', '-1 day')
       GROUP BY hour_bucket
       ORDER BY hour_bucket
     `).all();
@@ -1123,7 +1123,7 @@ async function getAnalytics(request, env, ctx) {
         AVG(duration) as avg_duration,
         COUNT(DISTINCT ip) as unique_visitors
       FROM analytics
-      WHERE date(timestamp) >= date('now', '-7 days')
+      WHERE timestamp >= datetime('now', '-7 days')
       GROUP BY path
       ORDER BY hit_count DESC
       LIMIT 10
@@ -1135,7 +1135,7 @@ async function getAnalytics(request, env, ctx) {
         COUNT(*) as requests,
         COUNT(DISTINCT ip) as unique_visitors
       FROM analytics
-      WHERE date(timestamp) >= date('now', '-7 days')
+      WHERE timestamp >= datetime('now', '-7 days')
         AND country IS NOT NULL 
         AND country != 'unknown'
       GROUP BY country
