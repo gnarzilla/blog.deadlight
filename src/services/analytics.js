@@ -9,9 +9,16 @@ export class AnalyticsService {
   }
 
   // --- Internal Helper for SQL Date Intervals ---
+  // IMPORTANT: always use the result as a bare `timestamp >= <this>` comparison.
+  // Wrapping the column (date(timestamp), datetime(timestamp)) stops SQLite from using
+  // idx_analytics_timestamp and turns the query into a full-table scan.
+  // The result is interpolated into SQL text, so the unit is allow-listed and the
+  // value is forced to a small positive integer.
   _getIntervalSql(intervalType, value) {
-    // Using D1's strftime and datetime functions directly in the query string
-    return `datetime('now', '-${value} ${intervalType}')`;
+    const unit = ['minute', 'hour', 'day'].includes(intervalType) ? intervalType : 'day';
+    const max = { minute: 1440, hour: 720, day: 365 }[unit];
+    const n = Math.min(max, Math.max(1, Math.trunc(Number(value)) || 1));
+    return `datetime('now', '-${n} ${unit}')`;
   }
 
   // --- Main Dashboard Analytics ---
@@ -139,7 +146,7 @@ export class AnalyticsService {
           COUNT(*) as hit_count,
           AVG(duration) as avg_duration,
           COUNT(DISTINCT ip) as unique_visitors
-        FROM analytics
+        FROM analytics INDEXED BY idx_analytics_timestamp
         WHERE timestamp >= ${this._getIntervalSql('day', days)}
         GROUP BY path
         ORDER BY hit_count DESC
@@ -238,8 +245,10 @@ export class AnalyticsService {
    */
   async getAnalyticsRowCount() {
     try {
+      // MAX(id) reads one row; COUNT(*) reads every row. The table is append-only, so the
+      // two match unless rows were deleted. Fine for a debug/health display.
       const countResult = await this.db.prepare(`
-        SELECT COUNT(*) as count FROM analytics
+        SELECT COALESCE(MAX(id), 0) as count FROM analytics
       `).first();
       return countResult?.count || 0;
     } catch (error) {

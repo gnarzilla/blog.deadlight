@@ -1094,79 +1094,20 @@ async function getAnalytics(request, env, ctx) {
   try {
     const config = await env.services.config.getConfig();
     
-    const summary = await env.DB.prepare(`
-      SELECT 
-        COUNT(*) as total_requests,
-        COUNT(DISTINCT ip) as unique_visitors,
-        AVG(duration) as avg_duration,
-        MAX(duration) as max_duration,
-        SUM(CASE WHEN status >= 400 THEN 1 ELSE 0 END) as error_count
-      FROM analytics
-      WHERE timestamp >= datetime('now', '-7 days')
-    `).first();
-    
-    const hourlyTraffic = await env.DB.prepare(`
-      SELECT 
-        hour_bucket as hour,
-        COUNT(*) as requests,
-        COUNT(DISTINCT ip) as unique_visitors
-      FROM analytics
-      WHERE timestamp >= datetime('now', '-1 day')
-      GROUP BY hour_bucket
-      ORDER BY hour_bucket
-    `).all();
-    
-    const topPaths = await env.DB.prepare(`
-      SELECT 
-        path,
-        COUNT(*) as hit_count,
-        AVG(duration) as avg_duration,
-        COUNT(DISTINCT ip) as unique_visitors
-      FROM analytics
-      WHERE timestamp >= datetime('now', '-7 days')
-      GROUP BY path
-      ORDER BY hit_count DESC
-      LIMIT 10
-    `).all();
-    
-    const countryStats = await env.DB.prepare(`
-      SELECT 
-        country,
-        COUNT(*) as requests,
-        COUNT(DISTINCT ip) as unique_visitors
-      FROM analytics
-      WHERE timestamp >= datetime('now', '-7 days')
-        AND country IS NOT NULL 
-        AND country != 'unknown'
-      GROUP BY country
-      ORDER BY requests DESC
-      LIMIT 20
-    `).all();
-    
+   const analytics = new AnalyticsService(env.DB);
+    const [summary, hourlyTraffic, topPaths, countryStats] = await Promise.all([
+      analytics.getSummary(7),
+      analytics.getHourlyTraffic(1),
+      analytics.getTopPaths(7, 10),
+      analytics.getCountryStats(7, 20)
+    ]);
+ 
     const analyticsData = {
-      summary: summary || { 
-        total_requests: 0, 
-        unique_visitors: 0, 
-        avg_duration: 0, 
-        error_count: 0 
-      },
-      topPaths: topPaths?.results || [],
-      hourlyTraffic: hourlyTraffic?.results || [],
-      countryStats: countryStats?.results || []
+      summary: summary || { total_requests: 0, unique_visitors: 0, avg_duration: 0, error_count: 0 },
+      topPaths,
+      hourlyTraffic: AnalyticsService.fillMissingHours(hourlyTraffic), // all 24 hours for the chart
+      countryStats
     };
-    
-    // Fill in missing hours for the chart (0-23)
-    const hoursData = new Map();
-    for (let i = 0; i < 24; i++) {
-      hoursData.set(i, { hour: i, requests: 0, unique_visitors: 0 });
-    }
-    
-    analyticsData.hourlyTraffic.forEach(hour => {
-      hoursData.set(hour.hour, hour);
-    });
-    
-    analyticsData.hourlyTraffic = Array.from(hoursData.values())
-      .sort((a, b) => a.hour - b.hour);
     
     return new Response(
       renderAnalyticsTemplate({

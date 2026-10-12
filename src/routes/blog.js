@@ -4,7 +4,7 @@ import { checkAuth } from '../../../lib.deadlight/core/src/auth/password.js';
 import { FederationService } from '../services/federation.js';
 import { PostModel } from '../../../lib.deadlight/core/src/db/models/index.js';
 import { renderAnalyticsTemplate } from '../templates/admin/analytics.js';
-import { getAnalyticsSummary, getHourlyTraffic, getTopPaths, getCountryStats } from '../middleware/analytics.js';
+import { AnalyticsService } from '../services/analytics.js';
 
 export const blogRoutes = {
   '/': {
@@ -242,49 +242,41 @@ export const blogRoutes = {
     }
   },
 
-
   '/analytics': {
     GET: async (request, env, ctx) => {
+      let config = null;
+      let user = null;
       try {
-        const config = await env.services.config.getConfig();
-        const url = new URL(request.url);
-        const timeRange = url.searchParams.get('range') || '7d';
-        
-        // Convert timeRange to days
+        config = await env.services.config.getConfig();
+        user = await checkAuth(request, env);
+
+        const timeRange = new URL(request.url).searchParams.get('range') || '7d';
         const days = timeRange === '24h' ? 1 : timeRange === '30d' ? 30 : 7;
-        
-        // Use the middleware helper functions
+
+        const analytics = new AnalyticsService(env.DB);
         const [summary, hourlyTraffic, topPaths, countryStats] = await Promise.all([
-          getAnalyticsSummary(env, days),
-          getHourlyTraffic(env, days),
-          getTopPaths(env, days, 10),
-          getCountryStats(env, days)
+          analytics.getSummary(days),
+          analytics.getHourlyTraffic(days),
+          analytics.getTopPaths(days, 10),
+          analytics.getCountryStats(days, 20)
         ]);
-        
+
         return new Response(
-          renderAnalyticsTemplate({
-            summary,
-            topPaths,
-            hourlyTraffic,
-            countryStats,
-            user: await checkAuth(request, env),
-            config
-          }),
+          renderAnalyticsTemplate({ summary, topPaths, hourlyTraffic, countryStats, user, config }),
           { headers: { 'Content-Type': 'text/html' } }
         );
-        
       } catch (error) {
         console.error('Analytics error:', error);
-        
-        // Return page with empty data
+
+        // Return page with empty data (same behaviour as before)
         return new Response(
           renderAnalyticsTemplate({
             summary: { total_requests: 0, unique_visitors: 0, avg_duration: 0, error_count: 0 },
             topPaths: [],
             hourlyTraffic: [],
             countryStats: [],
-            user: await checkAuth(request, env),
-            config
+            user,
+            config: config || {}
           }),
           { headers: { 'Content-Type': 'text/html' } }
         );
