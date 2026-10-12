@@ -96,23 +96,16 @@ async function ensureAnalyticsTable(env) {
   }
 }
 
+const windowArg = (days) => `-${Math.min(365, Math.max(1, Math.trunc(Number(days)) || 1))} days`;
+
 export async function getTopPaths(env, days = 7, limit = 10) {
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  
   const results = await env.DB.prepare(`
-    SELECT 
-      path,
-      COUNT(*) as hit_count,
-      AVG(duration) as avg_duration,
-      COUNT(DISTINCT ip) as unique_visitors
+    SELECT path, COUNT(*) as hit_count, AVG(duration) as avg_duration,
+           COUNT(DISTINCT ip) as unique_visitors
     FROM analytics
-    WHERE datetime(timestamp) >= datetime(?)
-    GROUP BY path
-    ORDER BY hit_count DESC
-    LIMIT ?
-  `).bind(startDate.toISOString(), limit).all();
-  
+    WHERE timestamp >= datetime('now', ?)
+    GROUP BY path ORDER BY hit_count DESC LIMIT ?
+  `).bind(windowArg(days), limit).all();
   return results.results;
 }
 

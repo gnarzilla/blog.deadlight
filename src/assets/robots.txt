@@ -1,0 +1,19 @@
+const ROBOTS = `User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: *
+Disallow: /admin
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /user/
+`;
+
+if (url.pathname === '/robots.txt') {
+  return new Response(ROBOTS, { headers: {
+    'content-type': 'text/plain; charset=utf-8',
+    'cache-control': 'public, max-age=86400' } });
+}
