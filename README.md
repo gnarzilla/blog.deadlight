@@ -7,9 +7,9 @@
 ![npm](https://img.shields.io/npm/v/create-deadlight-blog)
 [![GitHub License](https://img.shields.io/github/license/gnarzilla/proxy.deadlight)](LICENSE)
 
-[Manifesto](#why-this-exists) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](docs/ECOSYSTEM.md) · [Middleware](docs/MIDDLEWARE.md) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
+[Purpose](#purpose) · [Key Features](#key-features) · [Quick Start](#quick-start) · [Use Cases](#use-cases) · [Configuration](#configuration) · [The Deadlight Ecosystem](docs/ECOSYSTEM.md) · [Middleware](docs/MIDDLEWARE.md) · [Roadmap](#roadmap) · [Security](#security) · [Documentation](#documentation)
 
-> Built for the 80% of the internet that isn't fiber and datacenters. **3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
+**3–8 KB pages · Zero JS Required · Deployable from an Android Phone via Termux**
 
 ![Quad-instance landing](src/assets/quad-instance-landing.gif)
 
@@ -23,7 +23,6 @@ npx create-deadlight-blog my-blog
 
 *This handles cloning, authentication, database creation, schema migration, and admin user seeding automatically.*
 
-![One Click Deploy Terminal Demo](src/assets/click2launch.gif)
 
 ### Post-Deployment
 Your blog is now live on the edge.
@@ -34,13 +33,26 @@ Your blog is now live on the edge.
 Full getting started for all platoforms: [docs/QUICKSTART.md](docs/QUICKSTART.md)   
 For Andrioid/Raspberry PI: [docs/ARM64_QUICKSTART.md](docs/ARM64_QUICKSTART.md)
 
-## Live Demos
+## Live
 
-- **[deadlight.boo](https://deadlight.boo)** – Full-featured instance with admin dashboard
-- **[thatch-dt.deadlight.boo](https://thatch-dt.deadlight.boo)** – Zero-JS minimal theme (perfect for lynx/slow links)
-- **[deadmesh.deadlight.boo](https://deadmesh.deadlight.boo)** – Blog published over LoRa mesh
-- **[mobile.deadlight.boo](https://mobile.deadlight.boo)** - Instance published and managed entirely from Android via Termux
-- **[threat-level-midnight.deadlight.boo](https://threat-level-midnight.deadlight.boo)** – Federation testing instance
+<img src="https://deadlight.boo/apple-touch-icon.png" width="32" height="32" alt="Deadlight Logo">  [deadlight](https://deadlight.boo) - Main platform demo
+
+<img src="https://deadmesh.boo/apple-touch-icon.png" width="32" height="32" alt="Deadmesh Logo"> [deadmesh](https://deadmesh.boo) - LoRa gateway project blog
+
+<img src="https://thatch-dt.deadlight.boo/apple-touch-icon.png" width="32" height="32" alt="Thatch Logo"> [thatch](https://thatch-dt.deadlight.boo) - Zero-JS instance with use case examples
+
+<img src="https://mobile.deadlight.boo/apple-touch-icon.png" width="32" height="32" alt="Mobile.Deadlight Logo"> [deadroid](https://mobile.deadlight.boo) - Android deployed instance via Termux
+
+<img src="https://threat-level-midnight.deadlight.boo/apple-touch-icon.png" width="32" height="32" alt="Threat Level Midnight Logo">  [threat-level-midnight](https://threat-level-midnight.deadlight.boo) - Federation testing instance
+
+<details>
+     <summary>Archive</summary>
+       
+<img src="https://deadmesh.deadlight.boo/apple-touch-icon.png" width="32" height="32">[deadmesh](https://deadmesh.deadlight.boo) - LoRa gateway project blog (deadlight subdomain)
+
+[v1.deadlight](https://v1.deadlight.boo) - Legacy bootstrap framework
+
+</details>
 
 **Test federation:**
 ```bash
@@ -54,9 +66,10 @@ curl -X POST http://your-proxy:8080/api/federation/send \
   }'
 ```
 
-## Why this exists
+## Purpose
 
-Most blogging platforms assume you have reliable connectivity, cheap power, and modern browsers. **The rest of the planet doesn't.**
+I wanted a lightweight framework free of bloat that I could trust, so I turned it into a learning exercise and built my own. It was built for a userbase of 1, but I have presented it here for what I see as the frameworks best use cases, many of which relate to my other open source work. 
+
 
 | The internet most people actually have | Why Ghost/WordPress/Substack die here | How Deadlight just works |
 |----------------------------------------|--------------------------------------|--------------------------|
